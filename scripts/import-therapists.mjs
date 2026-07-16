@@ -29,7 +29,8 @@ const supabase = createClient(url, key, { auth: { autoRefreshToken: false, persi
 // ---- Parser de INSERT ... (cols) VALUES (...) lendo as colunas do header ----
 function parseInsert(sql) {
   const rows = [];
-  const re = /INSERT INTO\s+\S+\s*\(([^)]*)\)\s*VALUES/gi;
+  // Tolera nome de tabela com espaços/aspas (DBeaver às vezes usa a query como nome).
+  const re = /INSERT INTO[\s\S]*?\(([^)]*)\)\s*VALUES/gi;
   let m;
   while ((m = re.exec(sql))) {
     const cols = m[1].split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
@@ -40,17 +41,17 @@ function parseInsert(sql) {
       if (sql[i] !== "(") { if (i >= sql.length) break; i++; continue; }
       i++;
       const fields = [];
-      let cur = "", inStr = false, started = false;
+      let cur = "", inStr = false, quoted = false;
       while (i < sql.length) {
         const ch = sql[i];
         if (inStr) {
           if (ch === "'") { if (sql[i + 1] === "'") { cur += "'"; i += 2; continue; } inStr = false; i++; continue; }
           cur += ch; i++; continue;
         }
-        if (ch === "'") { inStr = true; started = true; i++; continue; }
-        if (ch === ",") { fields.push(norm(cur, started)); cur = ""; started = false; i++; continue; }
-        if (ch === ")") { fields.push(norm(cur, started)); i++; break; }
-        cur += ch; if (!/\s/.test(ch)) started = true; i++;
+        if (ch === "'") { inStr = true; quoted = true; i++; continue; }
+        if (ch === ",") { fields.push(norm(cur, quoted)); cur = ""; quoted = false; i++; continue; }
+        if (ch === ")") { fields.push(norm(cur, quoted)); i++; break; }
+        cur += ch; i++;
       }
       const obj = {};
       cols.forEach((c, idx) => (obj[c] = fields[idx] ?? null));
