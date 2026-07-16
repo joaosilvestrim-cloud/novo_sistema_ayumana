@@ -1,6 +1,4 @@
-import Link from "next/link";
 import {
-  Search,
   ShieldCheck,
   Globe2,
   Clock,
@@ -9,18 +7,8 @@ import {
 import { CvvBanner } from "@/components/site/cvv-banner";
 import { SiteHeader } from "@/components/site/header";
 import { SiteFooter } from "@/components/site/footer";
+import { Hero } from "@/components/site/hero";
 import { Button } from "@/components/ui/button";
-
-const QUEIXAS = [
-  "Ansiedade",
-  "Depressão",
-  "Saudade / adaptação no exterior",
-  "Relacionamentos",
-  "Autoestima",
-  "Luto",
-  "Estresse",
-  "Maternidade",
-];
 
 const DIFERENCIAIS = [
   {
@@ -52,63 +40,7 @@ export default function HomePage() {
       <SiteHeader />
 
       <main className="flex-1">
-        {/* Hero */}
-        <section className="relative overflow-hidden bg-surface">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-brand/10 blur-3xl"
-          />
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -bottom-32 -left-24 h-96 w-96 rounded-full bg-accent/10 blur-3xl"
-          />
-          <div className="relative mx-auto max-w-3xl px-4 py-20 text-center md:py-28">
-            <span className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-brand-dark">
-              <span className="h-2 w-2 rounded-full bg-brand" />
-              Psicoterapia com alma brasileira
-            </span>
-            <h1 className="mt-6 text-balance text-4xl font-semibold leading-tight text-heading md:text-5xl">
-              Encontre seu psicólogo,
-              <br className="hidden sm:block" /> no Brasil ou no exterior
-            </h1>
-            <p className="mx-auto mt-5 max-w-xl text-pretty text-lg text-foreground-muted">
-              Terapia em português, onde você estiver. Psicólogos brasileiros
-              verificados, atendimento online e contato direto pelo WhatsApp.
-            </p>
-
-            {/* Busca */}
-            <form
-              action="/psicologos"
-              className="mx-auto mt-8 flex max-w-xl items-center gap-2 rounded-2xl border border-border bg-background p-2 shadow-sm"
-            >
-              <div className="flex flex-1 items-center gap-2 pl-3">
-                <Search className="h-5 w-5 shrink-0 text-foreground-muted" />
-                <input
-                  type="text"
-                  name="q"
-                  placeholder="Busque por queixa, abordagem ou nome"
-                  className="h-11 w-full bg-transparent text-sm outline-none placeholder:text-foreground-muted"
-                />
-              </div>
-              <Button type="submit" size="md">
-                Buscar
-              </Button>
-            </form>
-
-            {/* Atalhos por queixa */}
-            <div className="mx-auto mt-6 flex max-w-2xl flex-wrap justify-center gap-2">
-              {QUEIXAS.map((q) => (
-                <Link
-                  key={q}
-                  href={`/psicologos?q=${encodeURIComponent(q)}`}
-                  className="rounded-full border border-border bg-background px-3 py-1.5 text-sm text-foreground-muted transition-colors hover:border-brand hover:text-brand-dark"
-                >
-                  {q}
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
+        <Hero />
 
         {/* Diferenciais */}
         <section className="mx-auto max-w-6xl px-4 py-20">
