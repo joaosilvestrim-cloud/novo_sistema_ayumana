@@ -14,6 +14,7 @@ export type Gender =
   | "outro"
   | "prefiro_nao_dizer";
 export type Audience = "crianca" | "adolescente" | "adulto" | "idoso" | "casal";
+export type SubscriptionStatus = "nenhuma" | "ativa" | "atrasada" | "cancelada";
 
 export type Profile = {
   id: string;
@@ -82,8 +83,22 @@ export type Psychologist = {
   timezones: string[];
   profile_completed: boolean;
   is_published: boolean;
+  asaas_customer_id: string | null;
+  asaas_subscription_id: string | null;
+  subscription_status: SubscriptionStatus;
+  subscription_period_end: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export const SUBSCRIPTION_LABELS: Record<
+  SubscriptionStatus,
+  { label: string; tone: "neutral" | "warning" | "success" | "danger" }
+> = {
+  nenhuma: { label: "Sem assinatura", tone: "neutral" },
+  ativa: { label: "Ativa", tone: "success" },
+  atrasada: { label: "Pagamento pendente", tone: "warning" },
+  cancelada: { label: "Cancelada", tone: "danger" },
 };
 
 export const AUDIENCE_LABELS: Record<Audience, string> = {
