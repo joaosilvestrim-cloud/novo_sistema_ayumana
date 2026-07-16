@@ -1,6 +1,11 @@
-// Importa terapeutas do sistema antigo, casando therapists.user_id = users.id.
-// Uso: node scripts/import-therapists.mjs "therapists.sql" "users.sql"
-// IMPORTANTE: o dump de users PRECISA conter a coluna id.
+// Importa terapeutas do sistema antigo para o novo (psychologists).
+//
+// MODO A (recomendado) — um arquivo com o JOIN já feito:
+//   node scripts/import-therapists.mjs "therapists_users_join.sql"
+//
+// MODO B — dois arquivos, SE o dump de users tiver a coluna id:
+//   node scripts/import-therapists.mjs "therapists.sql" "users.sql"
+//
 // Requer migrations 0001-0003. Usa service_role.
 import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
@@ -8,9 +13,9 @@ import dotenv from "dotenv";
 
 dotenv.config({ path: ".env.local" });
 
-const [therapistsFile, usersFile] = process.argv.slice(2);
-if (!therapistsFile || !usersFile) {
-  console.error('Uso: node scripts/import-therapists.mjs "therapists.sql" "users.sql"');
+const files = process.argv.slice(2);
+if (!files.length) {
+  console.error('Uso: node scripts/import-therapists.mjs "join.sql"  (ou therapists.sql users.sql)');
   process.exit(1);
 }
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -19,21 +24,16 @@ if (!url || !key) {
   console.error("✗ Faltam NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY.");
   process.exit(1);
 }
-const supabase = createClient(url, key, {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
+const supabase = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
 
-// ---- Parser de INSERT ... (cols) VALUES (...) que lê as colunas do header ----
+// ---- Parser de INSERT ... (cols) VALUES (...) lendo as colunas do header ----
 function parseInsert(sql) {
   const rows = [];
   const re = /INSERT INTO\s+\S+\s*\(([^)]*)\)\s*VALUES/gi;
   let m;
   while ((m = re.exec(sql))) {
-    const cols = m[1]
-      .split(",")
-      .map((c) => c.trim().replace(/^"|"$/g, ""));
+    const cols = m[1].split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
     let i = re.lastIndex;
-    // lê tuplas até ';' de nível superior
     while (i < sql.length) {
       while (i < sql.length && /[\s,]/.test(sql[i])) i++;
       if (sql[i] === ";") { i++; break; }
@@ -44,10 +44,7 @@ function parseInsert(sql) {
       while (i < sql.length) {
         const ch = sql[i];
         if (inStr) {
-          if (ch === "'") {
-            if (sql[i + 1] === "'") { cur += "'"; i += 2; continue; }
-            inStr = false; i++; continue;
-          }
+          if (ch === "'") { if (sql[i + 1] === "'") { cur += "'"; i += 2; continue; } inStr = false; i++; continue; }
           cur += ch; i++; continue;
         }
         if (ch === "'") { inStr = true; started = true; i++; continue; }
@@ -62,7 +59,6 @@ function parseInsert(sql) {
   }
   return rows;
 }
-
 function norm(raw, wasString) {
   if (wasString) return raw;
   const t = raw.trim();
@@ -76,31 +72,33 @@ function norm(raw, wasString) {
 // ---- Mapeamentos ----
 const GENDER = { AA: "feminino", AO: "masculino", TF: "feminino", NB: "nao_binario" };
 const APPROACH = { CL: "tcc", PA: "psicanalise", HA: "humanista" };
+const EXTERIOR_RE = /exterior|fora do pa[ií]s|brasileir[oa]s?\s+(no|que\s+(vivem|moram)|fora)|imigrante|expatriad/i;
 
 function stripHtml(html) {
   if (!html) return "";
-  return html
-    .replace(/<\/p>/gi, "\n\n")
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">")
-    .replace(/&#39;|&rsquo;/gi, "'")
-    .replace(/&quot;/gi, '"')
-    .replace(/\n{3,}/g, "\n\n")
-    .replace(/[ \t]{2,}/g, " ")
-    .trim();
+  return String(html)
+    .replace(/<\/p>/gi, "\n\n").replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/gi, " ").replace(/&amp;/gi, "&").replace(/&lt;/gi, "<").replace(/&gt;/gi, ">")
+    .replace(/&#39;|&rsquo;/gi, "'").replace(/&quot;/gi, '"')
+    .replace(/\n{3,}/g, "\n\n").replace(/[ \t]{2,}/g, " ").trim();
 }
-
 function slugify(input) {
-  return input
-    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+  return String(input).normalize("NFD").replace(/[̀-ͯ]/g, "")
     .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 50);
 }
-
-const EXTERIOR_RE = /exterior|fora do pa[ií]s|brasileir[oa]s?\s+(no|que\s+(vivem|moram)|fora)|imigrante|expatriad/i;
+function userName(r) {
+  if (r.name) return String(r.name).trim();
+  return [r.first_name, r.last_name, r.firstname, r.lastname]
+    .filter(Boolean).map((x) => String(x).trim()).join(" ").trim();
+}
+function userEmail(r) { return String(r.email ?? r.email_address ?? "").trim(); }
+function fullPhone(r) {
+  const cc = String(r.phone_country_code ?? "").replace(/\D/g, "");
+  const p = String(r.phone_whatsapp ?? r.phone ?? r.whatsapp ?? r.celular ?? "").replace(/\D/g, "");
+  if (!p) return null;
+  if (cc && !p.startsWith(cc)) return cc + p;
+  return p;
+}
 
 async function findUserByEmail(email) {
   for (let page = 1; page <= 20; page++) {
@@ -112,39 +110,38 @@ async function findUserByEmail(email) {
   return null;
 }
 
-async function run() {
-  const therapists = parseInsert(readFileSync(therapistsFile, "utf8"));
-  const users = parseInsert(readFileSync(usersFile, "utf8"));
-
-  if (!users.length || !("id" in users[0])) {
-    console.error("✗ O dump de users precisa conter a coluna 'id'. Reexporte incluindo o id.");
+function buildRows() {
+  if (files.length === 1) return parseInsert(readFileSync(files[0], "utf8"));
+  const therapists = parseInsert(readFileSync(files[0], "utf8"));
+  const users = parseInsert(readFileSync(files[1], "utf8"));
+  if (!users[0] || !("id" in users[0])) {
+    console.error("✗ O dump de users não tem a coluna 'id'. Use o modo de arquivo único (JOIN).");
     process.exit(1);
   }
-  const userById = new Map(users.map((u) => [String(u.id), u]));
+  const byId = new Map(users.map((u) => [String(u.id), u]));
+  return therapists.map((t) => ({ ...(byId.get(String(t.user_id)) || {}), ...t }));
+}
 
-  // Mapa de abordagem slug -> id.
+async function run() {
+  const rows = buildRows();
+  console.log(`Registros no arquivo: ${rows.length}\n`);
+
   const { data: apprs } = await supabase.from("approaches").select("id, slug");
   const apprId = Object.fromEntries((apprs ?? []).map((a) => [a.slug, a.id]));
 
-  let ok = 0, skipNoUser = 0, skipNoEmail = 0, fail = 0, published = 0;
+  let ok = 0, skipNoEmail = 0, fail = 0, published = 0;
 
-  for (const t of therapists) {
-    const u = userById.get(String(t.user_id));
-    if (!u) { skipNoUser++; continue; }
-    const email = (u.email || "").trim();
-    if (!email) { skipNoEmail++; continue; }
+  for (const r of rows) {
+    const email = userEmail(r);
+    if (!email || !email.includes("@")) { skipNoEmail++; continue; }
+    const name = userName(r) || email.split("@")[0];
+    const bio = stripHtml(r.profile_description);
+    const hasCrp = !!(r.crp && String(r.crp).trim());
+    const publish = hasCrp && r.appears_in_showcase === true;
 
-    const name = (u.name || "").trim();
-    const bio = stripHtml(t.profile_description);
-    const hasCrp = !!(t.crp && String(t.crp).trim());
-    const publish = hasCrp && t.appears_in_showcase === true;
-
-    // 1) conta auth
     let userId;
     const { data: created, error: cErr } = await supabase.auth.admin.createUser({
-      email,
-      email_confirm: true,
-      user_metadata: { full_name: name },
+      email, email_confirm: true, user_metadata: { full_name: name },
     });
     if (cErr) {
       const ex = await findUserByEmail(email);
@@ -152,23 +149,20 @@ async function run() {
       userId = ex.id;
     } else userId = created.user.id;
 
-    // 2) profile
     await supabase.from("profiles").upsert({ id: userId, full_name: name, email, role: "psicologo" });
 
-    // 3) psychologist
-    const phone = (u.phone_whatsapp || "").replace(/\D/g, "") || null;
-    const channel = t.service_channel; // ON | ALL | PR
+    const channel = r.service_channel;
     const payload = {
       profile_id: userId,
       display_name: name,
       headline: bio ? bio.split("\n")[0].slice(0, 140) : null,
       bio: bio || null,
-      gender: GENDER[t.gender_identity] ?? "prefiro_nao_dizer",
-      crp_number: hasCrp ? String(t.crp).trim() : null,
-      city: t.city || null,
+      gender: GENDER[r.gender_identity] ?? "prefiro_nao_dizer",
+      crp_number: hasCrp ? String(r.crp).trim() : null,
+      city: r.city || null,
       country: "BR",
-      phone_whatsapp: phone,
-      accepts_online: channel === "ON" || channel === "ALL",
+      phone_whatsapp: fullPhone(r),
+      accepts_online: channel === "ON" || channel === "ALL" || !channel,
       accepts_in_person: channel === "ALL" || channel === "PR",
       attends_abroad: EXTERIOR_RE.test(bio),
       languages: ["pt"],
@@ -180,7 +174,6 @@ async function run() {
 
     const { data: existing } = await supabase
       .from("psychologists").select("id").eq("profile_id", userId).maybeSingle();
-
     let psyId = existing?.id;
     if (psyId) await supabase.from("psychologists").update(payload).eq("id", psyId);
     else {
@@ -190,12 +183,10 @@ async function run() {
       psyId = ins.id;
     }
 
-    // slug
-    const slug = `${slugify(name)}-${psyId.slice(0, 6)}`;
-    await supabase.from("psychologists").update({ slug }).eq("id", psyId);
+    await supabase.from("psychologists")
+      .update({ slug: `${slugify(name)}-${psyId.slice(0, 6)}` }).eq("id", psyId);
 
-    // abordagem
-    const apprSlug = APPROACH[t.therapeutic_approach];
+    const apprSlug = APPROACH[r.therapeutic_approach];
     if (apprSlug && apprId[apprSlug]) {
       await supabase.from("psychologist_approaches")
         .upsert({ psychologist_id: psyId, approach_id: apprId[apprSlug] });
@@ -205,8 +196,7 @@ async function run() {
     if (publish) published++;
   }
 
-  console.log(`\n✓ Terapeutas importados: ${ok} (publicados: ${published})`);
-  console.log(`  sem match de user: ${skipNoUser} · sem email: ${skipNoEmail} · falhas: ${fail}`);
+  console.log(`\n✓ Importados: ${ok} (publicados: ${published}) · sem email: ${skipNoEmail} · falhas: ${fail}`);
 }
 
 run().catch((e) => { console.error(e); process.exit(1); });
