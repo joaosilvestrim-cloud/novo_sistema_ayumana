@@ -7,6 +7,9 @@
 
 create extension if not exists "pgcrypto";
 
+-- Permite que funções referenciem tabelas criadas mais abaixo (forward refs).
+set check_function_bodies = off;
+
 -- ------------------------------------------------------------
 -- ENUMs
 -- ------------------------------------------------------------
