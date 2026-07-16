@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Outfit, Archivo } from "next/font/google";
+import { Analytics } from "@/components/site/analytics";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -54,6 +55,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
         {children}
+        <Analytics />
       </body>
     </html>
   );

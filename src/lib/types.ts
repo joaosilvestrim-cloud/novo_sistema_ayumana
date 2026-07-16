@@ -119,6 +119,46 @@ export const VERIFICATION_LABELS: Record<
   reprovado: { label: "Reprovado", tone: "danger" },
 };
 
+export type ContentStatus = "pendente" | "publicada" | "reprovada";
+
+export type BlogPost = {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string | null;
+  content: string;
+  cover_url: string | null;
+  category: string;
+  author_name: string;
+  published: boolean;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ForumQuestion = {
+  id: string;
+  slug: string;
+  title: string;
+  body: string | null;
+  author_alias: string;
+  country_code: string | null;
+  specialty_id: number | null;
+  status: ContentStatus;
+  created_at: string;
+  published_at: string | null;
+};
+
+export type ForumAnswer = {
+  id: string;
+  question_id: string;
+  psychologist_id: string;
+  body: string;
+  status: ContentStatus;
+  created_at: string;
+  published_at: string | null;
+};
+
 /** Países-alvo iniciais (diferencial exterior — Blueprint §4). */
 export const COUNTRIES = [
   { code: "PT", name: "Portugal" },

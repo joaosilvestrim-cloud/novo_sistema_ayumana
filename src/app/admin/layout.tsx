@@ -36,6 +36,23 @@ export default async function AdminLayout({
           </div>
         </div>
       </header>
+      <nav className="border-b border-border bg-background">
+        <div className="mx-auto flex max-w-5xl gap-1 px-4">
+          {[
+            { href: "/admin/verificacao", label: "Verificação" },
+            { href: "/admin/moderacao", label: "Moderação" },
+            { href: "/admin/blog", label: "Blog" },
+          ].map((t) => (
+            <Link
+              key={t.href}
+              href={t.href}
+              className="border-b-2 border-transparent px-3 py-3 text-sm font-medium text-foreground-muted hover:border-brand hover:text-brand-dark"
+            >
+              {t.label}
+            </Link>
+          ))}
+        </div>
+      </nav>
       <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">{children}</div>
     </div>
   );

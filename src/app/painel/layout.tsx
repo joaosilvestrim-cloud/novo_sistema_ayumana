@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LayoutDashboard, UserRound, CreditCard, LogOut } from "lucide-react";
+import { LayoutDashboard, UserRound, CreditCard, MessagesSquare, LogOut } from "lucide-react";
 import { requireUser, getProfile } from "@/lib/auth";
 import { Logo } from "@/components/ui/logo";
 import { signOutAction } from "@/app/(auth)/actions";
@@ -7,6 +7,7 @@ import { signOutAction } from "@/app/(auth)/actions";
 const NAV = [
   { href: "/painel", label: "Início", icon: LayoutDashboard },
   { href: "/painel/onboarding", label: "Meu perfil", icon: UserRound },
+  { href: "/painel/forum", label: "Fórum", icon: MessagesSquare },
   { href: "/painel/assinatura", label: "Assinatura", icon: CreditCard },
 ];
 
