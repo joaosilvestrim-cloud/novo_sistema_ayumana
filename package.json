@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "db:push": "node scripts/db-push.mjs"
+    "db:push": "node scripts/db-push.mjs",
+    "db:seed": "cross-env NODE_OPTIONS=--use-system-ca node scripts/seed.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
