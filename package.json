@@ -11,6 +11,7 @@
     "db:push": "node scripts/db-push.mjs",
     "db:seed": "cross-env NODE_OPTIONS=--use-system-ca node scripts/seed.mjs",
     "db:seed:content": "cross-env NODE_OPTIONS=--use-system-ca node scripts/seed-content.mjs",
+    "db:seed:forum": "cross-env NODE_OPTIONS=--use-system-ca node scripts/seed-forum.mjs",
     "db:check": "cross-env NODE_OPTIONS=--use-system-ca node scripts/check-db.mjs",
     "db:buckets": "cross-env NODE_OPTIONS=--use-system-ca node scripts/create-buckets.mjs"
   },

@@ -43,6 +43,9 @@ export const metadata: Metadata = {
     locale: "pt_BR",
     siteName: "Ayumana",
   },
+  verification: process.env.GOOGLE_SITE_VERIFICATION
+    ? { google: process.env.GOOGLE_SITE_VERIFICATION }
+    : undefined,
 };
 
 export default function RootLayout({
