@@ -4,6 +4,10 @@ import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Loader2, CheckCircle2 } from "lucide-react";
 import { Field, Input, Textarea, Select, Label } from "@/components/ui/field";
+import { ScheduleEditor } from "@/components/schedule-editor";
+import { StyleEditor } from "@/components/style-editor";
+import { TIMEZONES } from "@/lib/schedule";
+import type { Schedule } from "@/lib/schedule";
 import {
   AUDIENCE_LABELS,
   COUNTRIES,
@@ -180,6 +184,12 @@ export function OnboardingForm({
         <Field label="Sobre você" htmlFor="bio" hint="Fale da sua abordagem e de quem você atende.">
           <Textarea id="bio" name="bio" rows={6} defaultValue={psy?.bio ?? ""} />
         </Field>
+        <Field label="Formação acadêmica" htmlFor="formation" hint="Ex.: Graduação em Psicologia pela USP; Especialização em TCC.">
+          <Textarea id="formation" name="formation" rows={3} defaultValue={psy?.formation ?? ""} />
+        </Field>
+        <Field label="Serviços oferecidos" htmlFor="services" hint="Separe por vírgula. Ex.: Psicoterapia individual, Terapia de casal">
+          <Input id="services" name="services" defaultValue={(psy?.services ?? []).join(", ")} />
+        </Field>
       </Section>
 
       <Section title="Abordagens">
@@ -264,9 +274,35 @@ export function OnboardingForm({
           </Field>
         </div>
 
-        <Field label="Fusos/janelas de horário" htmlFor="timezones" hint="Relevante para o exterior. Ex.: Europe/Lisbon, America/Sao_Paulo">
-          <Input id="timezones" name="timezones" defaultValue={(psy?.timezones ?? []).join(", ")} />
+        <Field label="Fuso horário" htmlFor="timezone" hint="Onde você atende. Se for fora do Brasil, mostramos o horário convertido para Brasília no seu perfil.">
+          <Select id="timezone" name="timezone" defaultValue={psy?.timezone ?? "America/Sao_Paulo"}>
+            <optgroup label="Brasil">
+              {TIMEZONES.filter((t) => t.group === "Brasil").map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </optgroup>
+            <optgroup label="Exterior">
+              {TIMEZONES.filter((t) => t.group === "Exterior").map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </optgroup>
+          </Select>
         </Field>
+      </Section>
+
+      <Section title="Disponibilidade" description="Marque os dias e horários que você atende.">
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" name="accepting_patients" defaultChecked={psy?.accepting_patients ?? true} className="h-4 w-4 accent-[var(--ayu-verde)]" />
+          Estou aceitando novos pacientes
+        </label>
+        <div>
+          <Label>Horário de atendimento</Label>
+          <ScheduleEditor name="schedule" initial={(psy?.schedule as Schedule) ?? null} />
+        </div>
+      </Section>
+
+      <Section title="Meu estilo de atendimento" description="Ajude o paciente a sentir como é a sua sessão. Arraste cada barra.">
+        <StyleEditor name="style" initial={psy?.style ?? null} />
       </Section>
 
       {state.error && (

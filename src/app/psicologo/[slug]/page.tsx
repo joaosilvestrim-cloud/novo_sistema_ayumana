@@ -10,7 +10,19 @@ import {
   Languages,
   Video,
   Users,
+  CalendarClock,
+  GraduationCap,
+  Check,
 } from "lucide-react";
+import {
+  DAY_ORDER,
+  DAY_LABEL,
+  isForeignTz,
+  convertHHMM,
+  tzLabel,
+  BR_TZ,
+} from "@/lib/schedule";
+import { STYLE_SPECTRUMS, styleValue } from "@/lib/style";
 
 function InstagramIcon({ className }: { className?: string }) {
   return (
@@ -160,6 +172,11 @@ export default async function PerfilPage({
                       <Globe2 className="h-3.5 w-3.5" /> Atende no exterior
                     </Badge>
                   )}
+                  {p.accepting_patients && (
+                    <Badge tone="success">
+                      <Check className="h-3.5 w-3.5" /> Aceitando novos pacientes
+                    </Badge>
+                  )}
                 </div>
               </div>
             </header>
@@ -209,6 +226,94 @@ export default async function PerfilPage({
                   {p.approaches.map((a) => (
                     <Badge key={a.id}>{a.name}</Badge>
                   ))}
+                </div>
+              </section>
+            )}
+
+            {p.formation && (
+              <section>
+                <h2 className="mb-2 flex items-center gap-2 text-lg">
+                  <GraduationCap className="h-5 w-5 text-teal-600" /> Formação acadêmica
+                </h2>
+                <p className="whitespace-pre-line text-foreground-muted">{p.formation}</p>
+              </section>
+            )}
+
+            {p.services && p.services.length > 0 && (
+              <section>
+                <h2 className="mb-3 text-lg">Serviços oferecidos</h2>
+                <ul className="space-y-2">
+                  {p.services.map((sv) => (
+                    <li key={sv} className="flex items-start gap-2 text-foreground-muted">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
+                      {sv}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {p.style && (
+              <section>
+                <h2 className="mb-1 text-lg">Meu estilo de atendimento</h2>
+                <p className="mb-4 text-sm text-foreground-muted">
+                  Uma ideia de como é a sessão com {p.display_name?.split(" ")[0] ?? "este profissional"}.
+                </p>
+                <div className="space-y-5">
+                  {STYLE_SPECTRUMS.map((s) => {
+                    const v = styleValue(p.style, s.key);
+                    return (
+                      <div key={s.key}>
+                        <div className="mb-1.5 flex justify-between text-xs font-medium text-foreground-muted">
+                          <span>{s.left}</span>
+                          <span>{s.right}</span>
+                        </div>
+                        <div className="relative h-2 rounded-full bg-gradient-to-r from-teal-200 via-surface-muted to-green-200">
+                          <div
+                            className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-brand shadow"
+                            style={{ left: `${v}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+
+            {p.schedule && DAY_ORDER.some((d) => p.schedule?.[d]) && (
+              <section>
+                <h2 className="mb-2 flex items-center gap-2 text-lg">
+                  <CalendarClock className="h-5 w-5 text-teal-600" /> Horário de atendimento
+                </h2>
+                {isForeignTz(p.timezone) && (
+                  <p className="mb-3 rounded-lg bg-teal-50 px-3 py-2 text-xs text-teal-700">
+                    Horários no fuso de {tzLabel(p.timezone)}. Entre parênteses, o
+                    equivalente no horário de Brasília.
+                  </p>
+                )}
+                <div className="divide-y divide-border rounded-xl border border-border">
+                  {DAY_ORDER.map((d) => {
+                    const h = p.schedule?.[d];
+                    return (
+                      <div key={d} className="flex items-center justify-between px-4 py-2.5 text-sm">
+                        <span className="text-foreground">{DAY_LABEL[d]}</span>
+                        {h ? (
+                          <span className="text-foreground-muted">
+                            {h.open}–{h.close}
+                            {isForeignTz(p.timezone) && (
+                              <span className="ml-2 text-xs text-teal-700">
+                                (Brasília {convertHHMM(h.open, p.timezone, BR_TZ)}–
+                                {convertHHMM(h.close, p.timezone, BR_TZ)})
+                              </span>
+                            )}
+                          </span>
+                        ) : (
+                          <span className="text-foreground-muted/60">Fechado</span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </section>
             )}

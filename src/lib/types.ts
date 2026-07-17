@@ -83,6 +83,12 @@ export type Psychologist = {
   audiences: Audience[];
   languages: string[];
   timezones: string[];
+  timezone: string;
+  schedule: Record<string, { open: string; close: string } | null> | null;
+  accepting_patients: boolean;
+  formation: string | null;
+  services: string[];
+  style: Record<string, number> | null;
   profile_completed: boolean;
   is_published: boolean;
   asaas_customer_id: string | null;

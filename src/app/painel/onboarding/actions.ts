@@ -64,6 +64,27 @@ export async function saveOnboardingAction(
   const phone = String(formData.get("phone_whatsapp") ?? "").replace(/\D/g, "") || null;
   const instagram = String(formData.get("instagram") ?? "").trim().replace(/^@+/, "") || null;
   const sessionPrice = toCents(String(formData.get("session_price") ?? ""));
+  const timezone = String(formData.get("timezone") ?? "America/Sao_Paulo").trim() || "America/Sao_Paulo";
+  const acceptingPatients = formData.get("accepting_patients") === "on";
+  const formation = String(formData.get("formation") ?? "").trim() || null;
+  const services = String(formData.get("services") ?? "")
+    .split(/[\n,;]/)
+    .map((x) => x.trim())
+    .filter(Boolean);
+  let schedule: unknown = null;
+  try {
+    const raw = String(formData.get("schedule") ?? "");
+    if (raw) schedule = JSON.parse(raw);
+  } catch {
+    schedule = null;
+  }
+  let style: unknown = null;
+  try {
+    const raw = String(formData.get("style") ?? "");
+    if (raw) style = JSON.parse(raw);
+  } catch {
+    style = null;
+  }
   const acceptsOnline = formData.get("accepts_online") === "on";
   const acceptsInPerson = formData.get("accepts_in_person") === "on";
   const attendsAbroad = formData.get("attends_abroad") === "on";
@@ -138,6 +159,12 @@ export async function saveOnboardingAction(
     state,
     phone_whatsapp: phone,
     instagram,
+    timezone,
+    schedule,
+    style,
+    accepting_patients: acceptingPatients,
+    formation,
+    services,
     session_price_cents: sessionPrice,
     accepts_online: acceptsOnline,
     accepts_in_person: acceptsInPerson,
