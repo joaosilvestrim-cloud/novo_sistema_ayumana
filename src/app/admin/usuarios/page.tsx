@@ -1,0 +1,185 @@
+import Link from "next/link";
+import { Search, ExternalLink, ShieldCheck, ShieldOff, Eye, EyeOff, BadgeCheck } from "lucide-react";
+import { getUsersOverview, type AdminUser } from "@/lib/admin";
+import { Badge } from "@/components/ui/badge";
+import { PLAN_LABEL } from "@/lib/plan-labels";
+import { VERIFICATION_LABELS } from "@/lib/types";
+import { toggleAdminAction, togglePublishAction, quickApproveAction } from "./actions";
+
+export const metadata = { title: "Usuários" };
+
+const PAGE_SIZE = 20;
+
+type SP = Record<string, string | string[] | undefined>;
+const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
+
+function matches(u: AdminUser, q: string, papel: string, status: string) {
+  if (papel === "admin" && u.role !== "admin") return false;
+  if (papel === "psicologo" && u.role !== "psicologo") return false;
+  if (status === "publicado" && !u.published) return false;
+  if (status === "rascunho" && u.published) return false;
+  if (status === "pendente" && u.verification !== "pendente") return false;
+  if (q) {
+    const hay = `${u.name ?? ""} ${u.email ?? ""} ${u.city ?? ""}`.toLowerCase();
+    if (!hay.includes(q.toLowerCase())) return false;
+  }
+  return true;
+}
+
+export default async function UsuariosPage({
+  searchParams,
+}: {
+  searchParams: Promise<SP>;
+}) {
+  const sp = await searchParams;
+  const q = one(sp.q).trim();
+  const papel = one(sp.papel);
+  const status = one(sp.status);
+  const page = Math.max(1, Number(one(sp.page)) || 1);
+
+  const all = await getUsersOverview();
+  const filtered = all.filter((u) => matches(u, q, papel, status));
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const rows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const qs = (patch: Record<string, string>) => {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (papel) params.set("papel", papel);
+    if (status) params.set("status", status);
+    Object.entries(patch).forEach(([k, v]) => (v ? params.set(k, v) : params.delete(k)));
+    return `/admin/usuarios?${params.toString()}`;
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl">Usuários</h1>
+        <p className="mt-1 text-foreground-muted">
+          {all.length} contas · gerencie papéis, publicação e verificação.
+        </p>
+      </div>
+
+      {/* Filtros */}
+      <form method="get" className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-1 items-center gap-2 rounded-lg border border-border bg-background px-3">
+          <Search className="h-4 w-4 text-foreground-muted" />
+          <input
+            name="q"
+            defaultValue={q}
+            placeholder="Buscar por nome, e-mail ou cidade"
+            className="h-10 w-full min-w-40 bg-transparent text-sm outline-none"
+          />
+        </div>
+        <select name="papel" defaultValue={papel} className="h-10 rounded-lg border border-border bg-background px-3 text-sm">
+          <option value="">Todos os papéis</option>
+          <option value="psicologo">Psicólogos</option>
+          <option value="admin">Admins</option>
+        </select>
+        <select name="status" defaultValue={status} className="h-10 rounded-lg border border-border bg-background px-3 text-sm">
+          <option value="">Qualquer status</option>
+          <option value="publicado">Publicados</option>
+          <option value="rascunho">Rascunho</option>
+          <option value="pendente">Verificação pendente</option>
+        </select>
+        <button className="h-10 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary-hover">
+          Filtrar
+        </button>
+      </form>
+
+      {/* Tabela */}
+      <div className="overflow-x-auto rounded-2xl border border-border bg-background">
+        <table className="w-full min-w-[820px] text-sm">
+          <thead>
+            <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-foreground-muted">
+              <th className="px-4 py-3 font-medium">Usuário</th>
+              <th className="px-4 py-3 font-medium">Papel</th>
+              <th className="px-4 py-3 font-medium">Plano</th>
+              <th className="px-4 py-3 font-medium">Verificação</th>
+              <th className="px-4 py-3 font-medium">Publicado</th>
+              <th className="px-4 py-3 font-medium">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((u) => {
+              const v = u.verification ? VERIFICATION_LABELS[u.verification] : null;
+              return (
+                <tr key={u.profileId} className="border-b border-border last:border-0">
+                  <td className="px-4 py-3">
+                    <div className="font-medium text-heading">{u.name || "—"}</div>
+                    <div className="text-xs text-foreground-muted">{u.email}</div>
+                    {u.city && <div className="text-xs text-foreground-muted">{u.city}</div>}
+                  </td>
+                  <td className="px-4 py-3">
+                    {u.role === "admin" ? <Badge tone="brand">Admin</Badge> : <Badge tone="neutral">Psicólogo</Badge>}
+                  </td>
+                  <td className="px-4 py-3">{u.plan ? PLAN_LABEL[u.plan] : "—"}</td>
+                  <td className="px-4 py-3">{v ? <Badge tone={v.tone}>{v.label}</Badge> : "—"}</td>
+                  <td className="px-4 py-3">
+                    {u.published ? <Badge tone="success">Sim</Badge> : <Badge tone="neutral">Não</Badge>}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {u.slug && u.published && (
+                        <Link href={`/psicologo/${u.slug}`} target="_blank" className="inline-flex h-8 items-center gap-1 rounded-md border border-border px-2 text-xs hover:bg-surface-muted" title="Ver perfil">
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </Link>
+                      )}
+                      {/* Aprovar rápido */}
+                      {u.psyId && u.verification !== "aprovado" && (
+                        <form action={quickApproveAction}>
+                          <input type="hidden" name="psy_id" value={u.psyId} />
+                          <button className="inline-flex h-8 items-center gap-1 rounded-md border border-green-600/40 px-2 text-xs text-green-700 hover:bg-green-50" title="Aprovar e publicar">
+                            <BadgeCheck className="h-3.5 w-3.5" /> Aprovar
+                          </button>
+                        </form>
+                      )}
+                      {/* Publicar / despublicar */}
+                      {u.psyId && (
+                        <form action={togglePublishAction}>
+                          <input type="hidden" name="psy_id" value={u.psyId} />
+                          <input type="hidden" name="publish" value={u.published ? "0" : "1"} />
+                          <button className="inline-flex h-8 items-center gap-1 rounded-md border border-border px-2 text-xs hover:bg-surface-muted" title={u.published ? "Despublicar" : "Publicar"}>
+                            {u.published ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                          </button>
+                        </form>
+                      )}
+                      {/* Admin toggle */}
+                      <form action={toggleAdminAction}>
+                        <input type="hidden" name="profile_id" value={u.profileId} />
+                        <input type="hidden" name="make_admin" value={u.role === "admin" ? "0" : "1"} />
+                        <button className="inline-flex h-8 items-center gap-1 rounded-md border border-border px-2 text-xs hover:bg-surface-muted" title={u.role === "admin" ? "Remover admin" : "Tornar admin"}>
+                          {u.role === "admin" ? <ShieldOff className="h-3.5 w-3.5" /> : <ShieldCheck className="h-3.5 w-3.5" />}
+                        </button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+            {rows.length === 0 && (
+              <tr>
+                <td colSpan={6} className="px-4 py-12 text-center text-foreground-muted">
+                  Nenhum usuário encontrado.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Paginação */}
+      <div className="flex items-center justify-between text-sm text-foreground-muted">
+        <span>{total} resultado(s)</span>
+        {totalPages > 1 && (
+          <div className="flex items-center gap-2">
+            {page > 1 && <Link href={qs({ page: String(page - 1) })} className="rounded-lg border border-border px-3 py-1.5 hover:bg-surface-muted">Anterior</Link>}
+            <span>Página {page} de {totalPages}</span>
+            {page < totalPages && <Link href={qs({ page: String(page + 1) })} className="rounded-lg border border-border px-3 py-1.5 hover:bg-surface-muted">Próxima</Link>}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

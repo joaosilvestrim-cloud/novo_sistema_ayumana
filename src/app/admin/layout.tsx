@@ -1,8 +1,10 @@
 import Link from "next/link";
-import { ShieldCheck, LogOut } from "lucide-react";
+import { LogOut, ExternalLink } from "lucide-react";
 import { requireAdmin } from "@/lib/auth";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { Logo } from "@/components/ui/logo";
 import { signOutAction } from "@/app/(auth)/actions";
+import { AdminNav } from "./admin-nav";
 
 export default async function AdminLayout({
   children,
@@ -11,49 +13,59 @@ export default async function AdminLayout({
 }) {
   const admin = await requireAdmin();
 
+  // Badges de pendências para a navegação.
+  const supabase = createAdminClient();
+  const [verif, perg, resp] = await Promise.all([
+    supabase.from("psychologists").select("*", { count: "exact", head: true }).eq("verification_status", "pendente"),
+    supabase.from("forum_questions").select("*", { count: "exact", head: true }).eq("status", "pendente"),
+    supabase.from("forum_answers").select("*", { count: "exact", head: true }).eq("status", "pendente"),
+  ]);
+  const badges = {
+    verificacao: verif.count ?? 0,
+    moderacao: (perg.count ?? 0) + (resp.count ?? 0),
+  };
+
   return (
-    <div className="flex min-h-screen flex-col bg-surface">
-      <header className="border-b border-border bg-brand-dark text-white">
-        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
-          <div className="flex items-center gap-3">
-            <Logo variant="symbol" href="/admin/verificacao" />
-            <span className="inline-flex items-center gap-1.5 text-sm font-medium">
-              <ShieldCheck className="h-4 w-4" /> Admin Ayumana
-            </span>
-          </div>
-          <div className="flex items-center gap-3 text-sm">
-            <Link href="/painel" className="text-white/70 hover:text-white">
-              Ver painel
-            </Link>
-            <span className="hidden text-white/60 sm:inline">
-              {admin.full_name || admin.email}
-            </span>
-            <form action={signOutAction}>
-              <button className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-white/80 hover:bg-white/10">
-                <LogOut className="h-4 w-4" /> Sair
-              </button>
-            </form>
-          </div>
+    <div className="min-h-screen bg-surface md:grid md:grid-cols-[248px_1fr]">
+      {/* Sidebar */}
+      <aside className="flex flex-col bg-brand-dark text-white md:min-h-screen">
+        <div className="flex items-center justify-between px-4 py-4">
+          <Logo variant="symbol" href="/admin" />
+          <span className="text-sm font-semibold">Admin Ayumana</span>
         </div>
-      </header>
-      <nav className="border-b border-border bg-background">
-        <div className="mx-auto flex max-w-5xl gap-1 px-4">
-          {[
-            { href: "/admin/verificacao", label: "Verificação" },
-            { href: "/admin/moderacao", label: "Moderação" },
-            { href: "/admin/blog", label: "Blog" },
-          ].map((t) => (
-            <Link
-              key={t.href}
-              href={t.href}
-              className="border-b-2 border-transparent px-3 py-3 text-sm font-medium text-foreground-muted hover:border-brand hover:text-brand-dark"
-            >
-              {t.label}
-            </Link>
-          ))}
+        <div className="hidden md:block md:flex-1">
+          <AdminNav badges={badges} />
         </div>
-      </nav>
-      <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">{children}</div>
+        {/* nav horizontal no mobile */}
+        <div className="border-t border-white/10 md:hidden">
+          <AdminNav badges={badges} />
+        </div>
+        <div className="hidden border-t border-white/10 p-3 md:block">
+          <Link
+            href="/"
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-white/60 hover:bg-white/10 hover:text-white"
+          >
+            <ExternalLink className="h-4 w-4" /> Ver site
+          </Link>
+        </div>
+      </aside>
+
+      {/* Conteúdo */}
+      <div className="flex min-h-screen flex-col">
+        <header className="flex h-16 items-center justify-end gap-3 border-b border-border bg-background px-4 md:px-8">
+          <span className="hidden text-sm text-foreground-muted sm:inline">
+            {admin.full_name || admin.email}
+          </span>
+          <form action={signOutAction}>
+            <button className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-foreground-muted hover:bg-surface-muted">
+              <LogOut className="h-4 w-4" /> Sair
+            </button>
+          </form>
+        </header>
+        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 md:px-8">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }
