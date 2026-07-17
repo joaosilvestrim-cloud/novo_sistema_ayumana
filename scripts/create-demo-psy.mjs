@@ -52,6 +52,7 @@ const payload = {
   services: ["Psicoterapia individual", "Terapia de casal", "Orientação a brasileiros no exterior"],
   style: { direcao: 30, estrutura: 25, tom: 22, foco: 72, registro: 32 },
   session_price_cents: 18000,
+  session_price_in_person_cents: 22000,
   video_url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
   accepts_online: true,
   accepts_in_person: true,

@@ -76,6 +76,7 @@ export type Psychologist = {
   phone_whatsapp: string | null;
   whatsapp_message: string | null;
   session_price_cents: number | null;
+  session_price_in_person_cents: number | null;
   video_url: string | null;
   accepts_online: boolean;
   accepts_in_person: boolean;

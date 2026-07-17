@@ -110,7 +110,10 @@ export default async function PerfilPage({
 
   const wa = whatsappLink(p.phone_whatsapp, p.whatsapp_message);
   const ig = instagramHandle(p.instagram);
-  const price = PAID.has(p.plan_tier) ? formatPrice(p.session_price_cents) : null;
+  const paid = PAID.has(p.plan_tier);
+  const price = paid ? formatPrice(p.session_price_cents) : null;
+  const pricePresencial = paid ? formatPrice(p.session_price_in_person_cents) : null;
+  const hasSchedule = !!p.schedule && DAY_ORDER.some((d) => p.schedule?.[d]);
   const showVideo = VIDEO_PLANS.has(p.plan_tier) && !!p.video_url;
   const countryNames = p.countries
     .map((c) => COUNTRIES.find((x) => x.code === c)?.name)
@@ -151,12 +154,12 @@ export default async function PerfilPage({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <div className="mx-auto max-w-4xl px-4 py-10">
+      <div className="mx-auto max-w-5xl px-4 py-10">
         <Link href="/psicologos" className="text-sm text-foreground-muted hover:text-brand-dark">
           ← Voltar para a busca
         </Link>
 
-        <div className="mt-4 grid gap-8 md:grid-cols-[1fr_300px]">
+        <div className="mt-4 grid gap-8 md:grid-cols-[1fr_340px]">
           {/* Conteúdo principal */}
           <div className="space-y-8">
             <header className="flex items-start gap-5">
@@ -192,6 +195,38 @@ export default async function PerfilPage({
             </header>
 
             {p.headline && <p className="text-lg text-heading">{p.headline}</p>}
+
+            {/* Contato rápido — visível só no mobile (a sidebar cobre o desktop) */}
+            {(price || pricePresencial || wa) && (
+              <div className="rounded-2xl border border-border bg-background p-4 md:hidden">
+                {(price || pricePresencial) && (
+                  <div className="mb-3 space-y-1">
+                    {price && (
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-sm text-foreground-muted">Sessão online</span>
+                        <span className="text-xl font-semibold text-brand-dark">{price}</span>
+                      </div>
+                    )}
+                    {pricePresencial && (
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-sm text-foreground-muted">Sessão presencial</span>
+                        <span className="text-xl font-semibold text-brand-dark">{pricePresencial}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {wa && (
+                  <a
+                    href={wa}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#25D366] px-5 font-medium text-white transition-colors hover:bg-[#1ebe5b]"
+                  >
+                    <MessageCircle className="h-5 w-5" /> Conversar no WhatsApp
+                  </a>
+                )}
+              </div>
+            )}
 
             {showVideo && (
               <section>
@@ -274,52 +309,25 @@ export default async function PerfilPage({
             {p.style && (
               <StyleSignature style={p.style} firstName={firstNameOf(p.display_name)} />
             )}
-
-            {p.schedule && DAY_ORDER.some((d) => p.schedule?.[d]) && (
-              <section>
-                <h2 className="mb-2 flex items-center gap-2 text-lg">
-                  <CalendarClock className="h-5 w-5 text-teal-600" /> Horário de atendimento
-                </h2>
-                {isForeignTz(p.timezone) && (
-                  <p className="mb-3 rounded-lg bg-teal-50 px-3 py-2 text-xs text-teal-700">
-                    Horários no fuso de {tzLabel(p.timezone)}. Entre parênteses, o
-                    equivalente no horário de Brasília.
-                  </p>
-                )}
-                <div className="divide-y divide-border rounded-xl border border-border">
-                  {DAY_ORDER.map((d) => {
-                    const h = p.schedule?.[d];
-                    return (
-                      <div key={d} className="flex items-center justify-between px-4 py-2.5 text-sm">
-                        <span className="text-foreground">{DAY_LABEL[d]}</span>
-                        {h ? (
-                          <span className="text-foreground-muted">
-                            {h.open}–{h.close}
-                            {isForeignTz(p.timezone) && (
-                              <span className="ml-2 text-xs text-teal-700">
-                                (Brasília {convertHHMM(h.open, p.timezone, BR_TZ)}–
-                                {convertHHMM(h.close, p.timezone, BR_TZ)})
-                              </span>
-                            )}
-                          </span>
-                        ) : (
-                          <span className="text-foreground-muted/60">Fechado</span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
-            )}
           </div>
 
           {/* Sidebar de contato */}
-          <aside className="md:sticky md:top-20 md:self-start">
+          <aside className="space-y-4 md:sticky md:top-20 md:self-start">
             <div className="space-y-4 rounded-2xl border border-border bg-background p-5">
-              {price && (
-                <div>
-                  <p className="text-xs text-foreground-muted">Sessão online</p>
-                  <p className="text-2xl font-semibold text-brand-dark">{price}</p>
+              {(price || pricePresencial) && (
+                <div className="space-y-2">
+                  {price && (
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-sm text-foreground-muted">Online</span>
+                      <span className="text-2xl font-semibold text-brand-dark">{price}</span>
+                    </div>
+                  )}
+                  {pricePresencial && (
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-sm text-foreground-muted">Presencial</span>
+                      <span className="text-2xl font-semibold text-brand-dark">{pricePresencial}</span>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -388,7 +396,44 @@ export default async function PerfilPage({
               </div>
             </div>
 
-            <p className="mt-3 px-1 text-xs text-foreground-muted">
+            {/* Horário de atendimento — ao lado, não no fim da página */}
+            {hasSchedule && (
+              <div className="rounded-2xl border border-border bg-background p-5">
+                <h2 className="mb-2 flex items-center gap-2 text-base">
+                  <CalendarClock className="h-5 w-5 text-teal-600" /> Horário de atendimento
+                </h2>
+                {isForeignTz(p.timezone) && (
+                  <p className="mb-3 rounded-lg bg-teal-50 px-3 py-2 text-xs text-teal-700">
+                    Fuso de {tzLabel(p.timezone)}. Entre parênteses, o horário de Brasília.
+                  </p>
+                )}
+                <div className="divide-y divide-border text-sm">
+                  {DAY_ORDER.map((d) => {
+                    const h = p.schedule?.[d];
+                    return (
+                      <div key={d} className="flex items-center justify-between gap-2 py-2">
+                        <span className="text-foreground">{DAY_LABEL[d]}</span>
+                        {h ? (
+                          <span className="text-right text-foreground-muted">
+                            {h.open}–{h.close}
+                            {isForeignTz(p.timezone) && (
+                              <span className="block text-xs text-teal-700">
+                                Brasília {convertHHMM(h.open, p.timezone, BR_TZ)}–
+                                {convertHHMM(h.close, p.timezone, BR_TZ)}
+                              </span>
+                            )}
+                          </span>
+                        ) : (
+                          <span className="text-foreground-muted/60">Fechado</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <p className="px-1 text-xs text-foreground-muted">
               A Ayumana não intermedeia sessões. O contato e o pagamento são
               combinados diretamente com o profissional.
             </p>

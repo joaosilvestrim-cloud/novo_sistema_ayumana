@@ -267,12 +267,16 @@ export function OnboardingForm({
           </div>
         </Field>
 
+        <Field label="Idiomas" htmlFor="languages" hint="Separe por vírgula. Ex.: pt, en, es">
+          <Input id="languages" name="languages" defaultValue={(psy?.languages ?? ["pt"]).join(", ")} />
+        </Field>
+
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Idiomas" htmlFor="languages" hint="Separe por vírgula. Ex.: pt, en, es">
-            <Input id="languages" name="languages" defaultValue={(psy?.languages ?? ["pt"]).join(", ")} />
-          </Field>
-          <Field label="Valor da sessão (R$)" htmlFor="session_price" hint="Opcional. Aparece nos planos pagos.">
+          <Field label="Valor sessão online (R$)" htmlFor="session_price" hint="Opcional. Aparece nos planos pagos.">
             <Input id="session_price" name="session_price" inputMode="decimal" defaultValue={psy?.session_price_cents ? (psy.session_price_cents / 100).toFixed(2) : ""} />
+          </Field>
+          <Field label="Valor sessão presencial (R$)" htmlFor="session_price_in_person" hint="Opcional. Só se você atende presencial.">
+            <Input id="session_price_in_person" name="session_price_in_person" inputMode="decimal" defaultValue={psy?.session_price_in_person_cents ? (psy.session_price_in_person_cents / 100).toFixed(2) : ""} />
           </Field>
         </div>
 
