@@ -100,8 +100,8 @@ export function StyleSignature({
         </div>
       )}
 
-      <div className="mt-4 grid items-center gap-4 sm:grid-cols-[320px_1fr]">
-        <svg ref={ref} viewBox="0 0 320 296" className="mx-auto w-full max-w-[320px]" role="img" aria-label="Radar do estilo de atendimento">
+      <div className="mt-4 grid items-center gap-4 sm:grid-cols-[360px_1fr]">
+        <svg ref={ref} viewBox="-40 0 400 296" className="mx-auto w-full max-w-[360px]" role="img" aria-label="Radar do estilo de atendimento">
           {/* Anéis de referência */}
           {[0.25, 0.5, 0.75, 1].map((f) => (
             <polygon

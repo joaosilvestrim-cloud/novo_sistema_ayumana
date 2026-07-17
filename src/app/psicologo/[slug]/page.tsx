@@ -114,6 +114,7 @@ export default async function PerfilPage({
   const price = paid ? formatPrice(p.session_price_cents) : null;
   const pricePresencial = paid ? formatPrice(p.session_price_in_person_cents) : null;
   const hasSchedule = !!p.schedule && DAY_ORDER.some((d) => p.schedule?.[d]);
+  const location = [p.city, p.state].filter(Boolean).join(" / ");
   const showVideo = VIDEO_PLANS.has(p.plan_tier) && !!p.video_url;
   const countryNames = p.countries
     .map((c) => COUNTRIES.find((x) => x.code === c)?.name)
@@ -212,6 +213,11 @@ export default async function PerfilPage({
                         <span className="text-sm text-foreground-muted">Sessão presencial</span>
                         <span className="text-xl font-semibold text-brand-dark">{pricePresencial}</span>
                       </div>
+                    )}
+                    {p.accepts_in_person && location && (
+                      <p className="flex items-center gap-1 text-xs text-foreground-muted">
+                        <MapPin className="h-3.5 w-3.5" /> Presencial em {location}
+                      </p>
                     )}
                   </div>
                 )}
@@ -327,6 +333,11 @@ export default async function PerfilPage({
                       <span className="text-sm text-foreground-muted">Presencial</span>
                       <span className="text-2xl font-semibold text-brand-dark">{pricePresencial}</span>
                     </div>
+                  )}
+                  {p.accepts_in_person && location && (
+                    <p className="flex items-center gap-1 text-xs text-foreground-muted">
+                      <MapPin className="h-3.5 w-3.5" /> Presencial em {location}
+                    </p>
                   )}
                 </div>
               )}
