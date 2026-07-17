@@ -81,8 +81,8 @@ export default async function CatalogoPage({
           </p>
         </header>
 
-        <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
-          <aside className="lg:sticky lg:top-20 lg:self-start">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
+          <aside className="min-w-0 lg:sticky lg:top-20 lg:self-start">
             <CatalogFiltersForm
               specialties={(specialties as Specialty[]) ?? []}
               approaches={(approaches as Approach[]) ?? []}
@@ -90,7 +90,7 @@ export default async function CatalogoPage({
             />
           </aside>
 
-          <section>
+          <section className="min-w-0">
             <p className="mb-4 text-sm text-foreground-muted">
               {total} profissional(is) encontrado(s)
             </p>
@@ -104,7 +104,7 @@ export default async function CatalogoPage({
                 </p>
               </div>
             ) : (
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {rows.map((p) => (
                   <PsychologistCard key={p.id} p={p} />
                 ))}
@@ -112,7 +112,7 @@ export default async function CatalogoPage({
             )}
 
             {totalPages > 1 && (
-              <nav className="mt-8 flex items-center justify-center gap-2">
+              <nav className="mt-8 flex flex-wrap items-center justify-center gap-2">
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
                   <Link
                     key={n}
