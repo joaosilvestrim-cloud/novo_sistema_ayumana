@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ShieldCheck, Globe2, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Avatar } from "@/components/ui/avatar";
+import { AvatarBubble } from "@/components/ui/avatar-bubble";
 import { formatPrice } from "@/lib/whatsapp";
 import { AUDIENCE_LABELS, type Audience } from "@/lib/types";
 import type { PsychologistCard as Card } from "@/lib/psychologists";
@@ -19,7 +19,7 @@ export function PsychologistCard({ p }: { p: Card }) {
       className="group flex flex-col rounded-2xl border border-border bg-background p-5 transition-shadow hover:shadow-md"
     >
       <div className="flex items-start gap-4">
-        <Avatar src={p.avatar_url} name={p.display_name} size={56} />
+        <AvatarBubble src={p.avatar_url} name={p.display_name} size={56} seed={p.id} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <h3 className="truncate text-base font-semibold text-heading group-hover:text-brand-dark">

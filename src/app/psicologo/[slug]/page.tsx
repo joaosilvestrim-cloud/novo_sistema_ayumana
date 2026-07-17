@@ -46,7 +46,7 @@ function InstagramIcon({ className }: { className?: string }) {
 }
 import { PageShell } from "@/components/site/page-shell";
 import { Badge } from "@/components/ui/badge";
-import { Avatar } from "@/components/ui/avatar";
+import { AvatarBubble } from "@/components/ui/avatar-bubble";
 import { ShareProfile } from "@/components/share-profile";
 import { getPsychologistBySlug } from "@/lib/psychologists";
 import { listAnswersByPsychologist } from "@/lib/forum";
@@ -169,7 +169,7 @@ export default async function PerfilPage({
           {/* Conteúdo principal */}
           <div className="space-y-8">
             <header className="flex items-start gap-5">
-              <Avatar src={p.avatar_url} name={p.display_name} size={80} />
+              <AvatarBubble src={p.avatar_url} name={p.display_name} size={96} seed={p.id} />
               <div>
                 <div className="flex items-center gap-2">
                   <h1 className="text-2xl md:text-3xl">{p.display_name}</h1>
