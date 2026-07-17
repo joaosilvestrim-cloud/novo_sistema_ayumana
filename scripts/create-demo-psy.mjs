@@ -50,7 +50,7 @@ const payload = {
   accepting_patients: true,
   formation: "Graduação em Psicologia pela USP.\nEspecialização em Terapia Cognitivo-Comportamental.\nFormação em Psicologia Transcultural.",
   services: ["Psicoterapia individual", "Terapia de casal", "Orientação a brasileiros no exterior"],
-  style: { direcao: 55, estrutura: 45, tom: 30, foco: 40, registro: 50 },
+  style: { direcao: 30, estrutura: 25, tom: 22, foco: 72, registro: 32 },
   session_price_cents: 18000,
   video_url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
   accepts_online: true,
