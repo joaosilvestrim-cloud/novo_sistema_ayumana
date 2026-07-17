@@ -10,6 +10,7 @@ export type AnswerWithAuthor = {
   id: string;
   body: string;
   created_at: string;
+  anonymous: boolean;
   psychologist: {
     slug: string | null;
     display_name: string | null;
@@ -61,7 +62,7 @@ export async function getQuestionBySlug(slug: string): Promise<{
   const { data: ans } = await supabase
     .from("forum_answers")
     .select(
-      "id, body, created_at, psychologist:psychologists(slug, display_name, crp_number)"
+      "*, psychologist:psychologists(slug, display_name, crp_number)"
     )
     .eq("question_id", q.id)
     .eq("status", "publicada")
@@ -72,6 +73,7 @@ export async function getQuestionBySlug(slug: string): Promise<{
       id: string;
       body: string;
       created_at: string;
+      anonymous?: boolean;
       psychologist:
         | { slug: string | null; display_name: string | null; crp_number: string | null }
         | { slug: string | null; display_name: string | null; crp_number: string | null }[]
@@ -80,7 +82,13 @@ export async function getQuestionBySlug(slug: string): Promise<{
     const psy = Array.isArray(row.psychologist)
       ? row.psychologist[0] ?? null
       : row.psychologist;
-    return { id: row.id, body: row.body, created_at: row.created_at, psychologist: psy };
+    return {
+      id: row.id,
+      body: row.body,
+      created_at: row.created_at,
+      anonymous: !!row.anonymous,
+      psychologist: psy,
+    };
   });
 
   return {

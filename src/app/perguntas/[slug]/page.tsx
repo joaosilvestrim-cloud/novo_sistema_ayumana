@@ -102,7 +102,12 @@ export default async function QuestionPage({
           {answers.map((a) => (
             <div key={a.id} className="rounded-2xl border border-border bg-background p-5">
               <div className="mb-2 flex items-center gap-2">
-                {a.psychologist?.slug ? (
+                <ShieldCheck className="h-4 w-4 text-green-600" />
+                {a.anonymous || !a.psychologist ? (
+                  <span className="text-sm font-semibold text-heading">
+                    Psicólogo(a) anônimo(a)
+                  </span>
+                ) : a.psychologist.slug ? (
                   <Link
                     href={`/psicologo/${a.psychologist.slug}`}
                     className="text-sm font-semibold text-heading hover:text-brand-dark"
@@ -111,11 +116,10 @@ export default async function QuestionPage({
                   </Link>
                 ) : (
                   <span className="text-sm font-semibold text-heading">
-                    {a.psychologist?.display_name ?? "Profissional"}
+                    {a.psychologist.display_name ?? "Profissional"}
                   </span>
                 )}
-                <ShieldCheck className="h-4 w-4 text-green-600" />
-                {a.psychologist?.crp_number && (
+                {!a.anonymous && a.psychologist?.crp_number && (
                   <span className="text-xs text-foreground-muted">
                     CRP {a.psychologist.crp_number}
                   </span>

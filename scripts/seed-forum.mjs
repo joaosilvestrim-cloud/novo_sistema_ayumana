@@ -91,7 +91,7 @@ async function run() {
       if (!exists) {
         const { error: aerr } = await s.from("forum_answers").insert({
           question_id: q.id, psychologist_id: psyId, body: answer,
-          status: "publicada", published_at: now,
+          status: "publicada", published_at: now, anonymous: true,
         });
         if (!aerr) ans++;
       }
