@@ -9,7 +9,7 @@
 // - Em modo avatar sem dump, o script varre a pasta procurando
 //   "<email>_profile_picture.<ext>" e casa pelo e-mail do psicólogo.
 // Requer migrations 0003/0004 e os buckets (npm run db:buckets).
-import { readFileSync, existsSync, readdirSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
@@ -21,8 +21,22 @@ if (!mode || !source) {
   process.exit(1);
 }
 const isUrl = /^https?:\/\//i.test(source);
+// Manifesto = arquivo texto com "chave<TAB>url_assinada" por linha.
+const isManifest = !isUrl && /\.txt$/i.test(source) && existsSync(source) && !isDir(source);
 const base = isUrl ? source.replace(/\/+$/, "") : source;
 const s = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+
+function isDir(p) { try { return statSync(p).isDirectory(); } catch { return false; } }
+
+// Carrega o manifesto (chave -> url assinada).
+const manifest = new Map();
+if (isManifest) {
+  for (const line of readFileSync(source, "utf8").split(/\r?\n/)) {
+    const idx = line.indexOf("\t");
+    if (idx > 0) manifest.set(line.slice(0, idx).trim(), line.slice(idx + 1).trim());
+  }
+  console.log(`Manifesto: ${manifest.size} URLs.`);
+}
 
 // ---- parser de INSERT ----
 function parseInsert(sql) {
@@ -60,6 +74,15 @@ function ctype(name) {
 const stem = (n) => n.replace(/\.[a-z0-9]+$/i, "");
 
 async function getBuffer(name) {
+  if (isManifest) {
+    const url = manifest.get(name);
+    if (!url) return null;
+    try {
+      const r = await fetch(url);
+      if (!r.ok) return null;
+      return Buffer.from(await r.arrayBuffer());
+    } catch { return null; }
+  }
   if (isUrl) {
     try {
       const r = await fetch(`${base}/${encodeURIComponent(name)}`);
@@ -108,18 +131,19 @@ async function runAvatar() {
   const byEmail = new Map();
   for (const p of psys ?? []) { const em = emailById.get(p.profile_id); if (em) byEmail.set(em, p.id); }
 
-  // Lista de {file, email}: do dump file_uploads OU varrendo a pasta.
+  // Lista de {file, email}: do manifesto, do dump file_uploads OU varrendo a pasta.
+  const fromNames = (names) =>
+    names
+      .filter((n) => /_profile_picture\./i.test(n))
+      .map((n) => ({ file: n, email: n.split("_profile_picture")[0].toLowerCase() }));
+
   let items = [];
-  if (dumpFile) {
-    const rows = parseInsert(readFileSync(dumpFile, "utf8"));
-    items = rows
-      .map((r) => String(r.name ?? ""))
-      .filter((n) => /_profile_picture\./i.test(n))
-      .map((n) => ({ file: n, email: n.split("_profile_picture")[0].toLowerCase() }));
+  if (isManifest) {
+    items = fromNames([...manifest.keys()]);
+  } else if (dumpFile) {
+    items = fromNames(parseInsert(readFileSync(dumpFile, "utf8")).map((r) => String(r.name ?? "")));
   } else if (!isUrl) {
-    items = readdirSync(base)
-      .filter((n) => /_profile_picture\./i.test(n))
-      .map((n) => ({ file: n, email: n.split("_profile_picture")[0].toLowerCase() }));
+    items = fromNames(readdirSync(base));
   } else {
     console.error("Modo avatar por URL precisa do file_uploads_dump.sql");
     process.exit(1);
