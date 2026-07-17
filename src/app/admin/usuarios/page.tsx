@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Search, ExternalLink, ShieldCheck, ShieldOff, Eye, EyeOff, BadgeCheck } from "lucide-react";
+import { Search, ExternalLink, ShieldCheck, ShieldOff, Eye, EyeOff, BadgeCheck, UserPlus } from "lucide-react";
 import { getUsersOverview, type AdminUser } from "@/lib/admin";
 import { Badge } from "@/components/ui/badge";
 import { PLAN_LABEL } from "@/lib/plan-labels";
@@ -54,11 +54,19 @@ export default async function UsuariosPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl">Usuários</h1>
-        <p className="mt-1 text-foreground-muted">
-          {all.length} contas · gerencie papéis, publicação e verificação.
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl">Usuários</h1>
+          <p className="mt-1 text-foreground-muted">
+            {all.length} contas · gerencie papéis, publicação e verificação.
+          </p>
+        </div>
+        <Link
+          href="/admin/usuarios/novo"
+          className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary-hover"
+        >
+          <UserPlus className="h-4 w-4" /> Novo usuário
+        </Link>
       </div>
 
       {/* Filtros */}
