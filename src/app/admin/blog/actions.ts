@@ -22,6 +22,24 @@ export async function savePostAction(
   const slug = slugInput ? slugify(slugInput) : slugify(title);
   const published = formData.get("published") === "on";
 
+  const admin = createAdminClient();
+
+  // Capa: usa upload se houver arquivo, senão mantém a URL atual.
+  let coverUrl = String(formData.get("cover_url") ?? "").trim() || null;
+  const coverFile = formData.get("cover_file") as File | null;
+  if (coverFile && coverFile.size > 0) {
+    if (coverFile.size > 8 * 1024 * 1024) {
+      return { error: "A imagem de capa excede 8 MB." };
+    }
+    const ext = (coverFile.name.split(".").pop() || "jpg").toLowerCase();
+    const path = `capas/${slug}-${Date.now()}.${ext}`;
+    const { error: upErr } = await admin.storage
+      .from("blog-images")
+      .upload(path, coverFile, { upsert: true, contentType: coverFile.type });
+    if (upErr) return { error: `Falha ao enviar a capa: ${upErr.message}` };
+    coverUrl = admin.storage.from("blog-images").getPublicUrl(path).data.publicUrl;
+  }
+
   const payload: Record<string, unknown> = {
     title,
     slug,
@@ -29,11 +47,9 @@ export async function savePostAction(
     content,
     category: String(formData.get("category") ?? "geral").trim() || "geral",
     author_name: String(formData.get("author_name") ?? "Equipe Ayumana").trim(),
-    cover_url: String(formData.get("cover_url") ?? "").trim() || null,
+    cover_url: coverUrl,
     published,
   };
-
-  const admin = createAdminClient();
 
   if (id) {
     // Ao publicar pela 1ª vez, carimba a data.
