@@ -146,6 +146,7 @@
   /* Tipografia */
   --font-sans: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-outfit), var(--font-archivo), ui-sans-serif, sans-serif;
+  --font-serif: var(--font-fraunces), ui-serif, Georgia, serif;
 
   /* Raios */
   --radius-lg: var(--radius);

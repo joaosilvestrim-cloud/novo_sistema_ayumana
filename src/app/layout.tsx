@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Outfit, Archivo } from "next/font/google";
+import { Outfit, Archivo, Fraunces } from "next/font/google";
 import { Analytics } from "@/components/site/analytics";
 import "./globals.css";
 
@@ -14,6 +14,14 @@ const archivo = Archivo({
   variable: "--font-archivo",
   subsets: ["latin"],
   weight: ["300", "400", "500", "600"],
+  display: "swap",
+});
+
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  style: ["normal"],
   display: "swap",
 });
 
@@ -56,7 +64,7 @@ export default function RootLayout({
   return (
     <html
       lang="pt-BR"
-      className={`${outfit.variable} ${archivo.variable} h-full antialiased`}
+      className={`${outfit.variable} ${archivo.variable} ${fraunces.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
         {children}

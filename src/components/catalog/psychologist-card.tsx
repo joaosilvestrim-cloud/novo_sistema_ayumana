@@ -1,82 +1,72 @@
 import Link from "next/link";
-import { ShieldCheck, Globe2, MapPin } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { AvatarBubble } from "@/components/ui/avatar-bubble";
-import { formatPrice } from "@/lib/whatsapp";
-import { AUDIENCE_LABELS, type Audience } from "@/lib/types";
+import { ShieldCheck, MapPin, Heart, HeartHandshake, User, ArrowRight } from "lucide-react";
+import { AvatarBubble, bubbleColor } from "@/components/ui/avatar-bubble";
 import type { PsychologistCard as Card } from "@/lib/psychologists";
 
-const PAID = new Set(["destaque", "ideal", "presenca"]);
-
 export function PsychologistCard({ p }: { p: Card }) {
-  const price = PAID.has(p.plan_tier) ? formatPrice(p.session_price_cents) : null;
-  const tags = p.specialties.slice(0, 3);
   const mainApproach = p.approaches[0]?.name;
+  const location = [p.city, p.state].filter(Boolean).join(" / ");
+  const color = bubbleColor(p.id);
 
   return (
     <Link
       href={`/psicologo/${p.slug}`}
-      className="group flex flex-col rounded-2xl border border-border bg-background p-5 transition-shadow hover:shadow-md"
+      className="group flex flex-col gap-5 rounded-3xl border border-border bg-background p-5 transition-shadow hover:shadow-lg sm:flex-row sm:items-center sm:gap-6 sm:p-6"
     >
-      <div className="flex items-start gap-4">
-        <AvatarBubble src={p.avatar_url} name={p.display_name} size={56} seed={p.id} />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <h3 className="truncate text-base font-semibold text-heading group-hover:text-brand-dark">
-              {p.display_name}
-            </h3>
-            <ShieldCheck className="h-4 w-4 shrink-0 text-green-600" aria-label="CRP verificado" />
-          </div>
-          <p className="text-sm text-foreground-muted">
-            {mainApproach ?? "Psicólogo(a)"}
-            {p.crp_number ? ` · CRP ${p.crp_number}` : ""}
-          </p>
-          {(p.city || p.attends_abroad) && (
-            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-foreground-muted">
-              {p.city && (
-                <span className="inline-flex items-center gap-1">
-                  <MapPin className="h-3 w-3" />
-                  {[p.city, p.state].filter(Boolean).join(" / ")}
-                </span>
-              )}
-              {p.attends_abroad && (
-                <span className="inline-flex items-center gap-1 text-teal-700">
-                  <Globe2 className="h-3 w-3" />
-                  Atende no exterior
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
+      <AvatarBubble
+        src={p.avatar_url}
+        name={p.display_name}
+        seed={p.id}
+        color={color}
+        strokeWidth={3}
+        className="mx-auto h-40 w-40 shrink-0 sm:mx-0 sm:h-44 sm:w-44"
+      />
 
-      {p.headline && (
-        <p className="mt-3 line-clamp-2 text-sm text-foreground">{p.headline}</p>
-      )}
-
-      {tags.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {tags.map((t) => (
-            <Badge key={t.id} tone={t.category === "exterior" ? "brand" : "neutral"}>
-              {t.name}
-            </Badge>
-          ))}
-        </div>
-      )}
-
-      <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
-        <div className="flex flex-wrap gap-1.5 text-xs text-foreground-muted">
-          {(p.audiences ?? []).slice(0, 3).map((a) => (
-            <span key={a}>{AUDIENCE_LABELS[a as Audience]}</span>
-          ))}
-        </div>
-        {price ? (
-          <span className="text-sm font-medium text-heading">{price}</span>
-        ) : (
-          <span className="text-sm font-medium text-brand-dark group-hover:underline">
-            Ver perfil →
+      <div className="min-w-0 flex-1">
+        {mainApproach && (
+          <span
+            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-heading"
+            style={{ backgroundColor: `${color}1F` }}
+          >
+            <HeartHandshake className="h-3.5 w-3.5" style={{ color }} />
+            {mainApproach}
           </span>
         )}
+
+        <h3 className="mt-2 flex items-center gap-2 font-serif text-2xl leading-tight text-heading group-hover:text-brand-dark sm:text-3xl">
+          <span className="truncate">{p.display_name}</span>
+          <ShieldCheck className="h-5 w-5 shrink-0 text-green-600" aria-label="CRP verificado" />
+        </h3>
+
+        <div className="mt-2 space-y-1 text-sm text-foreground-muted">
+          {p.crp_number && (
+            <p className="flex items-center gap-2">
+              <User className="h-4 w-4 shrink-0" /> CRP {p.crp_number}
+            </p>
+          )}
+          {location && (
+            <p className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 shrink-0" /> {location}
+            </p>
+          )}
+        </div>
+
+        {p.headline && (
+          <div className="mt-3 flex items-start gap-2 border-t border-border pt-3 text-sm text-foreground">
+            <Heart className="mt-0.5 h-4 w-4 shrink-0" style={{ color }} />
+            <span className="line-clamp-2">{p.headline}</span>
+          </div>
+        )}
+
+        <div className="mt-4 border-t border-border pt-4">
+          <span
+            className="inline-flex w-full items-center justify-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold transition-colors group-hover:brightness-95"
+            style={{ borderColor: color, color }}
+          >
+            Ver perfil
+            <ArrowRight className="h-4 w-4" />
+          </span>
+        </div>
       </div>
     </Link>
   );
