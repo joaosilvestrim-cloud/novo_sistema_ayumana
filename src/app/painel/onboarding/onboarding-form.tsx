@@ -9,6 +9,7 @@ import { StyleEditor } from "@/components/style-editor";
 import { CrpInput } from "@/components/crp-input";
 import { PhoneInput } from "@/components/phone-input";
 import { AvatarUpload } from "@/components/avatar-upload";
+import { GalleryUpload } from "@/components/gallery-upload";
 import { RichEditor } from "@/components/ui/rich-editor";
 import { TIMEZONES } from "@/lib/schedule";
 import type { Schedule } from "@/lib/schedule";
@@ -201,9 +202,13 @@ export function OnboardingForm({
           </p>
           <RichEditor name="bio" initialHtml={psy?.bio ?? ""} />
         </div>
-        <Field label="Formação acadêmica" htmlFor="formation" hint="Ex.: Graduação em Psicologia pela USP; Especialização em TCC.">
-          <Textarea id="formation" name="formation" rows={3} defaultValue={psy?.formation ?? ""} />
-        </Field>
+        <div>
+          <Label>Formação acadêmica</Label>
+          <p className="mb-1.5 text-sm text-foreground-muted">
+            Ex.: Graduação em Psicologia pela USP; Especialização em TCC. Use listas para organizar.
+          </p>
+          <RichEditor name="formation" initialHtml={psy?.formation ?? ""} />
+        </div>
         <Field label="Serviços oferecidos" htmlFor="services" hint="Separe por vírgula. Ex.: Psicoterapia individual, Terapia de casal">
           <Input id="services" name="services" defaultValue={(psy?.services ?? []).join(", ")} />
         </Field>
@@ -214,6 +219,13 @@ export function OnboardingForm({
         >
           <Input id="audio_file" name="audio_file" type="file" accept="audio/*" className="file:mr-3 file:rounded-md file:border-0 file:bg-surface-muted file:px-3 file:py-1.5 file:text-sm file:text-heading" />
         </Field>
+        <div>
+          <Label>Galeria de fotos</Label>
+          <p className="mb-2 text-sm text-foreground-muted">
+            Fotos do seu consultório ou ambiente de atendimento. Aparecem no seu perfil.
+          </p>
+          <GalleryUpload currentUrls={psy?.gallery_urls ?? []} />
+        </div>
       </Section>
 
       <Section title="Abordagens">

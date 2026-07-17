@@ -97,7 +97,9 @@ export async function saveOnboardingAction(
   const sessionPriceInPerson = toCents(String(formData.get("session_price_in_person") ?? ""));
   const timezone = String(formData.get("timezone") ?? "America/Sao_Paulo").trim() || "America/Sao_Paulo";
   const acceptingPatients = formData.get("accepting_patients") === "on";
-  const formation = String(formData.get("formation") ?? "").trim() || null;
+  const formationRaw = String(formData.get("formation") ?? "").trim();
+  const formationEmpty = !formationRaw || formationRaw.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim() === "";
+  const formation = formationEmpty ? null : sanitizeHtml(formationRaw);
   const services = String(formData.get("services") ?? "")
     .split(/[\n,;]/)
     .map((x) => x.trim())
@@ -195,6 +197,30 @@ export async function saveOnboardingAction(
     avatarUrl = admin.storage.from("avatars").getPublicUrl(path).data.publicUrl;
   }
 
+  // Galeria: mantém as URLs existentes que o usuário não removeu + sobe as novas.
+  const keptGallery = (formData.getAll("gallery_existing") as string[]).filter(Boolean);
+  const galleryFiles = (formData.getAll("gallery_files") as File[]).filter((f) => f && f.size > 0);
+  const newGalleryUrls: string[] = [];
+  if (galleryFiles.length) {
+    const admin = createAdminClient();
+    for (let i = 0; i < galleryFiles.length; i++) {
+      const f = galleryFiles[i];
+      if (f.size > 5 * 1024 * 1024) {
+        return { error: "Cada foto da galeria deve ter até 5 MB." };
+      }
+      const ext = (f.name.split(".").pop() || "jpg").toLowerCase();
+      const path = `${user.id}/galeria-${Date.now()}-${i}.${ext}`;
+      const { error: gErr } = await admin.storage
+        .from("avatars")
+        .upload(path, f, { upsert: true, contentType: f.type });
+      if (gErr) {
+        return { error: `Falha no upload da galeria: ${gErr.message}` };
+      }
+      newGalleryUrls.push(admin.storage.from("avatars").getPublicUrl(path).data.publicUrl);
+    }
+  }
+  const galleryUrls = [...keptGallery, ...newGalleryUrls].slice(0, 8);
+
   // Validação para envio à verificação.
   if (intent === "submit") {
     if (!displayName || !crpNumber || !crpUf) {
@@ -244,6 +270,7 @@ export async function saveOnboardingAction(
     session_price_in_person_cents: sessionPriceInPerson,
     ...(audioUrl ? { audio_url: audioUrl } : {}),
     ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
+    gallery_urls: galleryUrls,
     accepts_online: acceptsOnline,
     accepts_in_person: acceptsInPerson,
     attends_abroad: attendsAbroad,

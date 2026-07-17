@@ -79,6 +79,7 @@ export type Psychologist = {
   session_price_in_person_cents: number | null;
   video_url: string | null;
   audio_url: string | null;
+  gallery_urls: string[];
   accepts_online: boolean;
   accepts_in_person: boolean;
   attends_abroad: boolean;

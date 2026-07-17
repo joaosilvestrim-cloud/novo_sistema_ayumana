@@ -55,6 +55,11 @@ const payload = {
   session_price_in_person_cents: 22000,
   video_url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
   audio_url: "https://www.w3schools.com/html/horse.mp3", // placeholder só para demonstrar o player
+  gallery_urls: [
+    "https://picsum.photos/seed/ayumana1/600",
+    "https://picsum.photos/seed/ayumana2/600",
+    "https://picsum.photos/seed/ayumana3/600",
+  ],
 
   accepts_online: true,
   accepts_in_person: true,

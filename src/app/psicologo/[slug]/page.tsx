@@ -319,7 +319,14 @@ export default async function PerfilPage({
                     <h2 className="mb-2 flex items-center gap-2 text-lg">
                       <GraduationCap className="h-5 w-5 text-teal-600" /> Formação acadêmica
                     </h2>
-                    <p className="whitespace-pre-line text-sm text-foreground-muted">{p.formation}</p>
+                    {/<[a-z][\s\S]*>/i.test(p.formation) ? (
+                      <div
+                        className="prose-ayumana max-w-none text-sm text-foreground-muted"
+                        dangerouslySetInnerHTML={{ __html: p.formation }}
+                      />
+                    ) : (
+                      <p className="whitespace-pre-line text-sm text-foreground-muted">{p.formation}</p>
+                    )}
                   </section>
                 )}
 
@@ -337,6 +344,31 @@ export default async function PerfilPage({
                   </section>
                 )}
               </div>
+            )}
+
+            {(p.gallery_urls ?? []).length > 0 && (
+              <section>
+                <h2 className="mb-3 text-lg">Fotos do ambiente</h2>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {(p.gallery_urls ?? []).map((url) => (
+                    <a
+                      key={url}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block aspect-square overflow-hidden rounded-xl border border-border"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={url}
+                        alt="Foto do ambiente de atendimento"
+                        loading="lazy"
+                        className="h-full w-full object-cover transition-transform hover:scale-105"
+                      />
+                    </a>
+                  ))}
+                </div>
+              </section>
             )}
 
             {p.style && (
