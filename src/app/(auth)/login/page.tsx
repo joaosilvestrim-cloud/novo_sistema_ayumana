@@ -47,6 +47,12 @@ function LoginForm() {
           <p className="text-sm text-danger">{state.error}</p>
         )}
 
+        <div className="text-right">
+          <Link href="/esqueci-senha" className="text-sm text-foreground-muted hover:text-brand-dark">
+            Esqueci minha senha
+          </Link>
+        </div>
+
         <SubmitButton className="w-full">Entrar</SubmitButton>
       </form>
 
