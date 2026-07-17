@@ -1,8 +1,11 @@
 import { cn } from "@/lib/utils";
 
-// Silhueta do balão Ayumana (corpo arredondado + rabinho embaixo à esquerda).
-const BUBBLE_PATH =
-  "M52 6 A40 40 0 1 1 33.2 81.3 Q26 90 13 96 Q17 80 16.7 64.8 A40 40 0 0 1 52 6 Z";
+// Silhueta interna (área da foto) vetorizada da moldura orgânica real. viewBox 671x632.
+const INNER_PATH =
+  "M 554 70 L 605 102 L 631 126 L 643 142 L 654 163 L 664 197 L 666 214 L 665 238 L 656 274 L 633 323 L 605 371 L 562 430 L 532 464 L 505 491 L 457 532 L 402 570 L 345 601 L 311 615 L 288 622 L 259 627 L 229 627 L 200 621 L 194 612 L 194 603 L 197 598 L 202 594 L 214 591 L 229 584 L 246 570 L 260 551 L 265 540 L 270 522 L 271 504 L 268 488 L 256 462 L 246 449 L 230 433 L 200 411 L 127 372 L 95 352 L 76 337 L 59 320 L 38 291 L 24 264 L 13 235 L 6 206 L 3 178 L 4 155 L 9 130 L 15 113 L 26 92 L 39 74 L 57 56 L 87 35 L 114 22 L 138 14 L 164 8 L 197 4 L 240 3 L 291 5 L 342 9 L 400 17 L 441 26 L 484 39 L 517 52 Z";
+
+const VIEW_W = 671;
+const VIEW_H = 632;
 
 // As 4 cores da marca (Pantone 3165C / 3501C / 3115C / 128C).
 export const BUBBLE_COLORS = ["#05474A", "#73A533", "#53C4CC", "#F5C84B"];
@@ -31,14 +34,14 @@ function initials(name: string | null): string {
     .join("");
 }
 
-/** Foto do psicólogo recortada dentro do balão da marca, com contorno colorido. */
+/** Foto do psicólogo recortada dentro da moldura orgânica da marca, com contorno colorido. */
 export function AvatarBubble({
   src,
   name,
-  size = 56,
+  size = 160,
   seed,
   color,
-  strokeWidth = 4.5,
+  strokeWidth = 8,
   className,
 }: {
   src?: string | null;
@@ -54,38 +57,37 @@ export function AvatarBubble({
 
   return (
     <svg
-      viewBox="-3 -3 106 106"
+      viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
       width={size}
-      height={size}
       role="img"
       aria-label={name ?? "Psicólogo"}
       className={cn("shrink-0", className)}
     >
       <defs>
         <clipPath id={clipId}>
-          <path d={BUBBLE_PATH} />
+          <path d={INNER_PATH} />
         </clipPath>
       </defs>
 
       {src ? (
         <image
           href={src}
-          x="-3"
-          y="-3"
-          width="106"
-          height="106"
+          x="0"
+          y="0"
+          width={VIEW_W}
+          height={VIEW_H}
           preserveAspectRatio="xMidYMid slice"
           clipPath={`url(#${clipId})`}
         />
       ) : (
         <>
-          <path d={BUBBLE_PATH} fill={stroke} fillOpacity="0.12" />
+          <path d={INNER_PATH} fill={stroke} fillOpacity="0.12" />
           <text
-            x="50"
-            y="44"
+            x="330"
+            y="300"
             textAnchor="middle"
             dominantBaseline="central"
-            fontSize="30"
+            fontSize="210"
             fontWeight="600"
             fill={stroke}
           >
@@ -95,7 +97,7 @@ export function AvatarBubble({
       )}
 
       <path
-        d={BUBBLE_PATH}
+        d={INNER_PATH}
         fill="none"
         stroke={stroke}
         strokeWidth={strokeWidth}

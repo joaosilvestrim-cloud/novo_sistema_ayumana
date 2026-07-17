@@ -81,15 +81,13 @@ export default async function CatalogoPage({
           </p>
         </header>
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
-          <aside className="min-w-0 lg:sticky lg:top-20 lg:self-start">
-            <CatalogFiltersForm
-              specialties={(specialties as Specialty[]) ?? []}
-              approaches={(approaches as Approach[]) ?? []}
-              current={filters}
-            />
-          </aside>
+        <CatalogFiltersForm
+          specialties={(specialties as Specialty[]) ?? []}
+          approaches={(approaches as Approach[]) ?? []}
+          current={filters}
+        />
 
+        <div className="mt-8">
           <section className="min-w-0">
             <p className="mb-4 text-sm text-foreground-muted">
               {total} profissional(is) encontrado(s)
@@ -104,7 +102,7 @@ export default async function CatalogoPage({
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+              <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
                 {rows.map((p) => (
                   <PsychologistCard key={p.id} p={p} />
                 ))}

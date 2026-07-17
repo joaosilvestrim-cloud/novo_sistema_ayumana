@@ -18,8 +18,8 @@ export function PsychologistCard({ p }: { p: Card }) {
         name={p.display_name}
         seed={p.id}
         color={color}
-        strokeWidth={3}
-        className="mx-auto h-40 w-40 shrink-0 sm:mx-0 sm:h-44 sm:w-44"
+        size={200}
+        className="mx-auto w-44 shrink-0 sm:mx-0 sm:w-52"
       />
 
       <div className="min-w-0 flex-1">

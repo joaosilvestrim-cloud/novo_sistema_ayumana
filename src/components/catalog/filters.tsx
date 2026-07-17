@@ -28,9 +28,9 @@ export function CatalogFiltersForm({
     <form
       action="/psicologos"
       method="get"
-      className="space-y-5 rounded-2xl border border-border bg-background p-5"
+      className="grid grid-cols-1 gap-4 rounded-2xl border border-border bg-background p-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
     >
-      <div>
+      <div className="sm:col-span-2 lg:col-span-1">
         <Label htmlFor="q">Buscar</Label>
         <div className="flex items-center gap-2 rounded-lg border border-border px-2.5 focus-within:border-brand">
           <Search className="h-4 w-4 text-foreground-muted" />
@@ -115,7 +115,7 @@ export function CatalogFiltersForm({
         <Input id="precoMax" name="precoMax" inputMode="numeric" defaultValue={current.precoMax ?? ""} placeholder="Ex.: 150" />
       </div>
 
-      <label className="flex items-center gap-2 text-sm">
+      <label className="flex items-center gap-2 text-sm sm:col-span-2 sm:self-end sm:pb-2.5">
         <input
           type="checkbox"
           name="exterior"
@@ -126,8 +126,8 @@ export function CatalogFiltersForm({
         Só quem atende brasileiros no exterior
       </label>
 
-      <div className="flex gap-2">
-        <Button type="submit" className="flex-1">Filtrar</Button>
+      <div className="flex gap-2 sm:col-span-2 sm:self-end lg:col-span-3 xl:col-span-2 xl:justify-end">
+        <Button type="submit" className="flex-1 xl:flex-none xl:px-8">Filtrar</Button>
         <Button href="/psicologos" variant="outline">Limpar</Button>
       </div>
     </form>
