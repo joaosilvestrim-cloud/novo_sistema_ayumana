@@ -12,8 +12,8 @@ const NAV = [
 export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur">
-      <div className="mx-auto flex h-20 max-w-6xl items-center justify-between gap-4 px-4">
-        <Logo priority className="h-12" />
+      <div className="mx-auto flex h-24 max-w-6xl items-center justify-between gap-4 px-4">
+        <Logo priority className="h-16" />
 
         <nav className="hidden items-center gap-7 md:flex">
           {NAV.map((item) => (

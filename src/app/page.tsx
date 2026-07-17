@@ -59,11 +59,6 @@ const PASSOS = [
   },
 ];
 
-const FLAG: Record<string, string> = {
-  PT: "🇵🇹", US: "🇺🇸", IE: "🇮🇪", GB: "🇬🇧", DE: "🇩🇪",
-  ES: "🇪🇸", CA: "🇨🇦", AU: "🇦🇺", JP: "🇯🇵", NL: "🇳🇱",
-};
-
 function fmtDate(iso: string | null) {
   if (!iso) return "";
   try {
@@ -167,22 +162,26 @@ export default async function HomePage() {
         {/* Você mora fora? — países */}
         <section className="border-y border-border bg-brand-dark">
           <div className="mx-auto max-w-6xl px-4 py-16">
-            <div className="flex items-center gap-2 text-white/70">
-              <Globe2 className="h-5 w-5" />
-              <span className="text-sm font-medium">Você mora fora?</span>
+            <div className="mx-auto max-w-2xl text-center">
+              <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white">
+                <Globe2 className="h-3.5 w-3.5" /> Você mora fora?
+              </span>
+              <h2 className="mt-4 text-3xl font-semibold text-white">
+                Psicólogos brasileiros para onde você estiver
+              </h2>
+              <p className="mt-3 text-white/75">
+                Atendimento em português, no seu fuso. Escolha seu país:
+              </p>
             </div>
-            <h2 className="mt-3 max-w-2xl text-3xl font-semibold text-white">
-              Psicólogos brasileiros para onde você estiver
-            </h2>
-            <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            <div className="mx-auto mt-10 grid max-w-4xl grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
               {COUNTRY_LANDINGS.map((c) => (
                 <Link
                   key={c.slug}
                   href={`/no-exterior/${c.slug}`}
-                  className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-white/10"
+                  className="group flex items-center justify-between gap-2 rounded-xl border border-white/25 bg-white/10 px-4 py-3 text-sm font-medium text-white transition-colors hover:border-white/50 hover:bg-white/20"
                 >
-                  <span className="text-lg">{FLAG[c.code]}</span>
                   {c.name}
+                  <ArrowRight className="h-4 w-4 text-white/50 transition-transform group-hover:translate-x-0.5 group-hover:text-white" />
                 </Link>
               ))}
             </div>

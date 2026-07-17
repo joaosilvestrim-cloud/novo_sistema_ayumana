@@ -153,40 +153,44 @@
   --radius-2xl: 1.5rem;
 }
 
-* {
-  border-color: var(--border);
-}
+/* Regras base em @layer base para que os utilitários do Tailwind
+   (text-white, border-*, etc.) sempre vençam. */
+@layer base {
+  * {
+    border-color: var(--border);
+  }
 
-html {
-  -webkit-text-size-adjust: 100%;
-}
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-}
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-display);
-  color: var(--heading);
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    color: var(--heading);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
 
-a {
-  color: inherit;
-}
+  a {
+    color: inherit;
+  }
 
-::selection {
-  background: color-mix(in srgb, var(--ayu-verde) 30%, transparent);
-}
+  ::selection {
+    background: color-mix(in srgb, var(--ayu-verde) 30%, transparent);
+  }
 
-:where(button, a, input, select, textarea):focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
+  :where(button, a, input, select, textarea):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
 }
 
 /* ---- Animações da hero ---- */
