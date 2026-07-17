@@ -1,6 +1,7 @@
 import { Check } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PageShell } from "@/components/site/page-shell";
+import { ComparePlans } from "@/components/site/compare-plans";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { Plan } from "@/lib/types";
@@ -86,6 +87,10 @@ export default async function ParaPsicologosPage() {
           sujeitos a ajuste.
         </p>
       </section>
+
+      <div className="border-t border-border bg-surface">
+        <ComparePlans />
+      </div>
     </PageShell>
   );
 }
