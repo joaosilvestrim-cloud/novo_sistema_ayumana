@@ -3,7 +3,13 @@ import { ShieldCheck, MapPin, Heart, HeartHandshake, User, ArrowRight } from "lu
 import { AvatarBubble, bubbleColor } from "@/components/ui/avatar-bubble";
 import type { PsychologistCard as Card } from "@/lib/psychologists";
 
-export function PsychologistCard({ p }: { p: Card }) {
+export function PsychologistCard({
+  p,
+  stacked = false,
+}: {
+  p: Card;
+  stacked?: boolean;
+}) {
   const mainApproach = p.approaches[0]?.name;
   const location = [p.city, p.state].filter(Boolean).join(" / ");
   const color = bubbleColor(p.id);
@@ -11,15 +17,17 @@ export function PsychologistCard({ p }: { p: Card }) {
   return (
     <Link
       href={`/psicologo/${p.slug}`}
-      className="group flex flex-col gap-5 rounded-3xl border border-border bg-background p-5 transition-shadow hover:shadow-lg sm:flex-row sm:items-center sm:gap-6 sm:p-6"
+      className={`group flex gap-4 rounded-3xl border border-border bg-background p-5 transition-shadow hover:shadow-lg ${
+        stacked ? "flex-col" : "flex-col sm:flex-row sm:items-center sm:gap-6 sm:p-6"
+      }`}
     >
       <AvatarBubble
         src={p.avatar_url}
         name={p.display_name}
         seed={p.id}
         color={color}
-        size={200}
-        className="mx-auto w-44 shrink-0 sm:mx-0 sm:w-52"
+        size={190}
+        className={stacked ? "mx-auto w-32" : "mx-auto w-36 shrink-0 sm:mx-0 sm:w-40"}
       />
 
       <div className="min-w-0 flex-1">
@@ -28,14 +36,18 @@ export function PsychologistCard({ p }: { p: Card }) {
             className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-heading"
             style={{ backgroundColor: `${color}1F` }}
           >
-            <HeartHandshake className="h-3.5 w-3.5" style={{ color }} />
+            <HeartHandshake className="h-3.5 w-3.5 shrink-0" style={{ color }} />
             {mainApproach}
           </span>
         )}
 
-        <h3 className="mt-2 flex items-center gap-2 font-serif text-2xl leading-tight text-heading group-hover:text-brand-dark sm:text-3xl">
-          <span className="truncate">{p.display_name}</span>
-          <ShieldCheck className="h-5 w-5 shrink-0 text-green-600" aria-label="CRP verificado" />
+        <h3
+          className={`mt-2 flex items-start gap-1.5 font-serif leading-tight text-heading group-hover:text-brand-dark ${
+            stacked ? "text-lg" : "text-xl sm:text-2xl"
+          }`}
+        >
+          <span className="min-w-0 break-words">{p.display_name}</span>
+          <ShieldCheck className="mt-1 h-4 w-4 shrink-0 text-green-600" aria-label="CRP verificado" />
         </h3>
 
         <div className="mt-2 space-y-1 text-sm text-foreground-muted">
@@ -46,7 +58,7 @@ export function PsychologistCard({ p }: { p: Card }) {
           )}
           {location && (
             <p className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 shrink-0" /> {location}
+              <MapPin className="h-4 w-4 shrink-0" /> <span className="truncate">{location}</span>
             </p>
           )}
         </div>
