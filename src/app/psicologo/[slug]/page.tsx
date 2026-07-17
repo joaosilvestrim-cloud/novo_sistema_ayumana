@@ -273,7 +273,14 @@ export default async function PerfilPage({
             {p.bio && (
               <section>
                 <h2 className="mb-2 text-lg">Sobre mim</h2>
-                <p className="whitespace-pre-line text-foreground-muted">{p.bio}</p>
+                {/<[a-z][\s\S]*>/i.test(p.bio) ? (
+                  <div
+                    className="prose-ayumana max-w-none text-foreground-muted"
+                    dangerouslySetInnerHTML={{ __html: p.bio }}
+                  />
+                ) : (
+                  <p className="whitespace-pre-line text-foreground-muted">{p.bio}</p>
+                )}
               </section>
             )}
 

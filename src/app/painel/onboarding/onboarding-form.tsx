@@ -8,6 +8,8 @@ import { ScheduleEditor } from "@/components/schedule-editor";
 import { StyleEditor } from "@/components/style-editor";
 import { CrpInput } from "@/components/crp-input";
 import { PhoneInput } from "@/components/phone-input";
+import { AvatarUpload } from "@/components/avatar-upload";
+import { RichEditor } from "@/components/ui/rich-editor";
 import { TIMEZONES } from "@/lib/schedule";
 import type { Schedule } from "@/lib/schedule";
 import {
@@ -180,12 +182,25 @@ export function OnboardingForm({
       </Section>
 
       <Section title="Apresentação">
+        <div>
+          <Label>Foto de perfil</Label>
+          <AvatarUpload
+            name="avatar_file"
+            currentUrl={psy?.avatar_url ?? null}
+            displayName={psy?.display_name ?? null}
+            seed={psy?.id}
+          />
+        </div>
         <Field label="Título do perfil" htmlFor="headline" hint="Uma frase. Ex.: Psicóloga clínica para brasileiros na Europa.">
           <Input id="headline" name="headline" defaultValue={psy?.headline ?? ""} />
         </Field>
-        <Field label="Sobre você" htmlFor="bio" hint="Fale da sua abordagem e de quem você atende.">
-          <Textarea id="bio" name="bio" rows={6} defaultValue={psy?.bio ?? ""} />
-        </Field>
+        <div>
+          <Label>Sobre você</Label>
+          <p className="mb-1.5 text-sm text-foreground-muted">
+            Fale da sua abordagem e de quem você atende. Use os botões para formatar o texto.
+          </p>
+          <RichEditor name="bio" initialHtml={psy?.bio ?? ""} />
+        </div>
         <Field label="Formação acadêmica" htmlFor="formation" hint="Ex.: Graduação em Psicologia pela USP; Especialização em TCC.">
           <Textarea id="formation" name="formation" rows={3} defaultValue={psy?.formation ?? ""} />
         </Field>

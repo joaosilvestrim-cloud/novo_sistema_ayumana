@@ -11,6 +11,33 @@ const BUCKET = process.env.SUPABASE_CRP_BUCKET || "crp-documentos";
 
 export type OnboardingState = { error: string | null; ok?: boolean };
 
+// Sanitiza o HTML do editor rico: só permite as tags que o editor gera e
+// remove atributos perigosos (on*, javascript:). Defesa contra HTML malicioso
+// postado direto no server action.
+const ALLOWED_TAGS = new Set([
+  "p", "br", "strong", "b", "em", "i", "u", "s", "h2", "h3",
+  "ul", "ol", "li", "blockquote", "a", "code", "pre",
+]);
+function sanitizeHtml(html: string): string {
+  if (!html) return "";
+  let out = html.replace(/<(script|style|iframe|object|embed|noscript)[\s\S]*?<\/\1>/gi, "");
+  out = out.replace(/<(\/?)([a-z0-9]+)([^>]*)>/gi, (_m, slash, tag, attrs) => {
+    const t = String(tag).toLowerCase();
+    if (!ALLOWED_TAGS.has(t)) return "";
+    if (slash === "/") return `</${t}>`;
+    if (t === "a") {
+      const m = String(attrs).match(/href\s*=\s*"([^"]*)"/i) || String(attrs).match(/href\s*=\s*'([^']*)'/i);
+      const url = m ? m[1] : "";
+      if (/^(https?:|mailto:)/i.test(url)) {
+        return `<a href="${url}" target="_blank" rel="noopener noreferrer nofollow">`;
+      }
+      return "<a>";
+    }
+    return `<${t}>`;
+  });
+  return out;
+}
+
 function toCents(value: string): number | null {
   const cleaned = value.replace(/[^\d,.-]/g, "").replace(".", "").replace(",", ".");
   const n = Number(cleaned);
@@ -57,6 +84,8 @@ export async function saveOnboardingAction(
   const displayName = String(formData.get("display_name") ?? "").trim();
   const headline = String(formData.get("headline") ?? "").trim();
   const bio = String(formData.get("bio") ?? "").trim();
+  // Bio agora é HTML (editor rico). Considera vazio se não sobrar texto.
+  const bioEmpty = !bio || bio.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim() === "";
   const gender = String(formData.get("gender") ?? "").trim() || null;
   const crpNumber = String(formData.get("crp_number") ?? "").trim();
   const crpUf = String(formData.get("crp_uf") ?? "").trim().toUpperCase() || null;
@@ -147,6 +176,25 @@ export async function saveOnboardingAction(
     audioUrl = admin.storage.from("perfil-audio").getPublicUrl(path).data.publicUrl;
   }
 
+  // Upload da foto de perfil (opcional, bucket público via admin).
+  let avatarUrl: string | undefined;
+  const avatarFile = formData.get("avatar_file") as File | null;
+  if (avatarFile && avatarFile.size > 0) {
+    if (avatarFile.size > 5 * 1024 * 1024) {
+      return { error: "A foto excede 5 MB." };
+    }
+    const admin = createAdminClient();
+    const ext = (avatarFile.name.split(".").pop() || "jpg").toLowerCase();
+    const path = `${user.id}/perfil-${Date.now()}.${ext}`;
+    const { error: avErr } = await admin.storage
+      .from("avatars")
+      .upload(path, avatarFile, { upsert: true, contentType: avatarFile.type });
+    if (avErr) {
+      return { error: `Falha no upload da foto: ${avErr.message}` };
+    }
+    avatarUrl = admin.storage.from("avatars").getPublicUrl(path).data.publicUrl;
+  }
+
   // Validação para envio à verificação.
   if (intent === "submit") {
     if (!displayName || !crpNumber || !crpUf) {
@@ -161,13 +209,13 @@ export async function saveOnboardingAction(
     if (!crpDocumentPath) {
       return { error: "Envie o documento do CRP para solicitar a verificação." };
     }
-    if (!headline || !bio) {
+    if (!headline || bioEmpty) {
       return { error: "Preencha o título e a apresentação do perfil." };
     }
   }
 
   const profileCompleted =
-    !!displayName && !!crpNumber && !!crpUf && !!headline && !!bio && !!crpDocumentPath;
+    !!displayName && !!crpNumber && !!crpUf && !!headline && !bioEmpty && !!crpDocumentPath;
 
   const slug = displayName
     ? `${slugify(displayName)}-${psyId.slice(0, 6)}`
@@ -177,7 +225,7 @@ export async function saveOnboardingAction(
     display_name: displayName || null,
     slug,
     headline: headline || null,
-    bio: bio || null,
+    bio: bioEmpty ? null : sanitizeHtml(bio),
     gender,
     crp_number: crpNumber || null,
     crp_uf: crpUf,
@@ -195,6 +243,7 @@ export async function saveOnboardingAction(
     session_price_cents: sessionPrice,
     session_price_in_person_cents: sessionPriceInPerson,
     ...(audioUrl ? { audio_url: audioUrl } : {}),
+    ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
     accepts_online: acceptsOnline,
     accepts_in_person: acceptsInPerson,
     attends_abroad: attendsAbroad,
