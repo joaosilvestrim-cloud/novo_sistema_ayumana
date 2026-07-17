@@ -14,6 +14,7 @@ import {
 import { PageShell } from "@/components/site/page-shell";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
+import { ShareProfile } from "@/components/share-profile";
 import { getPsychologistBySlug } from "@/lib/psychologists";
 import { whatsappLink, formatPrice } from "@/lib/whatsapp";
 import {
@@ -48,6 +49,11 @@ export async function generateMetadata({
       title: `${p.display_name} · Ayumana`,
       description,
       type: "profile",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${p.display_name} · Ayumana`,
+      description,
     },
   };
 }
@@ -245,6 +251,10 @@ export default async function PerfilPage({
                   {p.accepts_in_person && <Badge tone="neutral">Presencial</Badge>}
                 </div>
               </dl>
+
+              <div className="mt-4 border-t border-border pt-4">
+                <ShareProfile slug={p.slug!} name={p.display_name} />
+              </div>
             </div>
 
             <p className="mt-3 px-1 text-xs text-foreground-muted">

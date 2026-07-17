@@ -10,6 +10,7 @@ import { getMyPsychologist, getProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ShareProfile } from "@/components/share-profile";
 import { VERIFICATION_LABELS, type Plan } from "@/lib/types";
 
 export default async function PainelHome() {
@@ -112,6 +113,11 @@ export default async function PainelHome() {
           ))}
         </ul>
       </div>
+
+      {/* Compartilhar perfil (quando publicado) */}
+      {psy?.is_published && psy.slug && (
+        <ShareProfile slug={psy.slug} name={psy.display_name} variant="card" />
+      )}
 
       {/* Plano atual */}
       <div className="rounded-2xl border border-border bg-background p-6">
