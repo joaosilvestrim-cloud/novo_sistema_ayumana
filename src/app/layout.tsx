@@ -18,7 +18,9 @@ const archivo = Archivo({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://ayumana.com.br"),
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || "https://ayumana.com.br"
+  ),
   title: {
     default: "Ayumana — Terapia em português, onde você estiver",
     template: "%s · Ayumana",
