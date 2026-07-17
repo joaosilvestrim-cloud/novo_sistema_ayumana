@@ -11,12 +11,31 @@ import {
   Video,
   Users,
 } from "lucide-react";
+
+function InstagramIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+      <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+    </svg>
+  );
+}
 import { PageShell } from "@/components/site/page-shell";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
 import { ShareProfile } from "@/components/share-profile";
 import { getPsychologistBySlug } from "@/lib/psychologists";
-import { whatsappLink, formatPrice } from "@/lib/whatsapp";
+import { whatsappLink, formatPrice, instagramHandle } from "@/lib/whatsapp";
 import {
   AUDIENCE_LABELS,
   COUNTRIES,
@@ -68,6 +87,7 @@ export default async function PerfilPage({
   if (!p) notFound();
 
   const wa = whatsappLink(p.phone_whatsapp, p.whatsapp_message);
+  const ig = instagramHandle(p.instagram);
   const price = PAID.has(p.plan_tier) ? formatPrice(p.session_price_cents) : null;
   const showVideo = VIDEO_PLANS.has(p.plan_tier) && !!p.video_url;
   const countryNames = p.countries
@@ -218,6 +238,18 @@ export default async function PerfilPage({
                 <p className="rounded-lg bg-surface-muted px-3 py-2 text-sm text-foreground-muted">
                   Contato indisponível no momento.
                 </p>
+              )}
+
+              {ig && (
+                <a
+                  href={`https://instagram.com/${ig}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-border font-medium text-heading transition-colors hover:bg-surface-muted"
+                >
+                  <InstagramIcon className="h-5 w-5" />
+                  @{ig}
+                </a>
               )}
 
               <dl className="space-y-3 border-t border-border pt-4 text-sm">

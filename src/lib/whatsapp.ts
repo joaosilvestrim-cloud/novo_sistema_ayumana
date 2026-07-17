@@ -12,6 +12,17 @@ export function whatsappLink(
   return `https://wa.me/${digits}?text=${text}`;
 }
 
+/** Normaliza o Instagram para só o handle (sem @, sem URL). Retorna null se inválido. */
+export function instagramHandle(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  let h = String(raw).trim();
+  const m = h.match(/instagram\.com\/([^/?#\s]+)/i);
+  if (m) h = m[1];
+  h = h.replace(/^@+/, "").trim();
+  if (!h || /\s/.test(h)) return null;
+  return h;
+}
+
 /** Formata centavos como BRL. */
 export function formatPrice(cents: number | null | undefined): string | null {
   if (cents == null) return null;

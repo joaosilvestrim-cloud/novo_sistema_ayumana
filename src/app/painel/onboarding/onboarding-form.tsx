@@ -137,6 +137,11 @@ export function OnboardingForm({
           </Field>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Instagram" htmlFor="instagram" hint="Só o @ ou o usuário. Ex.: @psi.fulana">
+            <Input id="instagram" name="instagram" defaultValue={psy?.instagram ? `@${psy.instagram}` : ""} />
+          </Field>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Cidade base" htmlFor="city">
             <Input id="city" name="city" defaultValue={psy?.city ?? ""} />
           </Field>

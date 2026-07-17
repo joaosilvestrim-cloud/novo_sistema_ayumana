@@ -62,6 +62,7 @@ export async function saveOnboardingAction(
   const city = String(formData.get("city") ?? "").trim() || null;
   const state = String(formData.get("state") ?? "").trim() || null;
   const phone = String(formData.get("phone_whatsapp") ?? "").replace(/\D/g, "") || null;
+  const instagram = String(formData.get("instagram") ?? "").trim().replace(/^@+/, "") || null;
   const sessionPrice = toCents(String(formData.get("session_price") ?? ""));
   const acceptsOnline = formData.get("accepts_online") === "on";
   const acceptsInPerson = formData.get("accepts_in_person") === "on";
@@ -136,6 +137,7 @@ export async function saveOnboardingAction(
     city,
     state,
     phone_whatsapp: phone,
+    instagram,
     session_price_cents: sessionPrice,
     accepts_online: acceptsOnline,
     accepts_in_person: acceptsInPerson,
