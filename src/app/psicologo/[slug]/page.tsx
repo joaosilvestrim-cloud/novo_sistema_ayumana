@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { PageShell } from "@/components/site/page-shell";
 import { Badge } from "@/components/ui/badge";
+import { Avatar } from "@/components/ui/avatar";
 import { getPsychologistBySlug } from "@/lib/psychologists";
 import { whatsappLink, formatPrice } from "@/lib/whatsapp";
 import {
@@ -111,13 +112,7 @@ export default async function PerfilPage({
           {/* Conteúdo principal */}
           <div className="space-y-8">
             <header className="flex items-start gap-5">
-              <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-teal-100 text-2xl font-semibold text-teal-800">
-                {(p.display_name || "AY")
-                  .split(" ")
-                  .slice(0, 2)
-                  .map((x) => x[0]?.toUpperCase())
-                  .join("")}
-              </div>
+              <Avatar src={p.avatar_url} name={p.display_name} size={80} />
               <div>
                 <div className="flex items-center gap-2">
                   <h1 className="text-2xl md:text-3xl">{p.display_name}</h1>

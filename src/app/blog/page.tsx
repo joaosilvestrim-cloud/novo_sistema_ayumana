@@ -43,7 +43,17 @@ export default async function BlogPage() {
                 href={`/blog/${p.slug}`}
                 className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-background transition-shadow hover:shadow-md"
               >
-                <div className="aspect-[16/9] bg-gradient-to-br from-teal-100 to-green-100" />
+                {p.cover_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={p.cover_url}
+                    alt={p.title}
+                    loading="lazy"
+                    className="aspect-[16/9] w-full object-cover"
+                  />
+                ) : (
+                  <div className="aspect-[16/9] bg-gradient-to-br from-teal-100 to-green-100" />
+                )}
                 <div className="flex flex-1 flex-col p-5">
                   <span className="text-xs font-medium uppercase tracking-wide text-teal-600">
                     {p.category}

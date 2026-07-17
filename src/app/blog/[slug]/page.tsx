@@ -74,6 +74,15 @@ export default async function PostPage({
           {post.author_name} · {fmt(post.published_at)}
         </p>
 
+        {post.cover_url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={post.cover_url}
+            alt={post.title}
+            className="mt-6 aspect-[16/9] w-full rounded-2xl object-cover"
+          />
+        )}
+
         <div className="mt-8">
           <Markdown>{post.content}</Markdown>
         </div>

@@ -11,7 +11,8 @@
     "db:push": "node scripts/db-push.mjs",
     "db:seed": "cross-env NODE_OPTIONS=--use-system-ca node scripts/seed.mjs",
     "db:seed:content": "cross-env NODE_OPTIONS=--use-system-ca node scripts/seed-content.mjs",
-    "db:check": "cross-env NODE_OPTIONS=--use-system-ca node scripts/check-db.mjs"
+    "db:check": "cross-env NODE_OPTIONS=--use-system-ca node scripts/check-db.mjs",
+    "db:buckets": "cross-env NODE_OPTIONS=--use-system-ca node scripts/create-buckets.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

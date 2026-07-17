@@ -1,21 +1,12 @@
 import Link from "next/link";
 import { ShieldCheck, Globe2, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Avatar } from "@/components/ui/avatar";
 import { formatPrice } from "@/lib/whatsapp";
 import { AUDIENCE_LABELS, type Audience } from "@/lib/types";
 import type { PsychologistCard as Card } from "@/lib/psychologists";
 
 const PAID = new Set(["destaque", "ideal", "presenca"]);
-
-function initials(name: string | null) {
-  if (!name) return "AY";
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase())
-    .join("");
-}
 
 export function PsychologistCard({ p }: { p: Card }) {
   const price = PAID.has(p.plan_tier) ? formatPrice(p.session_price_cents) : null;
@@ -28,9 +19,7 @@ export function PsychologistCard({ p }: { p: Card }) {
       className="group flex flex-col rounded-2xl border border-border bg-background p-5 transition-shadow hover:shadow-md"
     >
       <div className="flex items-start gap-4">
-        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-teal-100 text-lg font-semibold text-teal-800">
-          {initials(p.display_name)}
-        </div>
+        <Avatar src={p.avatar_url} name={p.display_name} size={56} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <h3 className="truncate text-base font-semibold text-heading group-hover:text-brand-dark">

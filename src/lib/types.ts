@@ -59,6 +59,7 @@ export type Psychologist = {
   headline: string | null;
   bio: string | null;
   gender: Gender | null;
+  avatar_url: string | null;
   crp_number: string | null;
   crp_uf: string | null;
   crp_document_path: string | null;
