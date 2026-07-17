@@ -54,6 +54,8 @@ const payload = {
   session_price_cents: 18000,
   session_price_in_person_cents: 22000,
   video_url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+  audio_url: "https://www.w3schools.com/html/horse.mp3", // placeholder só para demonstrar o player
+
   accepts_online: true,
   accepts_in_person: true,
   attends_abroad: true,
@@ -85,5 +87,21 @@ await s.from("psychologist_specialties").delete().eq("psychologist_id", psyId);
 await s.from("psychologist_specialties").insert(["ansiedade", "saudade", "adaptacao-cultural", "relacionamentos"].map((k) => ({ psychologist_id: psyId, specialty_id: sId[k] })).filter((r) => r.specialty_id));
 await s.from("psychologist_countries").delete().eq("psychologist_id", psyId);
 await s.from("psychologist_countries").insert(["PT", "GB", "IE"].map((code) => ({ psychologist_id: psyId, country_code: code })));
+
+// resposta identificada no fórum (demonstra a seção "Respostas no fórum")
+const { data: q } = await s.from("forum_questions").select("id").eq("status", "publicada").order("published_at", { ascending: false }).limit(1).maybeSingle();
+if (q) {
+  const ans = {
+    question_id: q.id,
+    psychologist_id: psyId,
+    body: "A saudade costuma vir junto com a sensação de estar dividido entre dois lugares. Nomear isso já ajuda. Tente manter rituais que te conectam ao Brasil sem se cobrar por estar longe. Se a saudade começar a pesar no dia a dia, vale conversar com um profissional que entenda a vida no exterior.",
+    status: "publicada",
+    anonymous: false,
+    published_at: new Date().toISOString(),
+  };
+  const { data: exA } = await s.from("forum_answers").select("id").eq("psychologist_id", psyId).eq("question_id", q.id).maybeSingle();
+  if (exA) await s.from("forum_answers").update(ans).eq("id", exA.id);
+  else await s.from("forum_answers").insert(ans);
+}
 
 console.log("✓ demo criado:", `/psicologo/${slug}`);

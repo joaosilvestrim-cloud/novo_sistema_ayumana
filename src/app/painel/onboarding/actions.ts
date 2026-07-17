@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { slugify } from "@/lib/slug";
 import type { Audience } from "@/lib/types";
 
@@ -127,6 +128,25 @@ export async function saveOnboardingAction(
     crpDocumentPath = path;
   }
 
+  // Upload do áudio de apresentação (opcional, bucket público via admin).
+  let audioUrl: string | undefined;
+  const audioFile = formData.get("audio_file") as File | null;
+  if (audioFile && audioFile.size > 0) {
+    if (audioFile.size > 10 * 1024 * 1024) {
+      return { error: "O áudio excede 10 MB." };
+    }
+    const admin = createAdminClient();
+    const ext = (audioFile.name.split(".").pop() || "mp3").toLowerCase();
+    const path = `${user.id}/apresentacao-${Date.now()}.${ext}`;
+    const { error: aErr } = await admin.storage
+      .from("perfil-audio")
+      .upload(path, audioFile, { upsert: true, contentType: audioFile.type });
+    if (aErr) {
+      return { error: `Falha no upload do áudio: ${aErr.message}` };
+    }
+    audioUrl = admin.storage.from("perfil-audio").getPublicUrl(path).data.publicUrl;
+  }
+
   // Validação para envio à verificação.
   if (intent === "submit") {
     if (!displayName || !crpNumber || !crpUf) {
@@ -174,6 +194,7 @@ export async function saveOnboardingAction(
     services,
     session_price_cents: sessionPrice,
     session_price_in_person_cents: sessionPriceInPerson,
+    ...(audioUrl ? { audio_url: audioUrl } : {}),
     accepts_online: acceptsOnline,
     accepts_in_person: acceptsInPerson,
     attends_abroad: attendsAbroad,

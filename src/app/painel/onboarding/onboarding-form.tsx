@@ -192,6 +192,13 @@ export function OnboardingForm({
         <Field label="Serviços oferecidos" htmlFor="services" hint="Separe por vírgula. Ex.: Psicoterapia individual, Terapia de casal">
           <Input id="services" name="services" defaultValue={(psy?.services ?? []).join(", ")} />
         </Field>
+        <Field
+          label="Áudio de apresentação"
+          htmlFor="audio_file"
+          hint={psy?.audio_url ? "Um áudio já foi enviado. Envie outro para substituir." : "Opcional. Um recado curto em áudio (MP3/M4A), até 10 MB."}
+        >
+          <Input id="audio_file" name="audio_file" type="file" accept="audio/*" className="file:mr-3 file:rounded-md file:border-0 file:bg-surface-muted file:px-3 file:py-1.5 file:text-sm file:text-heading" />
+        </Field>
       </Section>
 
       <Section title="Abordagens">

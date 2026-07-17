@@ -13,6 +13,8 @@ import {
   CalendarClock,
   GraduationCap,
   Check,
+  Volume2,
+  MessageSquare as MessageSquareIcon,
 } from "lucide-react";
 import {
   DAY_ORDER,
@@ -47,6 +49,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
 import { ShareProfile } from "@/components/share-profile";
 import { getPsychologistBySlug } from "@/lib/psychologists";
+import { listAnswersByPsychologist } from "@/lib/forum";
 import { whatsappLink, formatPrice, instagramHandle } from "@/lib/whatsapp";
 import {
   AUDIENCE_LABELS,
@@ -115,6 +118,8 @@ export default async function PerfilPage({
   const pricePresencial = paid ? formatPrice(p.session_price_in_person_cents) : null;
   const hasSchedule = !!p.schedule && DAY_ORDER.some((d) => p.schedule?.[d]);
   const location = [p.city, p.state].filter(Boolean).join(" / ");
+  const forumAnswers = await listAnswersByPsychologist(p.id);
+  const primeiroNome = firstNameOf(p.display_name) ?? "o profissional";
   const showVideo = VIDEO_PLANS.has(p.plan_tier) && !!p.video_url;
   const countryNames = p.countries
     .map((c) => COUNTRIES.find((x) => x.code === c)?.name)
@@ -250,6 +255,21 @@ export default async function PerfilPage({
               </section>
             )}
 
+            {p.audio_url && (
+              <section className="rounded-2xl border border-border bg-surface-muted/40 p-4">
+                <h2 className="mb-2 flex items-center gap-2 text-lg">
+                  <Volume2 className="h-5 w-5 text-teal-600" /> Ouça uma apresentação
+                </h2>
+                <p className="mb-3 text-sm text-foreground-muted">
+                  Um recado em áudio de {primeiroNome} para você.
+                </p>
+                {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                <audio controls preload="none" src={p.audio_url} className="w-full">
+                  Seu navegador não suporta áudio.
+                </audio>
+              </section>
+            )}
+
             {p.bio && (
               <section>
                 <h2 className="mb-2 text-lg">Sobre mim</h2>
@@ -315,6 +335,46 @@ export default async function PerfilPage({
             {p.style && (
               <StyleSignature style={p.style} firstName={firstNameOf(p.display_name)} />
             )}
+
+            {forumAnswers.length > 0 && (
+              <section>
+                <h2 className="mb-3 flex items-center gap-2 text-lg">
+                  <MessageSquareIcon className="h-5 w-5 text-teal-600" /> Respostas no fórum
+                </h2>
+                <div className="space-y-3">
+                  {forumAnswers.map((a) => (
+                    <Link
+                      key={a.id}
+                      href={`/perguntas/${a.question.slug}`}
+                      className="block rounded-xl border border-border p-4 transition-colors hover:border-brand hover:bg-brand/5"
+                    >
+                      <p className="font-medium text-heading">{a.question.title}</p>
+                      <p className="mt-1 line-clamp-2 text-sm text-foreground-muted">{a.body}</p>
+                      <span className="mt-2 inline-block text-xs font-medium text-brand-dark">Ler resposta →</span>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            <section className="rounded-2xl border border-border bg-surface-muted/40 p-5">
+              <h2 className="mb-4 text-lg">Como funciona a primeira conversa</h2>
+              <ol className="space-y-4">
+                {[
+                  `Você chama ${primeiroNome} no WhatsApp e conta, em poucas palavras, o que está buscando.`,
+                  "Vocês combinam um horário que caiba na sua rotina e no seu fuso.",
+                  "A primeira sessão é online, para se conhecerem e ver se faz sentido seguir juntos.",
+                  "Sem compromisso: o valor e a frequência são combinados diretamente com o profissional.",
+                ].map((step, i) => (
+                  <li key={i} className="flex gap-3">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand text-sm font-semibold text-white">
+                      {i + 1}
+                    </span>
+                    <p className="pt-0.5 text-sm text-foreground-muted">{step}</p>
+                  </li>
+                ))}
+              </ol>
+            </section>
           </div>
 
           {/* Sidebar de contato */}

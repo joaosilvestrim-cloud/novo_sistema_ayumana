@@ -101,3 +101,43 @@ export async function getQuestionBySlug(slug: string): Promise<{
 export async function listOpenQuestions(limit = 50): Promise<QuestionWithMeta[]> {
   return listQuestions(limit);
 }
+
+export type PsychologistAnswer = {
+  id: string;
+  body: string;
+  created_at: string;
+  question: { slug: string; title: string };
+};
+
+/** Respostas publicadas e identificadas (não anônimas) deste psicólogo. */
+export async function listAnswersByPsychologist(
+  psychologistId: string,
+  limit = 4
+): Promise<PsychologistAnswer[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("forum_answers")
+    .select("id, body, created_at, question:forum_questions(slug, title, status)")
+    .eq("psychologist_id", psychologistId)
+    .eq("status", "publicada")
+    .eq("anonymous", false)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  return ((data as unknown[]) ?? [])
+    .map((row) => {
+      const r = row as {
+        id: string;
+        body: string;
+        created_at: string;
+        question:
+          | { slug: string; title: string; status: string }
+          | { slug: string; title: string; status: string }[]
+          | null;
+      };
+      const q = Array.isArray(r.question) ? r.question[0] ?? null : r.question;
+      if (!q || q.status !== "publicada") return null;
+      return { id: r.id, body: r.body, created_at: r.created_at, question: { slug: q.slug, title: q.title } };
+    })
+    .filter(Boolean) as PsychologistAnswer[];
+}
