@@ -131,6 +131,12 @@ export async function saveOnboardingAction(
     if (!displayName || !crpNumber || !crpUf) {
       return { error: "Preencha nome de exibição, número e UF do CRP." };
     }
+    if (!/^\d{2}\/\d{4,6}$/.test(crpNumber)) {
+      return { error: "CRP inválido. Use o formato região/número, ex.: 06/153352." };
+    }
+    if (!phone || phone.length < 10) {
+      return { error: "Informe um número de WhatsApp válido, com DDI e DDD." };
+    }
     if (!crpDocumentPath) {
       return { error: "Envie o documento do CRP para solicitar a verificação." };
     }

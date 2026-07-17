@@ -6,6 +6,8 @@ import { Loader2, CheckCircle2 } from "lucide-react";
 import { Field, Input, Textarea, Select, Label } from "@/components/ui/field";
 import { ScheduleEditor } from "@/components/schedule-editor";
 import { StyleEditor } from "@/components/style-editor";
+import { CrpInput } from "@/components/crp-input";
+import { PhoneInput } from "@/components/phone-input";
 import { TIMEZONES } from "@/lib/schedule";
 import type { Schedule } from "@/lib/schedule";
 import {
@@ -136,8 +138,8 @@ export function OnboardingForm({
               <option value="outro">Outro</option>
             </Select>
           </Field>
-          <Field label="WhatsApp" htmlFor="phone_whatsapp" hint="Com DDI/DDD. Ex.: 5511999998888">
-            <Input id="phone_whatsapp" name="phone_whatsapp" inputMode="tel" defaultValue={psy?.phone_whatsapp ?? ""} />
+          <Field label="WhatsApp" htmlFor="phone_whatsapp" hint="Selecione o país e digite o número.">
+            <PhoneInput name="phone_whatsapp" defaultValue={psy?.phone_whatsapp ?? ""} />
           </Field>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -157,8 +159,8 @@ export function OnboardingForm({
 
       <Section title="Registro profissional (CRP)" description="Obrigatório para verificação. Seu documento é privado e visto apenas pela equipe Ayumana.">
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Número do CRP" htmlFor="crp_number" hint="Ex.: 06/123456">
-            <Input id="crp_number" name="crp_number" defaultValue={psy?.crp_number ?? ""} />
+          <Field label="Número do CRP" htmlFor="crp_number" hint="Formato região/número. Ex.: 06/153352">
+            <CrpInput name="crp_number" defaultValue={psy?.crp_number ?? ""} />
           </Field>
           <Field label="UF do CRP" htmlFor="crp_uf" hint="Ex.: SP">
             <Input id="crp_uf" name="crp_uf" maxLength={2} defaultValue={psy?.crp_uf ?? ""} />

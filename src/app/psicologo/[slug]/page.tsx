@@ -22,7 +22,7 @@ import {
   tzLabel,
   BR_TZ,
 } from "@/lib/schedule";
-import { STYLE_SPECTRUMS, styleValue } from "@/lib/style";
+import { StyleSignature } from "@/components/style-signature";
 
 function InstagramIcon({ className }: { className?: string }) {
   return (
@@ -56,6 +56,16 @@ import {
 
 const PAID = new Set(["destaque", "ideal", "presenca"]);
 const VIDEO_PLANS = new Set(["ideal", "presenca"]);
+
+/** Primeiro nome ignorando pronomes de tratamento (Dr., Dra., Prof.). */
+function firstNameOf(name?: string | null): string | undefined {
+  if (!name) return undefined;
+  const parts = name
+    .trim()
+    .split(/\s+/)
+    .filter((w) => !/^(dr|dra|prof|profa)\.?$/i.test(w));
+  return parts[0];
+}
 
 export async function generateMetadata({
   params,
@@ -206,79 +216,63 @@ export default async function PerfilPage({
               </section>
             )}
 
-            {p.specialties.length > 0 && (
-              <section>
-                <h2 className="mb-3 text-lg">Temas e queixas atendidas</h2>
-                <div className="flex flex-wrap gap-2">
-                  {p.specialties.map((s) => (
-                    <Badge key={s.id} tone={s.category === "exterior" ? "brand" : "neutral"}>
-                      {s.name}
-                    </Badge>
-                  ))}
-                </div>
-              </section>
+            {(p.specialties.length > 0 || p.approaches.length > 0) && (
+              <div className="grid gap-6 sm:grid-cols-2">
+                {p.specialties.length > 0 && (
+                  <section>
+                    <h2 className="mb-3 text-lg">Temas e queixas atendidas</h2>
+                    <div className="flex flex-wrap gap-2">
+                      {p.specialties.map((s) => (
+                        <Badge key={s.id} tone={s.category === "exterior" ? "brand" : "neutral"}>
+                          {s.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {p.approaches.length > 0 && (
+                  <section>
+                    <h2 className="mb-3 text-lg">Abordagens</h2>
+                    <div className="flex flex-wrap gap-2">
+                      {p.approaches.map((a) => (
+                        <Badge key={a.id}>{a.name}</Badge>
+                      ))}
+                    </div>
+                  </section>
+                )}
+              </div>
             )}
 
-            {p.approaches.length > 0 && (
-              <section>
-                <h2 className="mb-3 text-lg">Abordagens</h2>
-                <div className="flex flex-wrap gap-2">
-                  {p.approaches.map((a) => (
-                    <Badge key={a.id}>{a.name}</Badge>
-                  ))}
-                </div>
-              </section>
-            )}
+            {(p.formation || (p.services && p.services.length > 0)) && (
+              <div className="grid gap-6 rounded-2xl border border-border bg-surface-muted/40 p-5 sm:grid-cols-2">
+                {p.formation && (
+                  <section>
+                    <h2 className="mb-2 flex items-center gap-2 text-lg">
+                      <GraduationCap className="h-5 w-5 text-teal-600" /> Formação acadêmica
+                    </h2>
+                    <p className="whitespace-pre-line text-sm text-foreground-muted">{p.formation}</p>
+                  </section>
+                )}
 
-            {p.formation && (
-              <section>
-                <h2 className="mb-2 flex items-center gap-2 text-lg">
-                  <GraduationCap className="h-5 w-5 text-teal-600" /> Formação acadêmica
-                </h2>
-                <p className="whitespace-pre-line text-foreground-muted">{p.formation}</p>
-              </section>
-            )}
-
-            {p.services && p.services.length > 0 && (
-              <section>
-                <h2 className="mb-3 text-lg">Serviços oferecidos</h2>
-                <ul className="space-y-2">
-                  {p.services.map((sv) => (
-                    <li key={sv} className="flex items-start gap-2 text-foreground-muted">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
-                      {sv}
-                    </li>
-                  ))}
-                </ul>
-              </section>
+                {p.services && p.services.length > 0 && (
+                  <section>
+                    <h2 className="mb-3 text-lg">Serviços oferecidos</h2>
+                    <ul className="space-y-2">
+                      {p.services.map((sv) => (
+                        <li key={sv} className="flex items-start gap-2 text-sm text-foreground-muted">
+                          <Check className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
+                          {sv}
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
+              </div>
             )}
 
             {p.style && (
-              <section>
-                <h2 className="mb-1 text-lg">Meu estilo de atendimento</h2>
-                <p className="mb-4 text-sm text-foreground-muted">
-                  Uma ideia de como é a sessão com {p.display_name?.split(" ")[0] ?? "este profissional"}.
-                </p>
-                <div className="space-y-5">
-                  {STYLE_SPECTRUMS.map((s) => {
-                    const v = styleValue(p.style, s.key);
-                    return (
-                      <div key={s.key}>
-                        <div className="mb-1.5 flex justify-between text-xs font-medium text-foreground-muted">
-                          <span>{s.left}</span>
-                          <span>{s.right}</span>
-                        </div>
-                        <div className="relative h-2 rounded-full bg-gradient-to-r from-teal-200 via-surface-muted to-green-200">
-                          <div
-                            className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-brand shadow"
-                            style={{ left: `${v}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
+              <StyleSignature style={p.style} firstName={firstNameOf(p.display_name)} />
             )}
 
             {p.schedule && DAY_ORDER.some((d) => p.schedule?.[d]) && (
