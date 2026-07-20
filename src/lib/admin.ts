@@ -11,6 +11,7 @@ export type AdminMetrics = {
     total: number;
     publicados: number;
     rascunhos: number;
+    incompletos: number;
     novos30d: number;
   };
   verificacao: Record<VerificationStatus, number>;
@@ -50,7 +51,7 @@ export async function getMetrics(): Promise<AdminMetrics> {
     await Promise.all([
       supabase
         .from("psychologists")
-        .select("plan_tier, is_published, verification_status, subscription_status, created_at"),
+        .select("plan_tier, is_published, verification_status, subscription_status, created_at, profile_completed"),
       supabase.from("plans").select("id, price_cents"),
       supabase.from("blog_posts").select("*", { count: "exact", head: true }).eq("published", true),
       supabase.from("forum_questions").select("*", { count: "exact", head: true }).eq("status", "pendente"),
@@ -67,6 +68,7 @@ export async function getMetrics(): Promise<AdminMetrics> {
   const planos = { ...ZERO_PLAN };
   const assinaturas = { ativas: 0, atrasadas: 0, canceladas: 0, mrrCents: 0 };
   let publicados = 0;
+  let incompletos = 0;
   let novos30d = 0;
 
   const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
@@ -75,6 +77,7 @@ export async function getMetrics(): Promise<AdminMetrics> {
     verificacao[p.verification_status as VerificationStatus]++;
     planos[p.plan_tier as PlanTier]++;
     if (p.is_published) publicados++;
+    if (!p.profile_completed) incompletos++;
     if (p.created_at && new Date(p.created_at).getTime() >= cutoff) novos30d++;
 
     const sub = p.subscription_status as SubscriptionStatus;
@@ -88,7 +91,7 @@ export async function getMetrics(): Promise<AdminMetrics> {
   const total = psys?.length ?? 0;
 
   return {
-    psicologos: { total, publicados, rascunhos: total - publicados, novos30d },
+    psicologos: { total, publicados, rascunhos: total - publicados, incompletos, novos30d },
     verificacao,
     planos,
     assinaturas,
@@ -113,6 +116,7 @@ export type AdminUser = {
   plan: PlanTier | null;
   verification: VerificationStatus | null;
   published: boolean;
+  profileCompleted: boolean;
   subscription: SubscriptionStatus | null;
   createdAt: string | null;
 };
@@ -124,7 +128,7 @@ export async function getUsersOverview(): Promise<AdminUser[]> {
     supabase.from("profiles").select("id, full_name, email, role, created_at").order("created_at", { ascending: false }),
     supabase
       .from("psychologists")
-      .select("id, profile_id, slug, city, plan_tier, verification_status, is_published, subscription_status"),
+      .select("id, profile_id, slug, city, plan_tier, verification_status, is_published, subscription_status, profile_completed"),
   ]);
 
   const psyByProfile = new Map((psys ?? []).map((p) => [p.profile_id, p]));
@@ -142,6 +146,7 @@ export async function getUsersOverview(): Promise<AdminUser[]> {
       plan: (psy?.plan_tier as PlanTier) ?? null,
       verification: (psy?.verification_status as VerificationStatus) ?? null,
       published: psy?.is_published ?? false,
+      profileCompleted: psy?.profile_completed ?? false,
       subscription: (psy?.subscription_status as SubscriptionStatus) ?? null,
       createdAt: pr.created_at,
     };

@@ -93,6 +93,37 @@ export async function togglePublishAction(formData: FormData) {
   revalidatePath("/psicologos");
 }
 
+const PLAN_TIERS = ["essencial", "destaque", "ideal", "presenca"] as const;
+
+export async function changePlanAction(formData: FormData) {
+  await requireAdmin();
+  const psyId = String(formData.get("psy_id") ?? "");
+  const plan = String(formData.get("plan") ?? "");
+  if (!psyId || !PLAN_TIERS.includes(plan as (typeof PLAN_TIERS)[number])) return;
+
+  const admin = createAdminClient();
+  await admin.from("psychologists").update({ plan_tier: plan }).eq("id", psyId);
+  revalidatePath("/admin/usuarios");
+  revalidatePath("/psicologos");
+}
+
+export async function deleteUserAction(formData: FormData) {
+  const me = await requireAdmin();
+  const profileId = String(formData.get("profile_id") ?? "");
+  if (!profileId) return;
+  // Nunca deixa o admin excluir a própria conta.
+  if (profileId === me.id) return;
+
+  const admin = createAdminClient();
+  // Apaga o usuário do Auth (o profile costuma cair por cascata)...
+  await admin.auth.admin.deleteUser(profileId);
+  // ...e garante a limpeza das tabelas mesmo se o cascade não propagar.
+  await admin.from("psychologists").delete().eq("profile_id", profileId);
+  await admin.from("profiles").delete().eq("id", profileId);
+  revalidatePath("/admin/usuarios");
+  revalidatePath("/psicologos");
+}
+
 export async function quickApproveAction(formData: FormData) {
   const me = await requireAdmin();
   const psyId = String(formData.get("psy_id") ?? "");

@@ -51,7 +51,22 @@ const COUNTRY_PILLS = [
   { flag: "🇯🇵", label: "Japão", style: { bottom: "28%", right: "48%" }, cls: "ayu-float", delay: "1.6s" },
 ];
 
-function HeroVisual() {
+export type HeroPerson = {
+  name: string | null;
+  role: string;
+  place: string;
+  avatar_url: string | null;
+  slug: string | null;
+};
+
+function firstNames(name: string | null): string {
+  if (!name) return "Psicólogo(a)";
+  const parts = name.trim().split(/\s+/).filter((w) => !/^(dr|dra|prof|profa)\.?$/i.test(w));
+  // Primeiro nome + inicial do segundo (privacidade leve, como no visual antigo).
+  return parts[1] ? `${parts[0]} ${parts[1][0]}.` : parts[0] || "Psicólogo(a)";
+}
+
+function HeroVisual({ people = [] }: { people?: HeroPerson[] }) {
   return (
     <div className="relative hidden h-[440px] lg:block" aria-hidden>
       {/* anel orgânico que ecoa o símbolo da marca */}
@@ -69,40 +84,59 @@ function HeroVisual() {
         </div>
       ))}
 
-      {FLOATING.map((p) => (
-        <div
-          key={p.initials}
-          className={`absolute ${p.cls} w-56 rounded-2xl border border-border bg-background/95 p-3.5 shadow-lg shadow-teal-900/5 backdrop-blur`}
-          style={{ ...p.style, animationDelay: p.delay }}
-        >
-          <div className="flex items-center gap-3">
-            <div className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-semibold ${p.tone}`}>
-              {p.initials}
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-1">
-                <p className="truncate text-sm font-semibold text-heading">{p.name}</p>
-                <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-green-600" />
+      {FLOATING.map((fake, i) => {
+        const real = people[i];
+        const name = real ? firstNames(real.name) : fake.name;
+        const role = real ? real.role : fake.role;
+        const place = real ? real.place : `${fake.flag} ${fake.place}`;
+        const inner = (
+          <>
+            <div className="flex items-center gap-3">
+              {real?.avatar_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={real.avatar_url}
+                  alt={name ?? "Psicólogo"}
+                  className="h-11 w-11 shrink-0 rounded-full object-cover"
+                />
+              ) : (
+                <div className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-semibold ${fake.tone}`}>
+                  {fake.initials}
+                </div>
+              )}
+              <div className="min-w-0">
+                <div className="flex items-center gap-1">
+                  <p className="truncate text-sm font-semibold text-heading">{name}</p>
+                  <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-green-600" />
+                </div>
+                <p className="truncate text-xs text-foreground-muted">{role}</p>
               </div>
-              <p className="truncate text-xs text-foreground-muted">{p.role}</p>
             </div>
+            <div className="mt-3 flex items-center justify-between border-t border-border pt-2.5">
+              <span className="truncate text-xs text-foreground-muted">{place}</span>
+              <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-green-700">
+                <span className="ayu-pulse-dot h-1.5 w-1.5 rounded-full bg-green-500" />
+                online
+              </span>
+            </div>
+          </>
+        );
+        const cardCls = `absolute ${fake.cls} w-56 rounded-2xl border border-border bg-background/95 p-3.5 shadow-lg shadow-teal-900/5 backdrop-blur`;
+        return real?.slug ? (
+          <Link key={i} href={`/psicologo/${real.slug}`} className={cardCls} style={{ ...fake.style, animationDelay: fake.delay }}>
+            {inner}
+          </Link>
+        ) : (
+          <div key={i} className={cardCls} style={{ ...fake.style, animationDelay: fake.delay }}>
+            {inner}
           </div>
-          <div className="mt-3 flex items-center justify-between border-t border-border pt-2.5">
-            <span className="text-xs text-foreground-muted">
-              {p.flag} {p.place}
-            </span>
-            <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700">
-              <span className="ayu-pulse-dot h-1.5 w-1.5 rounded-full bg-green-500" />
-              online
-            </span>
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
 
-export function Hero() {
+export function Hero({ people = [] }: { people?: HeroPerson[] }) {
   return (
     <section className="relative overflow-hidden border-b border-border">
       {/* fundo: gradiente + blobs orgânicos animados */}

@@ -7,6 +7,10 @@ import {
   ArrowRight,
   TrendingUp,
   Globe2,
+  Clock,
+  AlertCircle,
+  EyeOff,
+  UserPlus,
 } from "lucide-react";
 import { getMetrics } from "@/lib/admin";
 import { formatPrice } from "@/lib/whatsapp";
@@ -104,6 +108,45 @@ export default async function AdminDashboard() {
           tone="neutral"
         />
       </div>
+
+      {/* KPIs de usuários — clique abre a lista já filtrada */}
+      <section>
+        <h2 className="mb-3 text-lg">Usuários</h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard
+            icon={Clock}
+            label="Aguardando aprovação"
+            value={m.verificacao.pendente}
+            sub="CRP em análise"
+            href="/admin/usuarios?status=pendente"
+            tone={m.verificacao.pendente > 0 ? "yellow" : "neutral"}
+          />
+          <StatCard
+            icon={AlertCircle}
+            label="Perfis incompletos"
+            value={m.psicologos.incompletos}
+            sub="Faltam dados obrigatórios"
+            href="/admin/usuarios?status=incompleto"
+            tone={m.psicologos.incompletos > 0 ? "yellow" : "neutral"}
+          />
+          <StatCard
+            icon={EyeOff}
+            label="Não publicados"
+            value={m.psicologos.rascunhos}
+            sub="Perfis em rascunho"
+            href="/admin/usuarios?status=rascunho"
+            tone="neutral"
+          />
+          <StatCard
+            icon={UserPlus}
+            label="Novos em 30 dias"
+            value={m.psicologos.novos30d}
+            sub={`${m.psicologos.total} psicólogos no total`}
+            href="/admin/usuarios?papel=psicologo"
+            tone="teal"
+          />
+        </div>
+      </section>
 
       {/* Filas pendentes */}
       {(m.verificacao.pendente > 0 ||

@@ -1,10 +1,12 @@
 import Link from "next/link";
-import { Search, ExternalLink, ShieldCheck, ShieldOff, Eye, EyeOff, BadgeCheck, UserPlus } from "lucide-react";
+import { Search, ExternalLink, ShieldCheck, ShieldOff, Eye, EyeOff, BadgeCheck, UserPlus, Trash2, AlertCircle } from "lucide-react";
 import { getUsersOverview, type AdminUser } from "@/lib/admin";
+import { requireAdmin } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
-import { PLAN_LABEL } from "@/lib/plan-labels";
+import { ConfirmButton } from "@/components/admin/confirm-button";
+import { PlanSelect } from "@/components/admin/plan-select";
 import { VERIFICATION_LABELS } from "@/lib/types";
-import { toggleAdminAction, togglePublishAction, quickApproveAction } from "./actions";
+import { toggleAdminAction, togglePublishAction, quickApproveAction, changePlanAction, deleteUserAction } from "./actions";
 
 export const metadata = { title: "Usuários" };
 
@@ -19,6 +21,7 @@ function matches(u: AdminUser, q: string, papel: string, status: string) {
   if (status === "publicado" && !u.published) return false;
   if (status === "rascunho" && u.published) return false;
   if (status === "pendente" && u.verification !== "pendente") return false;
+  if (status === "incompleto" && (u.role !== "psicologo" || u.profileCompleted)) return false;
   if (q) {
     const hay = `${u.name ?? ""} ${u.email ?? ""} ${u.city ?? ""}`.toLowerCase();
     if (!hay.includes(q.toLowerCase())) return false;
@@ -31,6 +34,7 @@ export default async function UsuariosPage({
 }: {
   searchParams: Promise<SP>;
 }) {
+  const me = await requireAdmin();
   const sp = await searchParams;
   const q = one(sp.q).trim();
   const papel = one(sp.papel);
@@ -90,6 +94,7 @@ export default async function UsuariosPage({
           <option value="publicado">Publicados</option>
           <option value="rascunho">Rascunho</option>
           <option value="pendente">Verificação pendente</option>
+          <option value="incompleto">Perfil incompleto</option>
         </select>
         <button className="h-10 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary-hover">
           Filtrar
@@ -118,11 +123,22 @@ export default async function UsuariosPage({
                     <div className="font-medium text-heading">{u.name || "—"}</div>
                     <div className="text-xs text-foreground-muted">{u.email}</div>
                     {u.city && <div className="text-xs text-foreground-muted">{u.city}</div>}
+                    {u.role === "psicologo" && !u.profileCompleted && (
+                      <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-yellow-400/15 px-2 py-0.5 text-[11px] font-medium text-yellow-700">
+                        <AlertCircle className="h-3 w-3" /> Perfil incompleto
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     {u.role === "admin" ? <Badge tone="brand">Admin</Badge> : <Badge tone="neutral">Psicólogo</Badge>}
                   </td>
-                  <td className="px-4 py-3">{u.plan ? PLAN_LABEL[u.plan] : "—"}</td>
+                  <td className="px-4 py-3">
+                    {u.psyId ? (
+                      <PlanSelect psyId={u.psyId} current={u.plan} action={changePlanAction} />
+                    ) : (
+                      "—"
+                    )}
+                  </td>
                   <td className="px-4 py-3">{v ? <Badge tone={v.tone}>{v.label}</Badge> : "—"}</td>
                   <td className="px-4 py-3">
                     {u.published ? <Badge tone="success">Sim</Badge> : <Badge tone="neutral">Não</Badge>}
@@ -161,6 +177,19 @@ export default async function UsuariosPage({
                           {u.role === "admin" ? <ShieldOff className="h-3.5 w-3.5" /> : <ShieldCheck className="h-3.5 w-3.5" />}
                         </button>
                       </form>
+                      {/* Excluir usuário */}
+                      {u.profileId !== me.id && (
+                        <form action={deleteUserAction}>
+                          <input type="hidden" name="profile_id" value={u.profileId} />
+                          <ConfirmButton
+                            message={`Excluir "${u.name || u.email}" permanentemente? Esta ação não pode ser desfeita.`}
+                            title="Excluir usuário"
+                            className="inline-flex h-8 items-center gap-1 rounded-md border border-danger/40 px-2 text-xs text-danger hover:bg-danger/10"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </ConfirmButton>
+                        </form>
+                      )}
                     </div>
                   </td>
                 </tr>

@@ -1,41 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { styleValue, type Style } from "@/lib/style";
+import { STYLE_SPECTRUMS, styleValue, styleTag, styleReading, type Style } from "@/lib/style";
 
-// Eixos do radar. `short` é o rótulo curto no vértice; left/right são os polos.
-const AXES = [
-  { key: "direcao", short: "Direção", left: "Escuta livre", right: "Direcionamento" },
-  { key: "estrutura", short: "Estrutura", left: "Sessão flexível", right: "Sessão estruturada" },
-  { key: "tom", short: "Provocação", left: "Acolhedor", right: "Provocador" },
-  { key: "foco", short: "Praticidade", left: "Foco nas emoções", right: "Foco em estratégias" },
-  { key: "registro", short: "Formalidade", left: "Informal", right: "Técnico" },
-];
-
-const KEYWORDS: Record<string, [string, string]> = {
-  direcao: ["Escuta ativa", "Direcionadora"],
-  estrutura: ["Flexível", "Estruturada"],
-  tom: ["Acolhedora", "Provocadora"],
-  foco: ["Foco emocional", "Foco prático"],
-  registro: ["Linguagem simples", "Técnica"],
-};
+// Eixos do radar = fonte única em style.ts.
+const AXES = STYLE_SPECTRUMS;
 
 function tagsFrom(style: Style | null | undefined): string[] {
   const out: string[] = [];
   for (const a of AXES) {
-    const v = styleValue(style, a.key);
-    const kw = KEYWORDS[a.key];
-    if (!kw) continue;
-    if (v <= 38) out.push(kw[0]);
-    else if (v >= 62) out.push(kw[1]);
+    const t = styleTag(a, styleValue(style, a.key));
+    if (t) out.push(t);
   }
   return out;
-}
-
-function interpret(v: number, left: string, right: string): string {
-  if (v <= 38) return `Mais ${left.toLowerCase()}`;
-  if (v >= 62) return `Mais ${right.toLowerCase()}`;
-  return `Equilíbrio entre ${left.toLowerCase()} e ${right.toLowerCase()}`;
 }
 
 // Geometria do radar.
@@ -166,7 +143,7 @@ export function StyleSignature({
                 onMouseLeave={() => setActive(null)}
                 onClick={() => setActive((p) => (p === i ? null : i))}
               >
-                {a.short}
+                {a.axis}
               </text>
             );
           })}
@@ -189,8 +166,8 @@ export function StyleSignature({
                   isActive ? "border-brand bg-brand/5" : "border-border"
                 }`}
               >
-                <span className="font-medium text-heading">{a.short}</span>
-                <span className="text-xs text-foreground-muted">{interpret(v, a.left, a.right)}</span>
+                <span className="font-medium text-heading">{a.axis}</span>
+                <span className="text-xs text-foreground-muted">{styleReading(a, v)}</span>
               </button>
             );
           })}

@@ -13,7 +13,6 @@ import { SiteHeader } from "@/components/site/header";
 import { SiteFooter } from "@/components/site/footer";
 import { Hero } from "@/components/site/hero";
 import { Button } from "@/components/ui/button";
-import { PsychologistCard } from "@/components/catalog/psychologist-card";
 import { listPsychologists } from "@/lib/psychologists";
 import { listPosts } from "@/lib/blog";
 import { COUNTRY_LANDINGS } from "@/lib/countries-content";
@@ -69,11 +68,21 @@ function fmtDate(iso: string | null) {
 }
 
 export default async function HomePage() {
-  const [{ rows: destaques }, posts] = await Promise.all([
+  const [{ rows }, posts] = await Promise.all([
     listPsychologists({ page: 1 }),
     listPosts(3),
   ]);
-  const featured = destaques.slice(0, 6);
+  // Hero: profissionais reais do plano IDEAL, com foto. Se não houver, o Hero usa o fallback.
+  const heroPeople = rows
+    .filter((r) => r.plan_tier === "ideal" && r.avatar_url)
+    .slice(0, 3)
+    .map((r) => ({
+      name: r.display_name,
+      role: r.approaches[0]?.name ?? "Psicólogo(a)",
+      place: [r.city, r.state].filter(Boolean).join(" / ") || "Online",
+      avatar_url: r.avatar_url,
+      slug: r.slug,
+    }));
 
   return (
     <>
@@ -81,7 +90,7 @@ export default async function HomePage() {
       <SiteHeader />
 
       <main className="flex-1">
-        <Hero />
+        <Hero people={heroPeople} />
 
         {/* Como funciona */}
         <section className="mx-auto max-w-6xl px-4 py-20">
@@ -131,33 +140,6 @@ export default async function HomePage() {
             </div>
           </div>
         </section>
-
-        {/* Psicólogos em destaque */}
-        {featured.length > 0 && (
-          <section className="mx-auto max-w-6xl px-4 py-20">
-            <div className="mb-8 flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <h2 className="text-3xl font-semibold text-heading">
-                  Psicólogos em destaque
-                </h2>
-                <p className="mt-2 text-foreground-muted">
-                  Profissionais verificados prontos para te atender.
-                </p>
-              </div>
-              <Link
-                href="/psicologos"
-                className="inline-flex items-center gap-1 text-sm font-medium text-brand-dark hover:underline"
-              >
-                Ver todos <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {featured.map((p) => (
-                <PsychologistCard key={p.id} p={p} stacked />
-              ))}
-            </div>
-          </section>
-        )}
 
         {/* Você mora fora? — países */}
         <section className="border-y border-border bg-brand-dark">
