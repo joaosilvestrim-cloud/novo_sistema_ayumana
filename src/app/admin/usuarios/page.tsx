@@ -160,7 +160,9 @@ export default async function UsuariosPage({
               return (
                 <tr key={u.profileId} className="border-b border-border last:border-0">
                   <td className="px-4 py-3">
-                    <div className="font-medium text-heading">{u.name || "—"}</div>
+                    <Link href={`/admin/usuarios/${u.profileId}`} className="font-medium text-heading hover:text-brand-dark hover:underline">
+                      {u.name || "—"}
+                    </Link>
                     <div className="text-xs text-foreground-muted">{u.email}</div>
                     {u.city && <div className="text-xs text-foreground-muted">{u.city}</div>}
                     {u.role === "psicologo" && !u.profileCompleted && (

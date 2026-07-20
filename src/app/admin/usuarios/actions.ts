@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail, emailShell } from "@/lib/email";
@@ -151,6 +152,7 @@ export async function deleteUserAction(formData: FormData) {
   await admin.from("profiles").delete().eq("id", profileId);
   revalidatePath("/admin/usuarios");
   revalidatePath("/psicologos");
+  redirect("/admin/usuarios");
 }
 
 export async function quickApproveAction(formData: FormData) {

@@ -121,6 +121,36 @@ export type AdminUser = {
   createdAt: string | null;
 };
 
+export type UserDetail = {
+  profile: {
+    id: string;
+    full_name: string | null;
+    email: string | null;
+    role: "psicologo" | "admin";
+    created_at: string | null;
+  };
+  psy: Record<string, unknown> | null;
+};
+
+/** Detalhe completo de um usuário (perfil + linha do psicólogo) para a página de gestão. */
+export async function getUserDetail(profileId: string): Promise<UserDetail | null> {
+  const supabase = createAdminClient();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id, full_name, email, role, created_at")
+    .eq("id", profileId)
+    .maybeSingle();
+  if (!profile) return null;
+
+  const { data: psy } = await supabase
+    .from("psychologists")
+    .select("*")
+    .eq("profile_id", profileId)
+    .maybeSingle();
+
+  return { profile: profile as UserDetail["profile"], psy: (psy as Record<string, unknown>) ?? null };
+}
+
 /** Todos os perfis com dados do psicólogo (join manual p/ evitar ambiguidade de FK). */
 export async function getUsersOverview(): Promise<AdminUser[]> {
   const supabase = createAdminClient();

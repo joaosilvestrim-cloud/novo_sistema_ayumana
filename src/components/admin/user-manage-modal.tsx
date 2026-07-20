@@ -72,11 +72,16 @@ export function UserManageModal({ u, canDelete }: { u: ManageUser; canDelete: bo
             </div>
 
             <div className="max-h-[60vh] space-y-5 overflow-y-auto p-5">
-              {u.slug && u.published && (
-                <Link href={`/psicologo/${u.slug}`} target="_blank" className={`${btn} w-full`}>
-                  <ExternalLink className="h-4 w-4" /> Ver perfil público
+              <div className="flex flex-wrap gap-2">
+                <Link href={`/admin/usuarios/${u.profileId}`} className={`${btn} flex-1`}>
+                  <Settings2 className="h-4 w-4" /> Página completa
                 </Link>
-              )}
+                {u.slug && u.published && (
+                  <Link href={`/psicologo/${u.slug}`} target="_blank" className={`${btn} flex-1`}>
+                    <ExternalLink className="h-4 w-4" /> Ver perfil
+                  </Link>
+                )}
+              </div>
 
               {/* Plano */}
               {u.psyId && (
