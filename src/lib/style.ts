@@ -27,18 +27,20 @@ export function styleValue(style: Style | null | undefined, key: string): number
   return typeof v === "number" && v >= 0 && v <= 100 ? v : 50;
 }
 
-/** Etiqueta-resumo = o polo para o qual pende (termo exato), ou null no meio. */
+// Regras de negócio (faixas): 0–30 forte à esquerda, 31–69 flexível/equilibrado,
+// 70–100 forte à direita. A tag só aparece nos extremos.
+/** Etiqueta-resumo = polo dominante nos extremos (termo exato), ou null no meio. */
 export function styleTag(s: StyleSpectrum, v: number): string | null {
-  if (v <= 40) return s.left;
-  if (v >= 60) return s.right;
+  if (v <= 30) return s.left;
+  if (v >= 70) return s.right;
   return null;
 }
 
-/** Leitura dinâmica: intensidade + polo dominante (sem citar o polo oposto). */
+/** Leitura dinâmica: intensidade + polo (sem citar o oposto). */
 export function styleReading(s: StyleSpectrum, v: number): string {
-  const dist = Math.abs(v - 50);
-  if (dist < 12) return "Equilíbrio entre os dois";
-  const pole = v > 50 ? s.right : s.left;
-  const intens = dist >= 35 ? "Predomínio de" : "Tende a";
-  return `${intens} ${pole.toLowerCase()}`;
+  if (v <= 30) return `Predomínio de ${s.left.toLowerCase()}`;
+  if (v >= 70) return `Predomínio de ${s.right.toLowerCase()}`;
+  if (v < 45) return `Tende a ${s.left.toLowerCase()}`;
+  if (v > 55) return `Tende a ${s.right.toLowerCase()}`;
+  return "Equilíbrio entre os dois";
 }

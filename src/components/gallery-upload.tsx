@@ -100,7 +100,7 @@ export function GalleryUpload({
       />
 
       <p className="mt-2 text-xs text-foreground-muted">
-        Até {MAX} fotos do seu consultório ou ambiente. JPG ou PNG, até 5 MB cada.
+        Até {MAX} fotos do seu consultório (atendimento presencial). JPG ou PNG, até 5 MB cada.
       </p>
     </div>
   );

@@ -13,7 +13,6 @@ import {
   CalendarClock,
   GraduationCap,
   Check,
-  Volume2,
   MessageSquare as MessageSquareIcon,
 } from "lucide-react";
 import {
@@ -255,21 +254,6 @@ export default async function PerfilPage({
               </section>
             )}
 
-            {p.audio_url && (
-              <section className="rounded-2xl border border-border bg-surface-muted/40 p-4">
-                <h2 className="mb-2 flex items-center gap-2 text-lg">
-                  <Volume2 className="h-5 w-5 text-teal-600" /> Ouça uma apresentação
-                </h2>
-                <p className="mb-3 text-sm text-foreground-muted">
-                  Um recado em áudio de {primeiroNome} para você.
-                </p>
-                {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-                <audio controls preload="none" src={p.audio_url} className="w-full">
-                  Seu navegador não suporta áudio.
-                </audio>
-              </section>
-            )}
-
             {p.bio && (
               <section>
                 <h2 className="mb-2 text-lg">Sobre mim</h2>
@@ -348,7 +332,10 @@ export default async function PerfilPage({
 
             {(p.gallery_urls ?? []).length > 0 && (
               <section>
-                <h2 className="mb-3 text-lg">Fotos do ambiente</h2>
+                <h2 className="mb-1 text-lg">Fotos do consultório</h2>
+                <p className="mb-3 text-sm text-foreground-muted">
+                  O espaço onde {primeiroNome} atende presencialmente.
+                </p>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                   {(p.gallery_urls ?? []).map((url) => (
                     <a

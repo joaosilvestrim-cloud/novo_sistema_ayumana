@@ -1,13 +1,11 @@
 import Link from "next/link";
-import { Search, ExternalLink, ShieldCheck, ShieldOff, Eye, EyeOff, BadgeCheck, UserPlus, Trash2, AlertCircle, KeyRound, Users, Clock } from "lucide-react";
+import { Search, ShieldCheck, EyeOff, UserPlus, AlertCircle, Users, Clock } from "lucide-react";
 import { getUsersOverview, type AdminUser } from "@/lib/admin";
 import { requireAdmin } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
-import { ConfirmButton } from "@/components/admin/confirm-button";
-import { PlanSelect } from "@/components/admin/plan-select";
+import { UserManageModal } from "@/components/admin/user-manage-modal";
 import { PLAN_LABEL } from "@/lib/plan-labels";
 import { VERIFICATION_LABELS, type PlanTier } from "@/lib/types";
-import { toggleAdminAction, togglePublishAction, quickApproveAction, changePlanAction, deleteUserAction, sendPasswordResetAction } from "./actions";
 
 export const metadata = { title: "Usuários" };
 
@@ -174,78 +172,13 @@ export default async function UsuariosPage({
                   <td className="px-4 py-3">
                     {u.role === "admin" ? <Badge tone="brand">Admin</Badge> : <Badge tone="neutral">Psicólogo</Badge>}
                   </td>
-                  <td className="px-4 py-3">
-                    {u.psyId ? (
-                      <PlanSelect psyId={u.psyId} current={u.plan} action={changePlanAction} />
-                    ) : (
-                      "—"
-                    )}
-                  </td>
+                  <td className="px-4 py-3">{u.plan ? PLAN_LABEL[u.plan] : "—"}</td>
                   <td className="px-4 py-3">{v ? <Badge tone={v.tone}>{v.label}</Badge> : "—"}</td>
                   <td className="px-4 py-3">
                     {u.published ? <Badge tone="success">Sim</Badge> : <Badge tone="neutral">Não</Badge>}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      {u.slug && u.published && (
-                        <Link href={`/psicologo/${u.slug}`} target="_blank" className="inline-flex h-8 items-center gap-1 rounded-md border border-border px-2 text-xs hover:bg-surface-muted" title="Ver perfil">
-                          <ExternalLink className="h-3.5 w-3.5" />
-                        </Link>
-                      )}
-                      {/* Aprovar rápido */}
-                      {u.psyId && u.verification !== "aprovado" && (
-                        <form action={quickApproveAction}>
-                          <input type="hidden" name="psy_id" value={u.psyId} />
-                          <button className="inline-flex h-8 items-center gap-1 rounded-md border border-green-600/40 px-2 text-xs text-green-700 hover:bg-green-50" title="Aprovar e publicar">
-                            <BadgeCheck className="h-3.5 w-3.5" /> Aprovar
-                          </button>
-                        </form>
-                      )}
-                      {/* Publicar / despublicar */}
-                      {u.psyId && (
-                        <form action={togglePublishAction}>
-                          <input type="hidden" name="psy_id" value={u.psyId} />
-                          <input type="hidden" name="publish" value={u.published ? "0" : "1"} />
-                          <button className="inline-flex h-8 items-center gap-1 rounded-md border border-border px-2 text-xs hover:bg-surface-muted" title={u.published ? "Despublicar" : "Publicar"}>
-                            {u.published ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                          </button>
-                        </form>
-                      )}
-                      {/* Admin toggle */}
-                      <form action={toggleAdminAction}>
-                        <input type="hidden" name="profile_id" value={u.profileId} />
-                        <input type="hidden" name="make_admin" value={u.role === "admin" ? "0" : "1"} />
-                        <button className="inline-flex h-8 items-center gap-1 rounded-md border border-border px-2 text-xs hover:bg-surface-muted" title={u.role === "admin" ? "Remover admin" : "Tornar admin"}>
-                          {u.role === "admin" ? <ShieldOff className="h-3.5 w-3.5" /> : <ShieldCheck className="h-3.5 w-3.5" />}
-                        </button>
-                      </form>
-                      {/* Reset de senha (envia e-mail) */}
-                      {u.email && (
-                        <form action={sendPasswordResetAction}>
-                          <input type="hidden" name="email" value={u.email} />
-                          <ConfirmButton
-                            message={`Enviar e-mail de redefinição de senha para ${u.email}?`}
-                            title="Enviar redefinição de senha"
-                            className="inline-flex h-8 items-center gap-1 rounded-md border border-border px-2 text-xs hover:bg-surface-muted"
-                          >
-                            <KeyRound className="h-3.5 w-3.5" />
-                          </ConfirmButton>
-                        </form>
-                      )}
-                      {/* Excluir usuário */}
-                      {u.profileId !== me.id && (
-                        <form action={deleteUserAction}>
-                          <input type="hidden" name="profile_id" value={u.profileId} />
-                          <ConfirmButton
-                            message={`Excluir "${u.name || u.email}" permanentemente? Esta ação não pode ser desfeita.`}
-                            title="Excluir usuário"
-                            className="inline-flex h-8 items-center gap-1 rounded-md border border-danger/40 px-2 text-xs text-danger hover:bg-danger/10"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </ConfirmButton>
-                        </form>
-                      )}
-                    </div>
+                    <UserManageModal u={u} canDelete={u.profileId !== me.id} />
                   </td>
                 </tr>
               );

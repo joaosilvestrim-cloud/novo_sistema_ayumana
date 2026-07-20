@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Search, ShieldCheck, Globe2, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { HeroVisual } from "@/components/site/hero-visual";
+import type { HeroPerson } from "@/lib/psychologists";
 
 const QUEIXAS = [
   "Ansiedade",
@@ -9,132 +11,6 @@ const QUEIXAS = [
   "Autoestima",
   "Luto",
 ];
-
-const FLOATING = [
-  {
-    initials: "MA",
-    name: "Mariana A.",
-    role: "TCC · atende no exterior",
-    flag: "🇵🇹",
-    place: "Portugal",
-    tone: "bg-teal-100 text-teal-800",
-    cls: "ayu-float",
-    style: { top: "4%", right: "6%" },
-    delay: "0s",
-  },
-  {
-    initials: "RS",
-    name: "Rafael S.",
-    role: "Psicanálise",
-    flag: "🇺🇸",
-    place: "EUA",
-    tone: "bg-green-100 text-green-800",
-    cls: "ayu-float-slow",
-    style: { top: "40%", right: "40%" },
-    delay: "1.2s",
-  },
-  {
-    initials: "CN",
-    name: "Camila N.",
-    role: "Infância · bilíngues",
-    flag: "🇮🇪",
-    place: "Irlanda",
-    tone: "bg-yellow-400/20 text-yellow-600",
-    cls: "ayu-float",
-    style: { bottom: "6%", right: "10%" },
-    delay: "0.6s",
-  },
-];
-
-const COUNTRY_PILLS = [
-  { flag: "🇩🇪", label: "Alemanha", style: { top: "24%", right: "34%" }, cls: "ayu-float-slow", delay: "0.3s" },
-  { flag: "🇯🇵", label: "Japão", style: { bottom: "28%", right: "48%" }, cls: "ayu-float", delay: "1.6s" },
-];
-
-export type HeroPerson = {
-  name: string | null;
-  role: string;
-  place: string;
-  avatar_url: string | null;
-  slug: string | null;
-};
-
-function firstNames(name: string | null): string {
-  if (!name) return "Psicólogo(a)";
-  const parts = name.trim().split(/\s+/).filter((w) => !/^(dr|dra|prof|profa)\.?$/i.test(w));
-  // Primeiro nome + inicial do segundo (privacidade leve, como no visual antigo).
-  return parts[1] ? `${parts[0]} ${parts[1][0]}.` : parts[0] || "Psicólogo(a)";
-}
-
-function HeroVisual({ people = [] }: { people?: HeroPerson[] }) {
-  return (
-    <div className="relative hidden h-[440px] lg:block" aria-hidden>
-      {/* anel orgânico que ecoa o símbolo da marca */}
-      <div className="absolute right-[14%] top-1/2 h-72 w-72 -translate-y-1/2 rounded-[46%_54%_60%_40%/48%_42%_58%_52%] border-2 border-brand/30" />
-      <div className="absolute right-[10%] top-1/2 h-80 w-80 -translate-y-1/2 rounded-[54%_46%_40%_60%/58%_52%_48%_42%] border border-accent/30" />
-
-      {COUNTRY_PILLS.map((c) => (
-        <div
-          key={c.label}
-          className={`absolute ${c.cls} rounded-full border border-border bg-background/90 px-3 py-1.5 text-xs font-medium text-heading shadow-sm backdrop-blur`}
-          style={{ ...c.style, animationDelay: c.delay }}
-        >
-          <span className="mr-1">{c.flag}</span>
-          {c.label}
-        </div>
-      ))}
-
-      {FLOATING.map((fake, i) => {
-        const real = people[i];
-        const name = real ? firstNames(real.name) : fake.name;
-        const role = real ? real.role : fake.role;
-        const place = real ? real.place : `${fake.flag} ${fake.place}`;
-        const inner = (
-          <>
-            <div className="flex items-center gap-3">
-              {real?.avatar_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={real.avatar_url}
-                  alt={name ?? "Psicólogo"}
-                  className="h-11 w-11 shrink-0 rounded-full object-cover"
-                />
-              ) : (
-                <div className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-semibold ${fake.tone}`}>
-                  {fake.initials}
-                </div>
-              )}
-              <div className="min-w-0">
-                <div className="flex items-center gap-1">
-                  <p className="truncate text-sm font-semibold text-heading">{name}</p>
-                  <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-green-600" />
-                </div>
-                <p className="truncate text-xs text-foreground-muted">{role}</p>
-              </div>
-            </div>
-            <div className="mt-3 flex items-center justify-between border-t border-border pt-2.5">
-              <span className="truncate text-xs text-foreground-muted">{place}</span>
-              <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-green-700">
-                <span className="ayu-pulse-dot h-1.5 w-1.5 rounded-full bg-green-500" />
-                online
-              </span>
-            </div>
-          </>
-        );
-        const cardCls = `absolute ${fake.cls} w-56 rounded-2xl border border-border bg-background/95 p-3.5 shadow-lg shadow-teal-900/5 backdrop-blur`;
-        return real?.slug ? (
-          <Link key={i} href={`/psicologo/${real.slug}`} className={cardCls} style={{ ...fake.style, animationDelay: fake.delay }}>
-            {inner}
-          </Link>
-        ) : (
-          <div key={i} className={cardCls} style={{ ...fake.style, animationDelay: fake.delay }}>
-            {inner}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 export function Hero({ people = [] }: { people?: HeroPerson[] }) {
   return (
@@ -229,7 +105,7 @@ export function Hero({ people = [] }: { people?: HeroPerson[] }) {
           </div>
         </div>
 
-        {/* Coluna visual */}
+        {/* Coluna visual (rotaciona entre os psicólogos IDEAL reais) */}
         <HeroVisual people={people} />
       </div>
     </section>

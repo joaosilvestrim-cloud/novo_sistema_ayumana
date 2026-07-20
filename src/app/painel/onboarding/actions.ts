@@ -159,25 +159,6 @@ export async function saveOnboardingAction(
     crpDocumentPath = path;
   }
 
-  // Upload do áudio de apresentação (opcional, bucket público via admin).
-  let audioUrl: string | undefined;
-  const audioFile = formData.get("audio_file") as File | null;
-  if (audioFile && audioFile.size > 0) {
-    if (audioFile.size > 10 * 1024 * 1024) {
-      return { error: "O áudio excede 10 MB." };
-    }
-    const admin = createAdminClient();
-    const ext = (audioFile.name.split(".").pop() || "mp3").toLowerCase();
-    const path = `${user.id}/apresentacao-${Date.now()}.${ext}`;
-    const { error: aErr } = await admin.storage
-      .from("perfil-audio")
-      .upload(path, audioFile, { upsert: true, contentType: audioFile.type });
-    if (aErr) {
-      return { error: `Falha no upload do áudio: ${aErr.message}` };
-    }
-    audioUrl = admin.storage.from("perfil-audio").getPublicUrl(path).data.publicUrl;
-  }
-
   // Upload da foto de perfil (opcional, bucket público via admin).
   let avatarUrl: string | undefined;
   const avatarFile = formData.get("avatar_file") as File | null;
@@ -268,7 +249,6 @@ export async function saveOnboardingAction(
     services,
     session_price_cents: sessionPrice,
     session_price_in_person_cents: sessionPriceInPerson,
-    ...(audioUrl ? { audio_url: audioUrl } : {}),
     ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
     gallery_urls: galleryUrls,
     accepts_online: acceptsOnline,
