@@ -1,135 +1,136 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { STYLE_SPECTRUMS, styleValue, styleTag, styleReading, type Style } from "@/lib/style";
+import { useState } from "react";
+import { Ear, CalendarDays, HeartHandshake, Heart, MessageCircle, BarChart3, Lightbulb } from "lucide-react";
+import {
+  STYLE_SPECTRUMS, styleValue, styleLean, styleIntensity, styleReading,
+  type Style, type StyleIcon,
+} from "@/lib/style";
 
-const N = 7; // blocos por linha (ímpar → bloco central de equilíbrio)
-const CENTER = 3;
+const ICONS: Record<StyleIcon, React.ElementType> = {
+  ear: Ear,
+  calendar: CalendarDays,
+  care: HeartHandshake,
+  heart: Heart,
+  chat: MessageCircle,
+};
 
-function tagsFrom(style: Style | null | undefined): string[] {
-  const out: string[] = [];
-  for (const s of STYLE_SPECTRUMS) {
-    const t = styleTag(s, styleValue(style, s.key));
-    if (t) out.push(t);
-  }
-  return out;
+const TEAL = "#0e7490"; // polo esquerdo
+const GREEN = "#4d7c0f"; // polo direito
+const GREY = "#94a3b8";
+
+// Geometria do radar (pentágono).
+const CX = 150, CY = 140, R = 96, NAX = STYLE_SPECTRUMS.length;
+function pt(i: number, radius: number): [number, number] {
+  const a = (-90 + (360 / NAX) * i) * (Math.PI / 180);
+  return [CX + radius * Math.cos(a), CY + radius * Math.sin(a)];
+}
+function ring(level: number): string {
+  return STYLE_SPECTRUMS.map((_, i) => pt(i, (level / 5) * R).join(",")).join(" ");
 }
 
-// Estado de cada bloco: acende do centro em direção ao polo dominante.
-function blockKind(v: number, i: number): "left" | "right" | "center" | null {
-  if (i === CENTER) return "center";
-  if (i > CENTER) {
-    const pos = 50 + ((i - CENTER) / (N - 1 - CENTER)) * 50; // 66.7 / 83.3 / 100
-    return v >= pos ? "right" : null;
-  }
-  const pos = 50 - ((CENTER - i) / CENTER) * 50; // 33.3 / 16.7 / 0
-  return v <= pos ? "left" : null;
-}
-
-export function StyleSignature({
-  style,
-  firstName,
-}: {
-  style: Style | null;
-  firstName?: string | null;
-}) {
-  const [mounted, setMounted] = useState(false);
+export function StyleSignature({ style, firstName }: { style: Style | null; firstName?: string | null }) {
   const [active, setActive] = useState<number | null>(null);
-  const ref = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const io = new IntersectionObserver(
-      ([e]) => {
-        if (e.isIntersecting) {
-          setMounted(true);
-          io.disconnect();
-        }
-      },
-      { threshold: 0.2 }
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-
-  const tags = tagsFrom(style);
+  const dims = STYLE_SPECTRUMS.map((s) => {
+    const v = styleValue(style, s.key);
+    return { s, v, lean: styleLean(v), intensity: styleIntensity(v) };
+  });
+  const dataPoly = dims.map((d, i) => pt(i, (d.intensity / 5) * R).join(",")).join(" ");
 
   return (
-    <section ref={ref}>
+    <section>
       <h2 className="text-lg">Meu estilo de atendimento</h2>
       <p className="mt-1 text-sm text-foreground-muted">
-        Como costuma ser a sessão com {firstName || "este profissional"}. Toque ou
-        passe o mouse em cada linha.
+        Como costuma ser a sessão com {firstName || "este profissional"}. Cada eixo é uma
+        preferência de atuação.
       </p>
 
-      {tags.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-2">
-          {tags.map((t) => (
-            <span key={t} className="rounded-full bg-brand/10 px-3 py-1 text-sm font-medium text-brand-dark">
-              {t}
-            </span>
+      {/* Radar */}
+      <div className="mt-4 flex justify-center">
+        <svg viewBox="0 0 300 290" className="ayu-rise w-full max-w-[420px]" role="img" aria-label="Radar do estilo de atendimento">
+          {/* anéis de referência */}
+          {[1, 2, 3, 4, 5].map((lv) => (
+            <polygon key={lv} points={ring(lv)} fill="none" stroke="#e2e8f0" strokeWidth="1" />
           ))}
-        </div>
-      )}
+          {/* eixos */}
+          {dims.map((_, i) => {
+            const [x, y] = pt(i, R);
+            return <line key={i} x1={CX} y1={CY} x2={x} y2={y} stroke="#e2e8f0" strokeWidth="1" />;
+          })}
+          {/* números 1..5 no eixo de cima */}
+          {[1, 2, 3, 4, 5].map((lv) => (
+            <text key={lv} x={CX + 5} y={CY - (lv / 5) * R + 3} fontSize="9" fill="#94a3b8">{lv}</text>
+          ))}
+          {/* área de dados */}
+          <polygon points={dataPoly} fill="#14b8a6" fillOpacity="0.15" stroke="#0d9488" strokeWidth="2" strokeLinejoin="round" />
+          {/* vértices + badge numerado */}
+          {dims.map((d, i) => {
+            const [x, y] = pt(i, (d.intensity / 5) * R);
+            const [bx, by] = pt(i, R + 20);
+            const color = d.lean === "left" ? TEAL : d.lean === "right" ? GREEN : GREY;
+            const on = active === i;
+            return (
+              <g key={i}>
+                <circle cx={x} cy={y} r={on ? 5 : 4} fill={color} stroke="#fff" strokeWidth="1.5" />
+                <circle cx={bx} cy={by} r="11" fill="#fff" stroke={color} strokeWidth="1.5" />
+                <text x={bx} y={by + 3.5} fontSize="11" fontWeight="600" fill={color} textAnchor="middle">{i + 1}</text>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
 
-      <div className="mt-5 space-y-2">
-        {STYLE_SPECTRUMS.map((s, idx) => {
-          const v = styleValue(style, s.key);
-          const isActive = active === idx;
+      {/* Legenda: cada dimensão com os dois polos, descrição e o lado que predomina */}
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        {dims.map((d, i) => {
+          const Icon = ICONS[d.s.icon];
+          const color = d.lean === "left" ? TEAL : d.lean === "right" ? GREEN : GREY;
           return (
-            <button
-              key={s.key}
-              type="button"
-              onMouseEnter={() => setActive(idx)}
+            <div
+              key={d.s.key}
+              onMouseEnter={() => setActive(i)}
               onMouseLeave={() => setActive(null)}
-              onFocus={() => setActive(idx)}
-              onClick={() => setActive((a) => (a === idx ? null : idx))}
-              className={`block w-full rounded-xl border p-3 text-left transition-colors ${
-                isActive ? "border-brand bg-brand/5" : "border-transparent hover:bg-surface-muted/50"
-              }`}
+              className={`rounded-xl border p-3 transition-colors ${active === i ? "border-brand bg-brand/5" : "border-border"}`}
             >
-              <div className="mb-1.5 flex justify-between text-xs font-medium">
-                <span className={v <= 30 ? "text-brand-dark" : "text-foreground-muted"}>{s.left}</span>
-                <span className={v >= 70 ? "text-brand-dark" : "text-foreground-muted"}>{s.right}</span>
+              <div className="flex items-center gap-2">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold" style={{ color, borderColor: color, borderWidth: 1.5 }}>
+                  {i + 1}
+                </span>
+                <Icon className="h-4 w-4 shrink-0" style={{ color }} />
+                <span className="text-sm font-medium" style={{ color }}>{styleReading(d.s, d.v)}</span>
               </div>
-
-              {/* Equalizer de blocos */}
-              <div className="flex items-center gap-1">
-                {Array.from({ length: N }).map((_, i) => {
-                  const kind = blockKind(v, i);
-                  const lit = kind !== null;
-                  const color =
-                    kind === "right" ? "bg-brand" : kind === "left" ? "bg-teal-500" : "bg-heading/40";
-                  // distância do centro define o atraso da animação (efeito equalizer)
-                  const delay = Math.abs(i - CENTER) * 70;
-                  return (
-                    <div key={i} className="relative h-4 flex-1 overflow-hidden rounded-[3px] bg-surface-muted">
-                      {lit && (
-                        <div
-                          className={`absolute inset-0 ${color} transition-all duration-300 ease-out`}
-                          style={{
-                            opacity: mounted ? 1 : 0,
-                            transform: mounted ? "scaleY(1)" : "scaleY(0.3)",
-                            transitionDelay: `${delay}ms`,
-                          }}
-                        />
-                      )}
-                    </div>
-                  );
-                })}
+              <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                <div className={d.lean === "left" ? "opacity-100" : "opacity-55"}>
+                  <p className="font-medium" style={{ color: TEAL }}>{d.s.left}</p>
+                  <p className="text-foreground-muted">{d.s.leftDesc}</p>
+                </div>
+                <div className={`text-right ${d.lean === "right" ? "opacity-100" : "opacity-55"}`}>
+                  <p className="font-medium" style={{ color: GREEN }}>{d.s.right}</p>
+                  <p className="text-foreground-muted">{d.s.rightDesc}</p>
+                </div>
               </div>
-
-              <p
-                className={`mt-1.5 text-xs transition-colors ${
-                  isActive ? "font-medium text-brand-dark" : "text-foreground-muted"
-                }`}
-              >
-                {styleReading(s, v)}
-              </p>
-            </button>
+            </div>
           );
         })}
+      </div>
+
+      {/* Rodapé explicativo */}
+      <div className="mt-4 grid gap-4 rounded-2xl bg-surface-muted/50 p-4 sm:grid-cols-2">
+        <div className="flex gap-3">
+          <BarChart3 className="mt-0.5 h-5 w-5 shrink-0 text-teal-700" />
+          <div>
+            <p className="text-sm font-semibold text-heading">Como interpretar</p>
+            <p className="text-xs text-foreground-muted">Quanto mais longe do centro, mais forte a tendência da dimensão. O centro indica equilíbrio entre os polos.</p>
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <Lightbulb className="mt-0.5 h-5 w-5 shrink-0 text-green-700" />
+          <div>
+            <p className="text-sm font-semibold text-heading">Importante</p>
+            <p className="text-xs text-foreground-muted">Não existe estilo melhor ou pior. Cada perfil é único e ajuda você a sentir o encaixe antes da primeira sessão.</p>
+          </div>
+        </div>
       </div>
     </section>
   );

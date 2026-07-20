@@ -1,23 +1,24 @@
 // "Meu estilo de atendimento": mapa bipolar do estilo do profissional.
-// NÃO é ranking de competências — cada eixo mostra a tendência entre dois polos
-// legítimos (ex.: escuta livre x direcionamento). Mostra encaixe, não "melhor/pior".
-//
-// Vocabulário ÚNICO: o cadastro (sliders), as tags e a leitura usam EXATAMENTE
-// os mesmos termos dos polos. Sem renomear eixo (evita ruído entre input e output).
-// Valor 0 = polo esquerdo, 100 = polo direito, 50 = equilíbrio.
+// Cada eixo é uma dimensão com dois polos legítimos. Valor 0 = polo esquerdo,
+// 100 = polo direito, 50 = equilíbrio. Fonte ÚNICA: cadastro (sliders) e radar.
+
+export type StyleIcon = "ear" | "calendar" | "care" | "heart" | "chat";
 
 export type StyleSpectrum = {
   key: string;
   left: string; // polo esquerdo (valor baixo)
   right: string; // polo direito (valor alto)
+  leftDesc: string;
+  rightDesc: string;
+  icon: StyleIcon;
 };
 
 export const STYLE_SPECTRUMS: StyleSpectrum[] = [
-  { key: "direcao", left: "Escuta livre", right: "Direcionamento" },
-  { key: "estrutura", left: "Sessão flexível", right: "Sessão estruturada" },
-  { key: "tom", left: "Acolhedor", right: "Desafiador" },
-  { key: "foco", left: "Foco nas emoções", right: "Foco em estratégias" },
-  { key: "registro", left: "Linguagem acessível", right: "Linguagem técnica" },
+  { key: "direcao", left: "Escuta livre", right: "Direcionamento", leftDesc: "Escuta sem diretividade", rightDesc: "Direção e orientação ativa", icon: "ear" },
+  { key: "estrutura", left: "Sessão flexível", right: "Sessão estruturada", leftDesc: "Mais abertura e adaptação", rightDesc: "Mais planejamento e estrutura", icon: "calendar" },
+  { key: "tom", left: "Acolhedor", right: "Desafiador", leftDesc: "Ambiente de apoio e validação", rightDesc: "Estímulo ao crescimento e à reflexão", icon: "care" },
+  { key: "foco", left: "Foco nas emoções", right: "Foco em estratégias", leftDesc: "Exploração e compreensão emocional", rightDesc: "Praticidade e resolução de problemas", icon: "heart" },
+  { key: "registro", left: "Linguagem acessível", right: "Linguagem técnica", leftDesc: "Clara, simples e cotidiana", rightDesc: "Mais conceitos e termos especializados", icon: "chat" },
 ];
 
 export type Style = Record<string, number>;
@@ -27,13 +28,23 @@ export function styleValue(style: Style | null | undefined, key: string): number
   return typeof v === "number" && v >= 0 && v <= 100 ? v : 50;
 }
 
-// Regras de negócio (faixas): 0–30 forte à esquerda, 31–69 flexível/equilibrado,
-// 70–100 forte à direita. A tag só aparece nos extremos.
-/** Etiqueta-resumo = polo dominante nos extremos (termo exato), ou null no meio. */
+// Regras de faixa: 0–30 forte à esquerda, 31–69 flexível, 70–100 forte à direita.
 export function styleTag(s: StyleSpectrum, v: number): string | null {
   if (v <= 30) return s.left;
   if (v >= 70) return s.right;
   return null;
+}
+
+/** Polo dominante ('left' | 'right' | 'center'). */
+export function styleLean(v: number): "left" | "right" | "center" {
+  if (v <= 45) return "left";
+  if (v >= 55) return "right";
+  return "center";
+}
+
+/** Intensidade 0–5 (distância do equilíbrio) para o raio no radar. */
+export function styleIntensity(v: number): number {
+  return (Math.abs(v - 50) / 50) * 5;
 }
 
 /** Leitura dinâmica: intensidade + polo (sem citar o oposto). */
