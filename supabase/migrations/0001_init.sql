@@ -118,7 +118,7 @@ insert into public.plans (id, name, price_cents, price_label, search_priority, i
     '["Prioridade na busca","Exibição do valor da sessão","Indicador de agenda aberta","Campos extras no perfil"]'::jsonb),
   ('ideal', 'Ideal', 3990, 'R$ 39,90/mês', 20, true, 3,
     '["Prioridade máxima","Vídeo de apresentação","Selo atende no exterior em destaque","Participação no fórum"]'::jsonb),
-  ('presenca', 'Presença', 29700, 'R$ 297 a 397/mês', 30, false, 4,
+  ('presenca', 'Presença', 29700, 'R$ 297/mês', 30, false, 4,
     '["Tudo do Ideal","Presença digital gerida pela Ayumana","8 peças/mês + 1 revisão","Capacidade limitada (15 a 20 vagas)"]'::jsonb)
 on conflict (id) do update set
   name = excluded.name,

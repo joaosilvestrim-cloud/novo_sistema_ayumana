@@ -2,10 +2,9 @@ import Link from "next/link";
 import { Search, ShieldCheck, EyeOff, UserPlus, AlertCircle, Users, Clock } from "lucide-react";
 import { getUsersOverview, type AdminUser } from "@/lib/admin";
 import { requireAdmin } from "@/lib/auth";
-import { Badge } from "@/components/ui/badge";
-import { UserManageModal } from "@/components/admin/user-manage-modal";
+import { UsersBulkTable } from "@/components/admin/users-bulk-table";
 import { PLAN_LABEL } from "@/lib/plan-labels";
-import { VERIFICATION_LABELS, type PlanTier } from "@/lib/types";
+import { type PlanTier } from "@/lib/types";
 
 export const metadata = { title: "Usuários" };
 
@@ -141,60 +140,8 @@ export default async function UsuariosPage({
         </button>
       </form>
 
-      {/* Tabela */}
-      <div className="overflow-x-auto rounded-2xl border border-border bg-background">
-        <table className="w-full min-w-[820px] text-sm">
-          <thead>
-            <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-foreground-muted">
-              <th className="px-4 py-3 font-medium">Usuário</th>
-              <th className="px-4 py-3 font-medium">Papel</th>
-              <th className="px-4 py-3 font-medium">Plano</th>
-              <th className="px-4 py-3 font-medium">Verificação</th>
-              <th className="px-4 py-3 font-medium">Publicado</th>
-              <th className="px-4 py-3 font-medium">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((u) => {
-              const v = u.verification ? VERIFICATION_LABELS[u.verification] : null;
-              return (
-                <tr key={u.profileId} className="border-b border-border last:border-0">
-                  <td className="px-4 py-3">
-                    <Link href={`/admin/usuarios/${u.profileId}`} className="font-medium text-heading hover:text-brand-dark hover:underline">
-                      {u.name || "—"}
-                    </Link>
-                    <div className="text-xs text-foreground-muted">{u.email}</div>
-                    {u.city && <div className="text-xs text-foreground-muted">{u.city}</div>}
-                    {u.role === "psicologo" && !u.profileCompleted && (
-                      <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-yellow-400/15 px-2 py-0.5 text-[11px] font-medium text-yellow-700">
-                        <AlertCircle className="h-3 w-3" /> Perfil incompleto
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    {u.role === "admin" ? <Badge tone="brand">Admin</Badge> : <Badge tone="neutral">Psicólogo</Badge>}
-                  </td>
-                  <td className="px-4 py-3">{u.plan ? PLAN_LABEL[u.plan] : "—"}</td>
-                  <td className="px-4 py-3">{v ? <Badge tone={v.tone}>{v.label}</Badge> : "—"}</td>
-                  <td className="px-4 py-3">
-                    {u.published ? <Badge tone="success">Sim</Badge> : <Badge tone="neutral">Não</Badge>}
-                  </td>
-                  <td className="px-4 py-3">
-                    <UserManageModal u={u} canDelete={u.profileId !== me.id} />
-                  </td>
-                </tr>
-              );
-            })}
-            {rows.length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-foreground-muted">
-                  Nenhum usuário encontrado.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      {/* Tabela com seleção e ações em massa */}
+      <UsersBulkTable rows={rows} meId={me.id} />
 
       {/* Paginação */}
       <div className="flex items-center justify-between text-sm text-foreground-muted">

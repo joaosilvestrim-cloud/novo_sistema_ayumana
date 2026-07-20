@@ -55,9 +55,7 @@ import {
   COUNTRIES,
   type Audience,
 } from "@/lib/types";
-
-const PAID = new Set(["destaque", "ideal", "presenca"]);
-const VIDEO_PLANS = new Set(["ideal", "presenca"]);
+import { planHas } from "@/lib/plan-features";
 
 /** Primeiro nome ignorando pronomes de tratamento (Dr., Dra., Prof.). */
 function firstNameOf(name?: string | null): string | undefined {
@@ -112,14 +110,14 @@ export default async function PerfilPage({
 
   const wa = whatsappLink(p.phone_whatsapp, p.whatsapp_message);
   const ig = instagramHandle(p.instagram);
-  const paid = PAID.has(p.plan_tier);
+  const paid = planHas(p.plan_tier, "showPrice");
   const price = paid ? formatPrice(p.session_price_cents) : null;
   const pricePresencial = paid ? formatPrice(p.session_price_in_person_cents) : null;
   const hasSchedule = !!p.schedule && DAY_ORDER.some((d) => p.schedule?.[d]);
   const location = [p.city, p.state].filter(Boolean).join(" / ");
   const forumAnswers = await listAnswersByPsychologist(p.id);
   const primeiroNome = firstNameOf(p.display_name) ?? "o profissional";
-  const showVideo = VIDEO_PLANS.has(p.plan_tier) && !!p.video_url;
+  const showVideo = planHas(p.plan_tier, "video") && !!p.video_url;
   const countryNames = p.countries
     .map((c) => COUNTRIES.find((x) => x.code === c)?.name)
     .filter(Boolean) as string[];
@@ -190,7 +188,7 @@ export default async function PerfilPage({
                       <Globe2 className="h-3.5 w-3.5" /> Atende no exterior
                     </Badge>
                   )}
-                  {p.accepting_patients && (
+                  {p.accepting_patients && planHas(p.plan_tier, "agendaAberta") && (
                     <Badge tone="success">
                       <Check className="h-3.5 w-3.5" /> Aceitando novos pacientes
                     </Badge>

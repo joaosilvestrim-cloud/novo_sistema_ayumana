@@ -17,7 +17,7 @@ const FALLBACK: Plan[] = [
   { id: "essencial", name: "Essencial", price_cents: 0, price_label: "Grátis", search_priority: 0, is_selfservice: true, sort_order: 1, features: ["Perfil completo", "Verificação de CRP", "Contato via WhatsApp", "Aparece na busca"] },
   { id: "destaque", name: "Destaque", price_cents: 2490, price_label: "R$ 24,90/mês", search_priority: 10, is_selfservice: true, sort_order: 2, features: ["Prioridade na busca", "Exibição do valor da sessão", "Indicador de agenda aberta", "Campos extras no perfil"] },
   { id: "ideal", name: "Ideal", price_cents: 3990, price_label: "R$ 39,90/mês", search_priority: 20, is_selfservice: true, sort_order: 3, features: ["Prioridade máxima", "Vídeo de apresentação", "Selo exterior em destaque", "Participação no fórum"] },
-  { id: "presenca", name: "Presença", price_cents: 29700, price_label: "R$ 297 a 397/mês", search_priority: 30, is_selfservice: false, sort_order: 4, features: ["Tudo do Ideal", "Presença digital gerida pela Ayumana", "8 peças/mês + 1 revisão", "Vagas limitadas (15 a 20)"] },
+  { id: "presenca", name: "Presença", price_cents: 29700, price_label: "R$ 297/mês", search_priority: 30, is_selfservice: false, sort_order: 4, features: ["Tudo do Ideal", "Presença digital gerida pela Ayumana", "8 peças/mês + 1 revisão", "Vagas limitadas (15 a 20)"] },
 ];
 
 export default async function ParaPsicologosPage() {

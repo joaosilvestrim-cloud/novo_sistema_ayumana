@@ -137,6 +137,37 @@ export async function sendPasswordResetAction(formData: FormData) {
   revalidatePath("/admin/usuarios");
 }
 
+export async function bulkUsersAction(formData: FormData) {
+  const me = await requireAdmin();
+  const op = String(formData.get("op") ?? "");
+  const psyIds = String(formData.get("psy_ids") ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+  const profileIds = String(formData.get("profile_ids") ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+  const plan = String(formData.get("plan") ?? "");
+  const admin = createAdminClient();
+
+  if ((op === "publish" || op === "unpublish") && psyIds.length) {
+    await admin.from("psychologists").update({ is_published: op === "publish" }).in("id", psyIds);
+  } else if (op === "approve" && psyIds.length) {
+    await admin.from("psychologists").update({
+      verification_status: "aprovado",
+      verified_at: new Date().toISOString(),
+      verified_by: me.id,
+      is_published: true,
+    }).in("id", psyIds);
+  } else if (op === "plan" && PLAN_TIERS.includes(plan as (typeof PLAN_TIERS)[number]) && psyIds.length) {
+    await admin.from("psychologists").update({ plan_tier: plan }).in("id", psyIds);
+  } else if (op === "delete") {
+    for (const pid of profileIds) {
+      if (pid === me.id) continue; // nunca a própria conta
+      await admin.auth.admin.deleteUser(pid);
+      await admin.from("psychologists").delete().eq("profile_id", pid);
+      await admin.from("profiles").delete().eq("id", pid);
+    }
+  }
+  revalidatePath("/admin/usuarios");
+  revalidatePath("/psicologos");
+}
+
 export async function deleteUserAction(formData: FormData) {
   const me = await requireAdmin();
   const profileId = String(formData.get("profile_id") ?? "");
