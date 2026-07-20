@@ -359,7 +359,17 @@ export default async function PerfilPage({
             )}
 
             {p.style && (
-              <StyleSignature style={p.style} firstName={firstNameOf(p.display_name)} />
+              <StyleSignature
+                style={p.style}
+                firstName={firstNameOf(p.display_name)}
+                avatarUrl={p.avatar_url}
+                seed={p.id}
+                attendanceTags={[
+                  p.accepts_online ? "Online" : null,
+                  p.accepts_in_person ? "Presencial" : null,
+                  ...(p.audiences ?? []).map((a) => AUDIENCE_LABELS[a as Audience]),
+                ].filter(Boolean) as string[]}
+              />
             )}
 
             {forumAnswers.length > 0 && (

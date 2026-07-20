@@ -1,137 +1,145 @@
 "use client";
 
 import { useState } from "react";
-import { Ear, CalendarDays, HeartHandshake, Heart, MessageCircle, BarChart3, Lightbulb } from "lucide-react";
+import { Ear, CalendarDays, HeartHandshake, Heart, MessageCircle, Sparkles } from "lucide-react";
+import { AvatarBubble } from "@/components/ui/avatar-bubble";
 import {
   STYLE_SPECTRUMS, styleValue, styleLean, styleIntensity, styleReading,
   type Style, type StyleIcon,
 } from "@/lib/style";
 
 const ICONS: Record<StyleIcon, React.ElementType> = {
-  ear: Ear,
-  calendar: CalendarDays,
-  care: HeartHandshake,
-  heart: Heart,
-  chat: MessageCircle,
+  ear: Ear, calendar: CalendarDays, care: HeartHandshake, heart: Heart, chat: MessageCircle,
 };
 
-const TEAL = "#0e7490"; // polo esquerdo
-const GREEN = "#4d7c0f"; // polo direito
-const GREY = "#94a3b8";
+// Adjetivo curto por polo, para montar o "arquétipo".
+const ADJ: Record<string, [string, string]> = {
+  direcao: ["Escuta ativa", "Direcionadora"],
+  estrutura: ["Flexível", "Estruturada"],
+  tom: ["Acolhedora", "Desafiadora"],
+  foco: ["Sensível", "Prática"],
+  registro: ["Acessível", "Técnica"],
+};
 
-// Geometria do radar (pentágono).
-const CX = 150, CY = 140, R = 96, NAX = STYLE_SPECTRUMS.length;
-function pt(i: number, radius: number): [number, number] {
-  const a = (-90 + (360 / NAX) * i) * (Math.PI / 180);
-  return [CX + radius * Math.cos(a), CY + radius * Math.sin(a)];
-}
-function ring(level: number): string {
-  return STYLE_SPECTRUMS.map((_, i) => pt(i, (level / 5) * R).join(",")).join(" ");
+const TEAL = "#0e7490";
+const GREEN = "#4d7c0f";
+
+type Dim = {
+  s: (typeof STYLE_SPECTRUMS)[number];
+  v: number;
+  lean: "left" | "right" | "center";
+  intensity: number;
+};
+
+function archetype(dims: Dim[]): string {
+  const leaning = dims.filter((d) => d.lean !== "center").sort((a, b) => b.intensity - a.intensity);
+  const adjs = leaning.slice(0, 2).map((d) => ADJ[d.s.key][d.lean === "left" ? 0 : 1]);
+  if (adjs.length === 0) return "Equilibrada e versátil";
+  if (adjs.length === 1) return adjs[0];
+  return `${adjs[0]} e ${adjs[1]}`;
 }
 
-export function StyleSignature({ style, firstName }: { style: Style | null; firstName?: string | null }) {
+function Pips({ level, color }: { level: number; color: string }) {
+  return (
+    <div className="flex gap-1">
+      {[0, 1, 2, 3, 4].map((i) => (
+        <span
+          key={i}
+          className="h-1.5 w-4 rounded-full"
+          style={{ backgroundColor: i < level ? color : "#e2e8f0" }}
+        />
+      ))}
+    </div>
+  );
+}
+
+export function StyleSignature({
+  style,
+  firstName,
+  avatarUrl,
+  seed,
+  attendanceTags = [],
+}: {
+  style: Style | null;
+  firstName?: string | null;
+  avatarUrl?: string | null;
+  seed?: string;
+  attendanceTags?: string[];
+}) {
   const [active, setActive] = useState<number | null>(null);
 
-  const dims = STYLE_SPECTRUMS.map((s) => {
+  const dims: Dim[] = STYLE_SPECTRUMS.map((s) => {
     const v = styleValue(style, s.key);
     return { s, v, lean: styleLean(v), intensity: styleIntensity(v) };
   });
-  const dataPoly = dims.map((d, i) => pt(i, (d.intensity / 5) * R).join(",")).join(" ");
+  const title = archetype(dims);
 
   return (
     <section>
       <h2 className="text-lg">Meu estilo de atendimento</h2>
-      <p className="mt-1 text-sm text-foreground-muted">
-        Como costuma ser a sessão com {firstName || "este profissional"}. Cada eixo é uma
-        preferência de atuação.
-      </p>
 
-      {/* Radar */}
-      <div className="mt-4 flex justify-center">
-        <svg viewBox="0 0 300 290" className="ayu-rise w-full max-w-[420px]" role="img" aria-label="Radar do estilo de atendimento">
-          {/* anéis de referência */}
-          {[1, 2, 3, 4, 5].map((lv) => (
-            <polygon key={lv} points={ring(lv)} fill="none" stroke="#e2e8f0" strokeWidth="1" />
-          ))}
-          {/* eixos */}
-          {dims.map((_, i) => {
-            const [x, y] = pt(i, R);
-            return <line key={i} x1={CX} y1={CY} x2={x} y2={y} stroke="#e2e8f0" strokeWidth="1" />;
-          })}
-          {/* números 1..5 no eixo de cima */}
-          {[1, 2, 3, 4, 5].map((lv) => (
-            <text key={lv} x={CX + 5} y={CY - (lv / 5) * R + 3} fontSize="9" fill="#94a3b8">{lv}</text>
-          ))}
-          {/* área de dados */}
-          <polygon points={dataPoly} fill="#14b8a6" fillOpacity="0.15" stroke="#0d9488" strokeWidth="2" strokeLinejoin="round" />
-          {/* vértices + badge numerado */}
+      {/* Cartão de perfil (ficha) */}
+      <div className="mt-3 overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-brand/5 via-background to-accent/5">
+        {/* Cabeçalho: avatar + arquétipo */}
+        <div className="flex items-center gap-4 border-b border-border/70 p-5">
+          <AvatarBubble src={avatarUrl} name={firstName ?? null} seed={seed} color={GREEN} size={110} className="w-16 shrink-0" />
+          <div className="min-w-0">
+            <p className="inline-flex items-center gap-1 text-xs font-medium text-brand-dark">
+              <Sparkles className="h-3.5 w-3.5" /> Perfil de abordagem
+            </p>
+            <p className="font-serif text-xl leading-tight text-heading">{title}</p>
+            <p className="text-sm text-foreground-muted">
+              Como costuma ser a sessão com {firstName || "este profissional"}.
+            </p>
+          </div>
+        </div>
+
+        {/* Atributos com medidor de nível */}
+        <div className="divide-y divide-border/60">
           {dims.map((d, i) => {
-            const [x, y] = pt(i, (d.intensity / 5) * R);
-            const [bx, by] = pt(i, R + 20);
-            const color = d.lean === "left" ? TEAL : d.lean === "right" ? GREEN : GREY;
+            const Icon = ICONS[d.s.icon];
+            const color = d.lean === "left" ? TEAL : d.lean === "right" ? GREEN : "#64748b";
+            const label = d.lean === "left" ? d.s.left : d.lean === "right" ? d.s.right : "Equilíbrio";
+            const desc = d.lean === "left" ? d.s.leftDesc : d.lean === "right" ? d.s.rightDesc : `${d.s.left} ↔ ${d.s.right}`;
+            const level = d.lean === "center" ? 1 : Math.max(1, Math.round(d.intensity));
             const on = active === i;
             return (
-              <g key={i}>
-                <circle cx={x} cy={y} r={on ? 5 : 4} fill={color} stroke="#fff" strokeWidth="1.5" />
-                <circle cx={bx} cy={by} r="11" fill="#fff" stroke={color} strokeWidth="1.5" />
-                <text x={bx} y={by + 3.5} fontSize="11" fontWeight="600" fill={color} textAnchor="middle">{i + 1}</text>
-              </g>
+              <div
+                key={d.s.key}
+                onMouseEnter={() => setActive(i)}
+                onMouseLeave={() => setActive(null)}
+                className={`flex items-center gap-3 px-5 py-3 transition-colors ${on ? "bg-brand/5" : ""}`}
+              >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: `${color}1a`, color }}>
+                  <Icon className="h-4.5 w-4.5" style={{ width: 18, height: 18 }} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="truncate text-sm font-semibold" style={{ color }}>{label}</span>
+                    <Pips level={level} color={color} />
+                  </div>
+                  <p className="truncate text-xs text-foreground-muted">{desc}</p>
+                </div>
+              </div>
             );
           })}
-        </svg>
+        </div>
+
+        {/* Tipo de atendimento */}
+        {attendanceTags.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 border-t border-border/70 px-5 py-4">
+            <span className="text-xs font-medium text-foreground-muted">Atende:</span>
+            {attendanceTags.map((t) => (
+              <span key={t} className="rounded-full bg-surface-muted px-2.5 py-1 text-xs font-medium text-heading">{t}</span>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Legenda: cada dimensão com os dois polos, descrição e o lado que predomina */}
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        {dims.map((d, i) => {
-          const Icon = ICONS[d.s.icon];
-          const color = d.lean === "left" ? TEAL : d.lean === "right" ? GREEN : GREY;
-          return (
-            <div
-              key={d.s.key}
-              onMouseEnter={() => setActive(i)}
-              onMouseLeave={() => setActive(null)}
-              className={`rounded-xl border p-3 transition-colors ${active === i ? "border-brand bg-brand/5" : "border-border"}`}
-            >
-              <div className="flex items-center gap-2">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold" style={{ color, borderColor: color, borderWidth: 1.5 }}>
-                  {i + 1}
-                </span>
-                <Icon className="h-4 w-4 shrink-0" style={{ color }} />
-                <span className="text-sm font-medium" style={{ color }}>{styleReading(d.s, d.v)}</span>
-              </div>
-              <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                <div className={d.lean === "left" ? "opacity-100" : "opacity-55"}>
-                  <p className="font-medium" style={{ color: TEAL }}>{d.s.left}</p>
-                  <p className="text-foreground-muted">{d.s.leftDesc}</p>
-                </div>
-                <div className={`text-right ${d.lean === "right" ? "opacity-100" : "opacity-55"}`}>
-                  <p className="font-medium" style={{ color: GREEN }}>{d.s.right}</p>
-                  <p className="text-foreground-muted">{d.s.rightDesc}</p>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Rodapé explicativo */}
-      <div className="mt-4 grid gap-4 rounded-2xl bg-surface-muted/50 p-4 sm:grid-cols-2">
-        <div className="flex gap-3">
-          <BarChart3 className="mt-0.5 h-5 w-5 shrink-0 text-teal-700" />
-          <div>
-            <p className="text-sm font-semibold text-heading">Como interpretar</p>
-            <p className="text-xs text-foreground-muted">Quanto mais longe do centro, mais forte a tendência da dimensão. O centro indica equilíbrio entre os polos.</p>
-          </div>
-        </div>
-        <div className="flex gap-3">
-          <Lightbulb className="mt-0.5 h-5 w-5 shrink-0 text-green-700" />
-          <div>
-            <p className="text-sm font-semibold text-heading">Importante</p>
-            <p className="text-xs text-foreground-muted">Não existe estilo melhor ou pior. Cada perfil é único e ajuda você a sentir o encaixe antes da primeira sessão.</p>
-          </div>
-        </div>
-      </div>
+      <p className="mt-2 px-1 text-xs text-foreground-muted">
+        Cada atributo mostra a tendência do profissional entre dois polos. Não existe
+        estilo melhor ou pior — ajuda você a sentir o encaixe.
+      </p>
     </section>
   );
 }
