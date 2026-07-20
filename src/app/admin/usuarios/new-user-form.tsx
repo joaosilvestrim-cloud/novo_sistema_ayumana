@@ -34,6 +34,7 @@ export function NewUserForm() {
         <Select id="role" name="role" defaultValue="admin">
           <option value="admin">Admin (acesso ao painel)</option>
           <option value="psicologo">Psicólogo</option>
+          <option value="conteudo">Conteúdo / Estúdio (Presença)</option>
         </Select>
       </Field>
 

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  ArrowLeft, ExternalLink, BadgeCheck, Eye, EyeOff, ShieldCheck, ShieldOff,
+  ArrowLeft, ExternalLink, BadgeCheck, Eye, EyeOff, ShieldCheck,
   KeyRound, Trash2, User, MapPin, Phone, Calendar, CreditCard,
 } from "lucide-react";
 import { getUserDetail } from "@/lib/admin";
@@ -15,7 +15,7 @@ import {
   type PlanTier, type VerificationStatus, type SubscriptionStatus,
 } from "@/lib/types";
 import {
-  toggleAdminAction, togglePublishAction, quickApproveAction,
+  setRoleAction, togglePublishAction, quickApproveAction,
   changePlanAction, deleteUserAction, sendPasswordResetAction,
 } from "../actions";
 
@@ -75,7 +75,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
           <h1 className="text-2xl">{profile.full_name || "—"}</h1>
           <p className="text-foreground-muted">{profile.email}</p>
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <Badge tone={profile.role === "admin" ? "brand" : "neutral"}>{profile.role === "admin" ? "Admin" : "Psicólogo"}</Badge>
+            <Badge tone={profile.role === "admin" ? "brand" : profile.role === "conteudo" ? "warning" : "neutral"}>{profile.role === "admin" ? "Admin" : profile.role === "conteudo" ? "Conteúdo" : "Psicólogo"}</Badge>
             {v && <Badge tone={v.tone}>{v.label}</Badge>}
             <Badge tone={published ? "success" : "neutral"}>{published ? "Publicado" : "Rascunho"}</Badge>
             {psy && !completed && <Badge tone="warning">Perfil incompleto</Badge>}
@@ -156,10 +156,14 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
               <button className={btn}>{published ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}{published ? "Despublicar" : "Publicar"}</button>
             </form>
           )}
-          <form action={toggleAdminAction}>
+          <form action={setRoleAction} className="flex items-center gap-2">
             <input type="hidden" name="profile_id" value={profile.id} />
-            <input type="hidden" name="make_admin" value={profile.role === "admin" ? "0" : "1"} />
-            <button className={btn}>{profile.role === "admin" ? <ShieldOff className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}{profile.role === "admin" ? "Remover admin" : "Tornar admin"}</button>
+            <select name="role" defaultValue={profile.role} className="h-9 rounded-lg border border-border bg-background px-2 text-sm">
+              <option value="psicologo">Psicólogo</option>
+              <option value="admin">Admin</option>
+              <option value="conteudo">Conteúdo / Estúdio</option>
+            </select>
+            <button className={btn}><ShieldCheck className="h-4 w-4" /> Definir papel</button>
           </form>
           {profile.email && (
             <form action={sendPasswordResetAction}>

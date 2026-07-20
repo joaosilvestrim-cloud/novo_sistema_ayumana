@@ -3,14 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  Settings2, X, ExternalLink, Trash2, KeyRound, ShieldCheck, ShieldOff,
+  Settings2, X, ExternalLink, Trash2, KeyRound, ShieldCheck,
   Eye, EyeOff, BadgeCheck, AlertCircle,
 } from "lucide-react";
 import { PLAN_LABEL } from "@/lib/plan-labels";
-import { VERIFICATION_LABELS, type PlanTier, type VerificationStatus } from "@/lib/types";
+import { VERIFICATION_LABELS, type PlanTier, type VerificationStatus, type UserRole } from "@/lib/types";
 import { ConfirmButton } from "@/components/admin/confirm-button";
 import {
-  toggleAdminAction, togglePublishAction, quickApproveAction,
+  setRoleAction, togglePublishAction, quickApproveAction,
   changePlanAction, deleteUserAction, sendPasswordResetAction,
 } from "@/app/admin/usuarios/actions";
 
@@ -23,7 +23,7 @@ export type ManageUser = {
   email: string | null;
   city: string | null;
   slug: string | null;
-  role: "psicologo" | "admin";
+  role: UserRole;
   plan: PlanTier | null;
   verification: VerificationStatus | null;
   published: boolean;
@@ -56,7 +56,7 @@ export function UserManageModal({ u, canDelete }: { u: ManageUser; canDelete: bo
                 <p className="truncate text-sm text-foreground-muted">{u.email}</p>
                 {u.city && <p className="text-xs text-foreground-muted">{u.city}</p>}
                 <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
-                  <span className="rounded-full bg-surface-muted px-2 py-0.5">{u.role === "admin" ? "Admin" : "Psicólogo"}</span>
+                  <span className="rounded-full bg-surface-muted px-2 py-0.5">{u.role === "admin" ? "Admin" : u.role === "conteudo" ? "Conteúdo" : "Psicólogo"}</span>
                   {v && <span className="rounded-full bg-surface-muted px-2 py-0.5">{v.label}</span>}
                   <span className="rounded-full bg-surface-muted px-2 py-0.5">{u.published ? "Publicado" : "Rascunho"}</span>
                   {u.role === "psicologo" && !u.profileCompleted && (
@@ -127,14 +127,15 @@ export function UserManageModal({ u, canDelete }: { u: ManageUser; canDelete: bo
               {/* Acesso */}
               <div>
                 <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-foreground-muted">Acesso</p>
-                <div className="flex flex-wrap gap-2">
-                  <form action={toggleAdminAction}>
+                <div className="flex flex-wrap items-center gap-2">
+                  <form action={setRoleAction} className="flex items-center gap-2">
                     <input type="hidden" name="profile_id" value={u.profileId} />
-                    <input type="hidden" name="make_admin" value={u.role === "admin" ? "0" : "1"} />
-                    <button className={btn}>
-                      {u.role === "admin" ? <ShieldOff className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
-                      {u.role === "admin" ? "Remover admin" : "Tornar admin"}
-                    </button>
+                    <select name="role" defaultValue={u.role} className="h-9 rounded-lg border border-border bg-background px-2 text-sm">
+                      <option value="psicologo">Psicólogo</option>
+                      <option value="admin">Admin</option>
+                      <option value="conteudo">Conteúdo / Estúdio</option>
+                    </select>
+                    <button className={btn}><ShieldCheck className="h-4 w-4" /> Definir papel</button>
                   </form>
                   {u.email && (
                     <form action={sendPasswordResetAction}>

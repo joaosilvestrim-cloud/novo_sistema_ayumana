@@ -115,7 +115,7 @@ export function UsersBulkTable({ rows, meId }: { rows: AdminUser[]; meId: string
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    {u.role === "admin" ? <Badge tone="brand">Admin</Badge> : <Badge tone="neutral">Psicólogo</Badge>}
+                    {u.role === "admin" ? <Badge tone="brand">Admin</Badge> : u.role === "conteudo" ? <Badge tone="warning">Conteúdo</Badge> : <Badge tone="neutral">Psicólogo</Badge>}
                   </td>
                   <td className="px-4 py-3">{u.plan ? PLAN_LABEL[u.plan] : "—"}</td>
                   <td className="px-4 py-3">{v ? <Badge tone={v.tone}>{v.label}</Badge> : "—"}</td>

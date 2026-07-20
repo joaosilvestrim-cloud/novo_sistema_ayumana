@@ -19,14 +19,22 @@ export async function signInAction(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
     return { error: "E-mail ou senha inválidos." };
   }
 
+  // Redireciona pelo papel quando o destino é o padrão.
+  let dest = next;
+  if (next === "/painel" && data.user) {
+    const { data: prof } = await supabase.from("profiles").select("role").eq("id", data.user.id).maybeSingle();
+    if (prof?.role === "conteudo") dest = "/estudio";
+    else if (prof?.role === "admin") dest = "/admin";
+  }
+
   revalidatePath("/", "layout");
-  redirect(next);
+  redirect(dest);
 }
 
 export async function signUpAction(

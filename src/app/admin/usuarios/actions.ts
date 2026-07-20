@@ -16,7 +16,8 @@ export async function createUserAction(
 
   const fullName = String(formData.get("full_name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  const role = String(formData.get("role") ?? "admin") === "admin" ? "admin" : "psicologo";
+  const roleRaw = String(formData.get("role") ?? "admin");
+  const role = (["admin", "psicologo", "conteudo"] as const).includes(roleRaw as never) ? roleRaw : "psicologo";
   const mode = String(formData.get("mode") ?? "senha"); // "senha" | "convite"
   const password = String(formData.get("password") ?? "");
 
@@ -80,6 +81,17 @@ export async function toggleAdminAction(formData: FormData) {
 
   const admin = createAdminClient();
   await admin.from("profiles").update({ role: makeAdmin ? "admin" : "psicologo" }).eq("id", profileId);
+  revalidatePath("/admin/usuarios");
+}
+
+export async function setRoleAction(formData: FormData) {
+  const me = await requireAdmin();
+  const profileId = String(formData.get("profile_id") ?? "");
+  const role = String(formData.get("role") ?? "");
+  if (!profileId || !(["admin", "psicologo", "conteudo"] as const).includes(role as never)) return;
+  if (profileId === me.id && role !== "admin") return; // não se auto-rebaixa
+  const admin = createAdminClient();
+  await admin.from("profiles").update({ role }).eq("id", profileId);
   revalidatePath("/admin/usuarios");
 }
 

@@ -1,6 +1,42 @@
 // Tipos do domínio Ayumana (espelham a migration 0001).
 
-export type UserRole = "psicologo" | "admin";
+export type UserRole = "psicologo" | "admin" | "conteudo";
+
+export type ContentStatusKey = "briefing" | "producao" | "revisao" | "ajustes" | "aprovado" | "entregue";
+export type ContentFormat = "post" | "story" | "reel" | "carrossel" | "outro";
+
+export type ContentItem = {
+  id: string;
+  psychologist_id: string;
+  cycle: string; // 'YYYY-MM'
+  title: string;
+  format: ContentFormat;
+  status: ContentStatusKey;
+  brief: string | null;
+  asset_url: string | null;
+  feedback: string | null;
+  assigned_to: string | null;
+  position: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export const CONTENT_STATUS: { key: ContentStatusKey; label: string; tone: "neutral" | "warning" | "success" | "brand" }[] = [
+  { key: "briefing", label: "Briefing", tone: "neutral" },
+  { key: "producao", label: "Em produção", tone: "brand" },
+  { key: "revisao", label: "Em revisão", tone: "warning" },
+  { key: "ajustes", label: "Ajustes", tone: "warning" },
+  { key: "aprovado", label: "Aprovado", tone: "success" },
+  { key: "entregue", label: "Entregue", tone: "success" },
+];
+
+export const CONTENT_FORMAT_LABEL: Record<ContentFormat, string> = {
+  post: "Post",
+  story: "Story",
+  reel: "Reel",
+  carrossel: "Carrossel",
+  outro: "Outro",
+};
 export type PlanTier = "essencial" | "destaque" | "ideal" | "presenca";
 export type VerificationStatus =
   | "nao_enviado"

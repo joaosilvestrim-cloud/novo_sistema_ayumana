@@ -4,6 +4,7 @@ import type {
   PlanTier,
   VerificationStatus,
   SubscriptionStatus,
+  UserRole,
 } from "@/lib/types";
 
 export type AdminMetrics = {
@@ -110,7 +111,7 @@ export type AdminUser = {
   profileId: string;
   name: string | null;
   email: string | null;
-  role: "psicologo" | "admin";
+  role: UserRole;
   slug: string | null;
   city: string | null;
   plan: PlanTier | null;
@@ -126,7 +127,7 @@ export type UserDetail = {
     id: string;
     full_name: string | null;
     email: string | null;
-    role: "psicologo" | "admin";
+    role: UserRole;
     created_at: string | null;
   };
   psy: Record<string, unknown> | null;

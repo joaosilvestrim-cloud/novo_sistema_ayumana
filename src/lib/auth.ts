@@ -42,6 +42,14 @@ export async function requireAdmin() {
   return profile;
 }
 
+/** Exige papel de conteúdo/estúdio (ou admin). */
+export async function requireContentStaff(): Promise<Profile> {
+  const profile = await getProfile();
+  if (!profile) redirect("/login");
+  if (profile.role !== "conteudo" && profile.role !== "admin") redirect("/painel");
+  return profile;
+}
+
 /** Perfil profissional do psicólogo logado (ou null). */
 export async function getMyPsychologist(): Promise<Psychologist | null> {
   const supabase = await createClient();

@@ -9,6 +9,7 @@ import {
   Users,
   CreditCard,
   Newspaper,
+  Palette,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +20,7 @@ const ITEMS = [
   { href: "/admin/usuarios", label: "Usuários", icon: Users },
   { href: "/admin/assinaturas", label: "Assinaturas", icon: CreditCard },
   { href: "/admin/blog", label: "Blog", icon: Newspaper },
+  { href: "/estudio", label: "Estúdio", icon: Palette },
 ] as const;
 
 export function AdminNav({
