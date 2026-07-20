@@ -230,7 +230,7 @@ export function Hero({ people = [] }: { people?: HeroPerson[] }) {
         </div>
 
         {/* Coluna visual */}
-        <HeroVisual />
+        <HeroVisual people={people} />
       </div>
     </section>
   );

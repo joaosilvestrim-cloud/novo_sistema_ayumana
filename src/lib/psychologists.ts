@@ -42,6 +42,66 @@ type RawRow = Psychologist & {
   countries: { country_code: string }[] | null;
 };
 
+export type HeroPerson = {
+  name: string | null;
+  role: string;
+  place: string;
+  avatar_url: string | null;
+  slug: string | null;
+};
+
+type HeroRow = {
+  slug: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
+  city: string | null;
+  state: string | null;
+  plan_tier: PlanTier;
+  approaches: { approach: { name: string } | null }[] | null;
+};
+
+const HERO_FIELDS =
+  "slug, display_name, avatar_url, city, state, plan_tier, approaches:psychologist_approaches(approach:approaches(name))";
+
+/** Até 3 profissionais reais para a animação da home: IDEAL primeiro, com foto. */
+export async function listHeroPeople(): Promise<HeroPerson[]> {
+  const supabase = await createClient();
+
+  // 1) IDEAL publicados com foto têm prioridade absoluta.
+  const { data: ideal } = await supabase
+    .from("psychologists")
+    .select(HERO_FIELDS)
+    .eq("is_published", true)
+    .not("avatar_url", "is", null)
+    .eq("plan_tier", "ideal")
+    .limit(3);
+
+  let rows = (ideal ?? []) as unknown as HeroRow[];
+
+  // 2) Completa com outros publicados com foto, dando peso aos planos pagos.
+  if (rows.length < 3) {
+    const { data: others } = await supabase
+      .from("psychologists")
+      .select(HERO_FIELDS)
+      .eq("is_published", true)
+      .not("avatar_url", "is", null)
+      .neq("plan_tier", "ideal")
+      .limit(40);
+    const extra = ((others ?? []) as unknown as HeroRow[]).sort(
+      (a, b) => (PLAN_PRIORITY[b.plan_tier] ?? 0) - (PLAN_PRIORITY[a.plan_tier] ?? 0)
+    );
+    rows = [...rows, ...extra].slice(0, 3);
+  }
+
+  return rows.slice(0, 3).map((r) => ({
+    name: r.display_name,
+    role: r.approaches?.[0]?.approach?.name ?? "Psicólogo(a)",
+    place: [r.city, r.state].filter(Boolean).join(" / ") || "Online",
+    avatar_url: r.avatar_url,
+    slug: r.slug,
+  }));
+}
+
 function shape(row: RawRow): PsychologistCard {
   return {
     ...(row as Psychologist),

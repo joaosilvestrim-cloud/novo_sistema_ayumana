@@ -1,26 +1,23 @@
 // "Meu estilo de atendimento": mapa bipolar do estilo do profissional.
-// NÃO é um ranking de competências — cada eixo mostra a tendência entre dois
-// polos legítimos (ex.: escuta livre x direcionamento). Ajuda o paciente a
-// sentir o encaixe, não a julgar "melhor/pior".
-// Cada valor vai de 0 (polo esquerdo) a 100 (polo direito). 50 = equilíbrio.
+// NÃO é ranking de competências — cada eixo mostra a tendência entre dois polos
+// legítimos (ex.: escuta livre x direcionamento). Mostra encaixe, não "melhor/pior".
 //
-// Fonte ÚNICA de verdade: o editor do cadastro e o radar do perfil leem daqui.
+// Vocabulário ÚNICO: o cadastro (sliders), as tags e a leitura usam EXATAMENTE
+// os mesmos termos dos polos. Sem renomear eixo (evita ruído entre input e output).
+// Valor 0 = polo esquerdo, 100 = polo direito, 50 = equilíbrio.
 
 export type StyleSpectrum = {
   key: string;
-  left: string; // polo esquerdo
-  right: string; // polo direito
-  axis: string; // rótulo do eixo no radar (aponta para o polo direito)
-  tagLeft: string; // etiqueta-resumo quando pende à esquerda
-  tagRight: string; // etiqueta-resumo quando pende à direita
+  left: string; // polo esquerdo (valor baixo)
+  right: string; // polo direito (valor alto)
 };
 
 export const STYLE_SPECTRUMS: StyleSpectrum[] = [
-  { key: "direcao", left: "Escuta livre", right: "Direcionamento", axis: "Direcionamento", tagLeft: "Escuta ativa", tagRight: "Direcionadora" },
-  { key: "estrutura", left: "Sessão flexível", right: "Sessão estruturada", axis: "Estrutura", tagLeft: "Flexível", tagRight: "Estruturada" },
-  { key: "tom", left: "Acolhedor", right: "Desafiador", axis: "Desafio", tagLeft: "Acolhedora", tagRight: "Desafiadora" },
-  { key: "foco", left: "Foco nas emoções", right: "Foco em estratégias", axis: "Praticidade", tagLeft: "Foco emocional", tagRight: "Foco prático" },
-  { key: "registro", left: "Linguagem acessível", right: "Linguagem técnica", axis: "Formalidade", tagLeft: "Linguagem acessível", tagRight: "Linguagem técnica" },
+  { key: "direcao", left: "Escuta livre", right: "Direcionamento" },
+  { key: "estrutura", left: "Sessão flexível", right: "Sessão estruturada" },
+  { key: "tom", left: "Acolhedor", right: "Desafiador" },
+  { key: "foco", left: "Foco nas emoções", right: "Foco em estratégias" },
+  { key: "registro", left: "Linguagem acessível", right: "Linguagem técnica" },
 ];
 
 export type Style = Record<string, number>;
@@ -30,16 +27,18 @@ export function styleValue(style: Style | null | undefined, key: string): number
   return typeof v === "number" && v >= 0 && v <= 100 ? v : 50;
 }
 
-/** Etiqueta-resumo do eixo conforme a posição, ou null se estiver no meio. */
+/** Etiqueta-resumo = o polo para o qual pende (termo exato), ou null no meio. */
 export function styleTag(s: StyleSpectrum, v: number): string | null {
-  if (v <= 38) return s.tagLeft;
-  if (v >= 62) return s.tagRight;
+  if (v <= 40) return s.left;
+  if (v >= 60) return s.right;
   return null;
 }
 
-/** Frase de interpretação de um eixo. */
+/** Leitura dinâmica: intensidade + polo dominante (sem citar o polo oposto). */
 export function styleReading(s: StyleSpectrum, v: number): string {
-  if (v <= 38) return `Mais ${s.left.toLowerCase()}`;
-  if (v >= 62) return `Mais ${s.right.toLowerCase()}`;
-  return `Equilíbrio entre ${s.left.toLowerCase()} e ${s.right.toLowerCase()}`;
+  const dist = Math.abs(v - 50);
+  if (dist < 12) return "Equilíbrio entre os dois";
+  const pole = v > 50 ? s.right : s.left;
+  const intens = dist >= 35 ? "Predomínio de" : "Tende a";
+  return `${intens} ${pole.toLowerCase()}`;
 }

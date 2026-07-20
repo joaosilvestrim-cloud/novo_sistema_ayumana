@@ -1,12 +1,13 @@
 import Link from "next/link";
-import { Search, ExternalLink, ShieldCheck, ShieldOff, Eye, EyeOff, BadgeCheck, UserPlus, Trash2, AlertCircle } from "lucide-react";
+import { Search, ExternalLink, ShieldCheck, ShieldOff, Eye, EyeOff, BadgeCheck, UserPlus, Trash2, AlertCircle, KeyRound, Users, Clock } from "lucide-react";
 import { getUsersOverview, type AdminUser } from "@/lib/admin";
 import { requireAdmin } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmButton } from "@/components/admin/confirm-button";
 import { PlanSelect } from "@/components/admin/plan-select";
-import { VERIFICATION_LABELS } from "@/lib/types";
-import { toggleAdminAction, togglePublishAction, quickApproveAction, changePlanAction, deleteUserAction } from "./actions";
+import { PLAN_LABEL } from "@/lib/plan-labels";
+import { VERIFICATION_LABELS, type PlanTier } from "@/lib/types";
+import { toggleAdminAction, togglePublishAction, quickApproveAction, changePlanAction, deleteUserAction, sendPasswordResetAction } from "./actions";
 
 export const metadata = { title: "Usuários" };
 
@@ -15,9 +16,10 @@ const PAGE_SIZE = 20;
 type SP = Record<string, string | string[] | undefined>;
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
 
-function matches(u: AdminUser, q: string, papel: string, status: string) {
+function matches(u: AdminUser, q: string, papel: string, status: string, plano: string) {
   if (papel === "admin" && u.role !== "admin") return false;
   if (papel === "psicologo" && u.role !== "psicologo") return false;
+  if (plano && u.plan !== plano) return false;
   if (status === "publicado" && !u.published) return false;
   if (status === "rascunho" && u.published) return false;
   if (status === "pendente" && u.verification !== "pendente") return false;
@@ -39,10 +41,20 @@ export default async function UsuariosPage({
   const q = one(sp.q).trim();
   const papel = one(sp.papel);
   const status = one(sp.status);
+  const plano = one(sp.plano);
   const page = Math.max(1, Number(one(sp.page)) || 1);
 
   const all = await getUsersOverview();
-  const filtered = all.filter((u) => matches(u, q, papel, status));
+  const filtered = all.filter((u) => matches(u, q, papel, status, plano));
+
+  // KPIs (base inteira, independem dos filtros ativos).
+  const kpis = {
+    total: all.length,
+    psicologos: all.filter((u) => u.role === "psicologo").length,
+    pendentes: all.filter((u) => u.verification === "pendente").length,
+    incompletos: all.filter((u) => u.role === "psicologo" && !u.profileCompleted).length,
+    naoPublicados: all.filter((u) => u.role === "psicologo" && !u.published).length,
+  };
   const total = filtered.length;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const rows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -52,6 +64,7 @@ export default async function UsuariosPage({
     if (q) params.set("q", q);
     if (papel) params.set("papel", papel);
     if (status) params.set("status", status);
+    if (plano) params.set("plano", plano);
     Object.entries(patch).forEach(([k, v]) => (v ? params.set(k, v) : params.delete(k)));
     return `/admin/usuarios?${params.toString()}`;
   };
@@ -71,6 +84,29 @@ export default async function UsuariosPage({
         >
           <UserPlus className="h-4 w-4" /> Novo usuário
         </Link>
+      </div>
+
+      {/* KPIs — clique filtra a lista */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        {[
+          { icon: Users, label: "Psicólogos", value: kpis.psicologos, href: "/admin/usuarios?papel=psicologo", tone: "neutral" as const },
+          { icon: Clock, label: "Aguardando aprovação", value: kpis.pendentes, href: "/admin/usuarios?status=pendente", tone: kpis.pendentes ? "yellow" as const : "neutral" as const },
+          { icon: AlertCircle, label: "Perfis incompletos", value: kpis.incompletos, href: "/admin/usuarios?status=incompleto", tone: kpis.incompletos ? "yellow" as const : "neutral" as const },
+          { icon: EyeOff, label: "Não publicados", value: kpis.naoPublicados, href: "/admin/usuarios?status=rascunho", tone: "neutral" as const },
+          { icon: ShieldCheck, label: "Total de contas", value: kpis.total, href: "/admin/usuarios", tone: "neutral" as const },
+        ].map((k) => (
+          <Link
+            key={k.label}
+            href={k.href}
+            className={`rounded-xl border p-4 transition-shadow hover:shadow-sm ${
+              k.tone === "yellow" ? "border-yellow-300 bg-yellow-400/10" : "border-border bg-background"
+            }`}
+          >
+            <k.icon className={`h-5 w-5 ${k.tone === "yellow" ? "text-yellow-700" : "text-foreground-muted"}`} />
+            <p className="mt-2 text-2xl font-semibold text-heading">{k.value}</p>
+            <p className="text-xs text-foreground-muted">{k.label}</p>
+          </Link>
+        ))}
       </div>
 
       {/* Filtros */}
@@ -95,6 +131,12 @@ export default async function UsuariosPage({
           <option value="rascunho">Rascunho</option>
           <option value="pendente">Verificação pendente</option>
           <option value="incompleto">Perfil incompleto</option>
+        </select>
+        <select name="plano" defaultValue={plano} className="h-10 rounded-lg border border-border bg-background px-3 text-sm">
+          <option value="">Todos os planos</option>
+          {(["essencial", "destaque", "ideal", "presenca"] as PlanTier[]).map((t) => (
+            <option key={t} value={t}>{PLAN_LABEL[t]}</option>
+          ))}
         </select>
         <button className="h-10 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary-hover">
           Filtrar
@@ -177,6 +219,19 @@ export default async function UsuariosPage({
                           {u.role === "admin" ? <ShieldOff className="h-3.5 w-3.5" /> : <ShieldCheck className="h-3.5 w-3.5" />}
                         </button>
                       </form>
+                      {/* Reset de senha (envia e-mail) */}
+                      {u.email && (
+                        <form action={sendPasswordResetAction}>
+                          <input type="hidden" name="email" value={u.email} />
+                          <ConfirmButton
+                            message={`Enviar e-mail de redefinição de senha para ${u.email}?`}
+                            title="Enviar redefinição de senha"
+                            className="inline-flex h-8 items-center gap-1 rounded-md border border-border px-2 text-xs hover:bg-surface-muted"
+                          >
+                            <KeyRound className="h-3.5 w-3.5" />
+                          </ConfirmButton>
+                        </form>
+                      )}
                       {/* Excluir usuário */}
                       {u.profileId !== me.id && (
                         <form action={deleteUserAction}>

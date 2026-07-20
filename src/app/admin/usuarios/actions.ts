@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendEmail, emailShell } from "@/lib/email";
 
 export type CreateUserState = { error: string | null; ok?: boolean; email?: string };
 
@@ -105,6 +106,34 @@ export async function changePlanAction(formData: FormData) {
   await admin.from("psychologists").update({ plan_tier: plan }).eq("id", psyId);
   revalidatePath("/admin/usuarios");
   revalidatePath("/psicologos");
+}
+
+export async function sendPasswordResetAction(formData: FormData) {
+  await requireAdmin();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  if (!email.includes("@")) return;
+
+  const admin = createAdminClient();
+  const site = process.env.NEXT_PUBLIC_SITE_URL || "https://ayumana.com.br";
+  const { data, error } = await admin.auth.admin.generateLink({
+    type: "recovery",
+    email,
+    options: { redirectTo: `${site}/redefinir-senha` },
+  });
+  const link = data?.properties?.action_link;
+  if (error || !link) return;
+
+  await sendEmail({
+    to: email,
+    subject: "Redefinição de senha — Ayumana",
+    html: emailShell({
+      heading: "Redefinir sua senha",
+      bodyHtml:
+        "Recebemos um pedido para redefinir a senha da sua conta na Ayumana. Clique no botão abaixo para escolher uma nova senha. Se não foi você, ignore este e-mail.",
+      cta: { label: "Definir nova senha", url: link },
+    }),
+  });
+  revalidatePath("/admin/usuarios");
 }
 
 export async function deleteUserAction(formData: FormData) {

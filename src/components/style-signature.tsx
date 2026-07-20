@@ -3,30 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { STYLE_SPECTRUMS, styleValue, styleTag, styleReading, type Style } from "@/lib/style";
 
-// Eixos do radar = fonte única em style.ts.
-const AXES = STYLE_SPECTRUMS;
-
 function tagsFrom(style: Style | null | undefined): string[] {
   const out: string[] = [];
-  for (const a of AXES) {
-    const t = styleTag(a, styleValue(style, a.key));
+  for (const s of STYLE_SPECTRUMS) {
+    const t = styleTag(s, styleValue(style, s.key));
     if (t) out.push(t);
   }
   return out;
-}
-
-// Geometria do radar.
-const CX = 160;
-const CY = 148;
-const R = 92;
-const N = AXES.length;
-
-function point(i: number, radius: number): [number, number] {
-  const ang = (-90 + (360 / N) * i) * (Math.PI / 180);
-  return [CX + radius * Math.cos(ang), CY + radius * Math.sin(ang)];
-}
-function polygon(radiusOf: (i: number) => number): string {
-  return AXES.map((_, i) => point(i, radiusOf(i)).join(",")).join(" ");
 }
 
 export function StyleSignature({
@@ -37,9 +20,9 @@ export function StyleSignature({
   firstName?: string | null;
 }) {
   const [mounted, setMounted] = useState(false);
-  const [active, setActive] = useState<number | null>(null);
-  const ref = useRef<SVGSVGElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
 
+  // Anima ao entrar na viewport.
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -50,21 +33,20 @@ export function StyleSignature({
           io.disconnect();
         }
       },
-      { threshold: 0.3 }
+      { threshold: 0.2 }
     );
     io.observe(el);
     return () => io.disconnect();
   }, []);
 
   const tags = tagsFrom(style);
-  const dataPoly = polygon((i) => (styleValue(style, AXES[i].key) / 100) * R);
 
   return (
-    <section>
+    <section ref={ref}>
       <h2 className="text-lg">Meu estilo de atendimento</h2>
       <p className="mt-1 text-sm text-foreground-muted">
-        Um mapa de como costuma ser a sessão com {firstName || "este profissional"}.
-        Toque ou passe o mouse em cada ponta.
+        Como costuma ser a sessão com {firstName || "este profissional"}. Cada barra
+        pende para o lado que predomina.
       </p>
 
       {tags.length > 0 && (
@@ -77,101 +59,44 @@ export function StyleSignature({
         </div>
       )}
 
-      <div className="mt-4 grid items-center gap-4 sm:grid-cols-[360px_1fr]">
-        <svg ref={ref} viewBox="-40 0 400 296" className="mx-auto w-full max-w-[360px]" role="img" aria-label="Radar do estilo de atendimento">
-          {/* Anéis de referência */}
-          {[0.25, 0.5, 0.75, 1].map((f) => (
-            <polygon
-              key={f}
-              points={polygon(() => f * R)}
-              fill="none"
-              stroke={f === 0.5 ? "#cbd5e1" : "#e5e7eb"}
-              strokeDasharray={f === 0.5 ? "3 3" : undefined}
-              strokeWidth="1"
-            />
-          ))}
-          {/* Eixos */}
-          {AXES.map((a, i) => {
-            const [x, y] = point(i, R);
-            return <line key={a.key} x1={CX} y1={CY} x2={x} y2={y} stroke="#e5e7eb" strokeWidth="1" />;
-          })}
-          {/* Área de dados (cresce do centro) */}
-          <g
-            style={{
-              transformOrigin: `${CX}px ${CY}px`,
-              transform: mounted ? "scale(1)" : "scale(0)",
-              transition: "transform 800ms cubic-bezier(0.22,1,0.36,1)",
-            }}
-          >
-            <polygon points={dataPoly} fill="#73A533" fillOpacity="0.18" stroke="#05474A" strokeWidth="2" strokeLinejoin="round" />
-            {AXES.map((a, i) => {
-              const v = styleValue(style, a.key);
-              const [x, y] = point(i, (v / 100) * R);
-              return (
-                <circle
-                  key={a.key}
-                  cx={x}
-                  cy={y}
-                  r={active === i ? 6 : 4}
-                  fill="#05474A"
-                  stroke="#fff"
-                  strokeWidth="2"
-                  style={{ cursor: "pointer" }}
-                  onMouseEnter={() => setActive(i)}
-                  onMouseLeave={() => setActive(null)}
-                  onClick={() => setActive((p) => (p === i ? null : i))}
+      <div className="mt-5 space-y-5">
+        {STYLE_SPECTRUMS.map((s) => {
+          const v = styleValue(style, s.key);
+          const target = mounted ? v : 50;
+          const right = target > 50;
+          // Segmento preenchido do centro (50%) até o valor.
+          const fillLeft = right ? 50 : target;
+          const fillWidth = Math.abs(target - 50);
+          return (
+            <div key={s.key}>
+              <div className="mb-1.5 flex justify-between text-xs font-medium">
+                <span className={!right && Math.abs(v - 50) >= 12 ? "text-brand-dark" : "text-foreground-muted"}>
+                  {s.left}
+                </span>
+                <span className={right && Math.abs(v - 50) >= 12 ? "text-brand-dark" : "text-foreground-muted"}>
+                  {s.right}
+                </span>
+              </div>
+              <div className="relative h-3 rounded-full bg-surface-muted">
+                {/* linha central (equilíbrio) */}
+                <div className="absolute left-1/2 top-1/2 h-4 w-px -translate-x-1/2 -translate-y-1/2 bg-border" />
+                {/* preenchimento divergente a partir do centro */}
+                <div
+                  className={`absolute top-0 h-full rounded-full transition-all duration-700 ease-out ${
+                    right ? "bg-brand" : "bg-teal-500"
+                  }`}
+                  style={{ left: `${fillLeft}%`, width: `${fillWidth}%` }}
                 />
-              );
-            })}
-          </g>
-          {/* Rótulos dos vértices */}
-          {AXES.map((a, i) => {
-            const [x, y] = point(i, R + 20);
-            const anchor = x < CX - 4 ? "end" : x > CX + 4 ? "start" : "middle";
-            return (
-              <text
-                key={a.key}
-                x={x}
-                y={y}
-                textAnchor={anchor}
-                dominantBaseline="middle"
-                className="fill-foreground-muted"
-                fontSize="12"
-                fontWeight={active === i ? 700 : 500}
-                style={{ cursor: "pointer" }}
-                onMouseEnter={() => setActive(i)}
-                onMouseLeave={() => setActive(null)}
-                onClick={() => setActive((p) => (p === i ? null : i))}
-              >
-                {a.axis}
-              </text>
-            );
-          })}
-        </svg>
-
-        {/* Leitura ao lado (ou embaixo no mobile) */}
-        <div className="space-y-2">
-          {AXES.map((a, i) => {
-            const v = styleValue(style, a.key);
-            const isActive = active === i;
-            return (
-              <button
-                key={a.key}
-                type="button"
-                onMouseEnter={() => setActive(i)}
-                onMouseLeave={() => setActive(null)}
-                onFocus={() => setActive(i)}
-                onClick={() => setActive((p) => (p === i ? null : i))}
-                className={`flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
-                  isActive ? "border-brand bg-brand/5" : "border-border"
-                }`}
-              >
-                <span className="font-medium text-heading">{a.axis}</span>
-                <span className="text-xs text-foreground-muted">{styleReading(a, v)}</span>
-              </button>
-            );
-          })}
-        </div>
+                {/* marcador na posição do valor */}
+                <div
+                  className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-heading shadow transition-all duration-700 ease-out"
+                  style={{ left: `${target}%` }}
+                />
+              </div>
+              <p className="mt-1.5 text-xs text-foreground-muted">{styleReading(s, v)}</p>
+            </div>
+          );
+        })}
       </div>
     </section>
   );

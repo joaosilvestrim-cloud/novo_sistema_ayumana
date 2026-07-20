@@ -13,7 +13,7 @@ import { SiteHeader } from "@/components/site/header";
 import { SiteFooter } from "@/components/site/footer";
 import { Hero } from "@/components/site/hero";
 import { Button } from "@/components/ui/button";
-import { listPsychologists } from "@/lib/psychologists";
+import { listHeroPeople } from "@/lib/psychologists";
 import { listPosts } from "@/lib/blog";
 import { COUNTRY_LANDINGS } from "@/lib/countries-content";
 
@@ -68,21 +68,10 @@ function fmtDate(iso: string | null) {
 }
 
 export default async function HomePage() {
-  const [{ rows }, posts] = await Promise.all([
-    listPsychologists({ page: 1 }),
+  const [heroPeople, posts] = await Promise.all([
+    listHeroPeople(),
     listPosts(3),
   ]);
-  // Hero: profissionais reais do plano IDEAL, com foto. Se não houver, o Hero usa o fallback.
-  const heroPeople = rows
-    .filter((r) => r.plan_tier === "ideal" && r.avatar_url)
-    .slice(0, 3)
-    .map((r) => ({
-      name: r.display_name,
-      role: r.approaches[0]?.name ?? "Psicólogo(a)",
-      place: [r.city, r.state].filter(Boolean).join(" / ") || "Online",
-      avatar_url: r.avatar_url,
-      slug: r.slug,
-    }));
 
   return (
     <>
