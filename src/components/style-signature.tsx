@@ -3,6 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { STYLE_SPECTRUMS, styleValue, styleTag, styleReading, type Style } from "@/lib/style";
 
+const N = 7; // blocos por linha (ímpar → bloco central de equilíbrio)
+const CENTER = 3;
+
 function tagsFrom(style: Style | null | undefined): string[] {
   const out: string[] = [];
   for (const s of STYLE_SPECTRUMS) {
@@ -10,6 +13,17 @@ function tagsFrom(style: Style | null | undefined): string[] {
     if (t) out.push(t);
   }
   return out;
+}
+
+// Estado de cada bloco: acende do centro em direção ao polo dominante.
+function blockKind(v: number, i: number): "left" | "right" | "center" | null {
+  if (i === CENTER) return "center";
+  if (i > CENTER) {
+    const pos = 50 + ((i - CENTER) / (N - 1 - CENTER)) * 50; // 66.7 / 83.3 / 100
+    return v >= pos ? "right" : null;
+  }
+  const pos = 50 - ((CENTER - i) / CENTER) * 50; // 33.3 / 16.7 / 0
+  return v <= pos ? "left" : null;
 }
 
 export function StyleSignature({
@@ -20,9 +34,9 @@ export function StyleSignature({
   firstName?: string | null;
 }) {
   const [mounted, setMounted] = useState(false);
+  const [active, setActive] = useState<number | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
-  // Anima ao entrar na viewport.
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -45,8 +59,8 @@ export function StyleSignature({
     <section ref={ref}>
       <h2 className="text-lg">Meu estilo de atendimento</h2>
       <p className="mt-1 text-sm text-foreground-muted">
-        Como costuma ser a sessão com {firstName || "este profissional"}. Cada barra
-        pende para o lado que predomina.
+        Como costuma ser a sessão com {firstName || "este profissional"}. Toque ou
+        passe o mouse em cada linha.
       </p>
 
       {tags.length > 0 && (
@@ -59,42 +73,61 @@ export function StyleSignature({
         </div>
       )}
 
-      <div className="mt-5 space-y-5">
-        {STYLE_SPECTRUMS.map((s) => {
+      <div className="mt-5 space-y-2">
+        {STYLE_SPECTRUMS.map((s, idx) => {
           const v = styleValue(style, s.key);
-          const target = mounted ? v : 50;
-          const right = target > 50;
-          // Segmento preenchido do centro (50%) até o valor.
-          const fillLeft = right ? 50 : target;
-          const fillWidth = Math.abs(target - 50);
+          const isActive = active === idx;
           return (
-            <div key={s.key}>
+            <button
+              key={s.key}
+              type="button"
+              onMouseEnter={() => setActive(idx)}
+              onMouseLeave={() => setActive(null)}
+              onFocus={() => setActive(idx)}
+              onClick={() => setActive((a) => (a === idx ? null : idx))}
+              className={`block w-full rounded-xl border p-3 text-left transition-colors ${
+                isActive ? "border-brand bg-brand/5" : "border-transparent hover:bg-surface-muted/50"
+              }`}
+            >
               <div className="mb-1.5 flex justify-between text-xs font-medium">
-                <span className={!right && Math.abs(v - 50) >= 12 ? "text-brand-dark" : "text-foreground-muted"}>
-                  {s.left}
-                </span>
-                <span className={right && Math.abs(v - 50) >= 12 ? "text-brand-dark" : "text-foreground-muted"}>
-                  {s.right}
-                </span>
+                <span className={v <= 30 ? "text-brand-dark" : "text-foreground-muted"}>{s.left}</span>
+                <span className={v >= 70 ? "text-brand-dark" : "text-foreground-muted"}>{s.right}</span>
               </div>
-              <div className="relative h-3 rounded-full bg-surface-muted">
-                {/* linha central (equilíbrio) */}
-                <div className="absolute left-1/2 top-1/2 h-4 w-px -translate-x-1/2 -translate-y-1/2 bg-border" />
-                {/* preenchimento divergente a partir do centro */}
-                <div
-                  className={`absolute top-0 h-full rounded-full transition-all duration-700 ease-out ${
-                    right ? "bg-brand" : "bg-teal-500"
-                  }`}
-                  style={{ left: `${fillLeft}%`, width: `${fillWidth}%` }}
-                />
-                {/* marcador na posição do valor */}
-                <div
-                  className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-heading shadow transition-all duration-700 ease-out"
-                  style={{ left: `${target}%` }}
-                />
+
+              {/* Equalizer de blocos */}
+              <div className="flex items-center gap-1">
+                {Array.from({ length: N }).map((_, i) => {
+                  const kind = blockKind(v, i);
+                  const lit = kind !== null;
+                  const color =
+                    kind === "right" ? "bg-brand" : kind === "left" ? "bg-teal-500" : "bg-heading/40";
+                  // distância do centro define o atraso da animação (efeito equalizer)
+                  const delay = Math.abs(i - CENTER) * 70;
+                  return (
+                    <div key={i} className="relative h-4 flex-1 overflow-hidden rounded-[3px] bg-surface-muted">
+                      {lit && (
+                        <div
+                          className={`absolute inset-0 ${color} transition-all duration-300 ease-out`}
+                          style={{
+                            opacity: mounted ? 1 : 0,
+                            transform: mounted ? "scaleY(1)" : "scaleY(0.3)",
+                            transitionDelay: `${delay}ms`,
+                          }}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-              <p className="mt-1.5 text-xs text-foreground-muted">{styleReading(s, v)}</p>
-            </div>
+
+              <p
+                className={`mt-1.5 text-xs transition-colors ${
+                  isActive ? "font-medium text-brand-dark" : "text-foreground-muted"
+                }`}
+              >
+                {styleReading(s, v)}
+              </p>
+            </button>
           );
         })}
       </div>
