@@ -1,33 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Ear, CalendarDays, HeartHandshake, Heart, MessageCircle, Sparkles } from "lucide-react";
+import { AvatarBubble } from "@/components/ui/avatar-bubble";
 import {
-  STYLE_SPECTRUMS, styleValue, styleLean, styleIntensity, type Style, type StyleIcon,
+  STYLE_SPECTRUMS, styleValue, styleLean, styleIntensity, styleReading,
+  type Style, type StyleIcon,
 } from "@/lib/style";
 
 const ICONS: Record<StyleIcon, React.ElementType> = {
   ear: Ear, calendar: CalendarDays, care: HeartHandshake, heart: Heart, chat: MessageCircle,
 };
 
-// Cores (gradiente) por dimensão e polo — dão a "aura" única de cada profissional.
-const HUE: Record<string, { left: [string, string]; right: [string, string] }> = {
-  direcao: { left: ["#2dd4bf", "#0e7490"], right: ["#4ade80", "#16a34a"] },
-  estrutura: { left: ["#22d3ee", "#0891b2"], right: ["#34d399", "#059669"] },
-  tom: { left: ["#38bdf8", "#0284c7"], right: ["#a3e635", "#65a30d"] },
-  foco: { left: ["#5eead4", "#14b8a6"], right: ["#84cc16", "#4d7c0f"] },
-  registro: { left: ["#7dd3fc", "#0ea5e9"], right: ["#86efac", "#4d7c0f"] },
-};
-
-// Falas que dão o "gostinho" da sessão, por polo.
-const PHRASE: Record<string, { left: string; right: string }> = {
-  direcao: { left: "Pode falar à vontade, estou aqui.", right: "Deixa que eu te trago uma direção." },
-  estrutura: { left: "A gente vai no fluxo de hoje.", right: "Vamos seguir um plano para a sessão." },
-  tom: { left: "Vamos com calma, no seu tempo.", right: "E se a gente olhar por outro ângulo?" },
-  foco: { left: "Como você se sentiu com isso?", right: "Bora montar um passo prático?" },
-  registro: { left: "Sem termos difíceis, combinado?", right: "Posso te explicar o conceito por trás." },
-};
-
+// Adjetivo curto por polo, para montar o "arquétipo".
 const ADJ: Record<string, [string, string]> = {
   direcao: ["Escuta ativa", "Direcionadora"],
   estrutura: ["Flexível", "Estruturada"],
@@ -36,16 +21,43 @@ const ADJ: Record<string, [string, string]> = {
   registro: ["Acessível", "Técnica"],
 };
 
+const TEAL = "#0e7490";
+const GREEN = "#4d7c0f";
+
 type Dim = {
   s: (typeof STYLE_SPECTRUMS)[number];
+  v: number;
   lean: "left" | "right" | "center";
   intensity: number;
-  side: "left" | "right"; // polo dominante (center vira o mais próximo)
 };
+
+function archetype(dims: Dim[]): string {
+  const leaning = dims.filter((d) => d.lean !== "center").sort((a, b) => b.intensity - a.intensity);
+  const adjs = leaning.slice(0, 2).map((d) => ADJ[d.s.key][d.lean === "left" ? 0 : 1]);
+  if (adjs.length === 0) return "Equilibrada e versátil";
+  if (adjs.length === 1) return adjs[0];
+  return `${adjs[0]} e ${adjs[1]}`;
+}
+
+function Pips({ level, color }: { level: number; color: string }) {
+  return (
+    <div className="flex gap-1">
+      {[0, 1, 2, 3, 4].map((i) => (
+        <span
+          key={i}
+          className="h-1.5 w-4 rounded-full"
+          style={{ backgroundColor: i < level ? color : "#e2e8f0" }}
+        />
+      ))}
+    </div>
+  );
+}
 
 export function StyleSignature({
   style,
   firstName,
+  avatarUrl,
+  seed,
   attendanceTags = [],
 }: {
   style: Style | null;
@@ -54,95 +66,68 @@ export function StyleSignature({
   seed?: string;
   attendanceTags?: string[];
 }) {
+  const [active, setActive] = useState<number | null>(null);
+
   const dims: Dim[] = STYLE_SPECTRUMS.map((s) => {
     const v = styleValue(style, s.key);
-    const lean = styleLean(v);
-    return { s, lean, intensity: styleIntensity(v), side: v >= 50 ? "right" : "left" };
+    return { s, v, lean: styleLean(v), intensity: styleIntensity(v) };
   });
-
-  // Ordena por intensidade — os traços mais marcantes lideram a cena.
-  const strong = [...dims].sort((a, b) => b.intensity - a.intensity);
-  const archetype = strong.slice(0, 2).map((d) => ADJ[d.s.key][d.side === "left" ? 0 : 1]).join(" e ");
-
-  const [auto, setAuto] = useState(0);
-  const [hover, setHover] = useState<number | null>(null);
-
-  useEffect(() => {
-    const id = setInterval(() => setAuto((a) => (a + 1) % STYLE_SPECTRUMS.length), 3800);
-    return () => clearInterval(id);
-  }, []);
-
-  // Dimensão ativa (hover manda; senão o carrossel entre os mais fortes).
-  const activeDim = hover !== null ? dims[hover] : strong[auto % strong.length];
-  const aColors = HUE[activeDim.s.key][activeDim.side];
-  const phrase = PHRASE[activeDim.s.key][activeDim.side];
+  const title = archetype(dims);
 
   return (
     <section>
       <h2 className="text-lg">Meu estilo de atendimento</h2>
-      <p className="mt-1 text-sm text-foreground-muted">
-        A aura de {firstName || "este profissional"} muda com o estilo. Toque nos traços.
-      </p>
 
+      {/* Cartão de perfil (ficha) */}
       <div className="mt-3 overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-brand/5 via-background to-accent/5">
-        {/* Palco da aura + cena */}
-        <div className="relative h-60 overflow-hidden">
-          {/* aura (2 blobs orgânicos animados) */}
-          <div
-            className="aura-blob absolute left-1/2 top-1/2 h-44 w-44 -translate-x-1/2 -translate-y-1/2 blur-[2px] transition-[background] duration-700"
-            style={{ background: `linear-gradient(135deg, ${aColors[0]}, ${aColors[1]})`, opacity: 0.9 }}
-          />
-          <div
-            className="aura-blob-2 absolute left-1/2 top-1/2 h-32 w-32 -translate-x-1/2 -translate-y-1/2 mix-blend-multiply blur-[1px] transition-[background] duration-700"
-            style={{ background: `linear-gradient(300deg, ${aColors[1]}, ${aColors[0]})`, opacity: 0.55 }}
-          />
-          <div className="absolute left-1/2 top-1/2 h-24 w-24 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/25 backdrop-blur-sm" />
-          <div className="pointer-events-none absolute left-1/2 top-1/2 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white/80 text-heading shadow">
-            <Sparkles className="h-6 w-6" style={{ color: aColors[1] }} />
-          </div>
-
-          {/* balão da cena (troca com a dimensão ativa) */}
-          <div key={`${activeDim.s.key}-${activeDim.side}`} className="ayu-rise absolute right-3 top-3 max-w-[62%] rounded-2xl rounded-tr-sm border border-border bg-background/95 px-3 py-2 shadow-md backdrop-blur">
-            <p className="text-[11px] font-medium" style={{ color: aColors[1] }}>
-              {ADJ[activeDim.s.key][activeDim.side === "left" ? 0 : 1]}
+        {/* Cabeçalho: avatar + arquétipo */}
+        <div className="flex items-center gap-4 border-b border-border/70 p-5">
+          <AvatarBubble src={avatarUrl} name={firstName ?? null} seed={seed} color={GREEN} size={110} className="w-16 shrink-0" />
+          <div className="min-w-0">
+            <p className="inline-flex items-center gap-1 text-xs font-medium text-brand-dark">
+              <Sparkles className="h-3.5 w-3.5" /> Perfil de abordagem
             </p>
-            <p className="text-sm text-heading">“{phrase}”</p>
-          </div>
-          <div className="absolute bottom-3 left-3 rounded-full bg-background/90 px-3 py-1 text-xs font-medium text-brand-dark shadow-sm backdrop-blur">
-            <span className="inline-flex items-center gap-1"><Sparkles className="h-3 w-3" /> {archetype}</span>
+            <p className="font-serif text-xl leading-tight text-heading">{title}</p>
+            <p className="text-sm text-foreground-muted">
+              Como costuma ser a sessão com {firstName || "este profissional"}.
+            </p>
           </div>
         </div>
 
-        {/* traços interativos */}
-        <div className="flex flex-wrap gap-2 border-t border-border/70 p-4">
+        {/* Atributos com medidor de nível */}
+        <div className="divide-y divide-border/60">
           {dims.map((d, i) => {
             const Icon = ICONS[d.s.icon];
-            const isOn = (hover === null ? strong[auto % strong.length].s.key === d.s.key : hover === i);
-            const c = HUE[d.s.key][d.side][1];
+            const color = d.lean === "left" ? TEAL : d.lean === "right" ? GREEN : "#64748b";
+            const label = d.lean === "left" ? d.s.left : d.lean === "right" ? d.s.right : "Equilíbrio";
+            const desc = d.lean === "left" ? d.s.leftDesc : d.lean === "right" ? d.s.rightDesc : `${d.s.left} ↔ ${d.s.right}`;
+            const level = d.lean === "center" ? 1 : Math.max(1, Math.round(d.intensity));
+            const on = active === i;
             return (
-              <button
+              <div
                 key={d.s.key}
-                type="button"
-                onMouseEnter={() => setHover(i)}
-                onMouseLeave={() => setHover(null)}
-                onFocus={() => setHover(i)}
-                onClick={() => setHover((h) => (h === i ? null : i))}
-                className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all"
-                style={{
-                  borderColor: isOn ? c : "var(--border)",
-                  backgroundColor: isOn ? `${c}18` : "transparent",
-                  color: isOn ? c : "var(--foreground-muted)",
-                }}
+                onMouseEnter={() => setActive(i)}
+                onMouseLeave={() => setActive(null)}
+                className={`flex items-center gap-3 px-5 py-3 transition-colors ${on ? "bg-brand/5" : ""}`}
               >
-                <Icon className="h-3.5 w-3.5" style={{ color: c }} />
-                {ADJ[d.s.key][d.side === "left" ? 0 : 1]}
-              </button>
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: `${color}1a`, color }}>
+                  <Icon className="h-4.5 w-4.5" style={{ width: 18, height: 18 }} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="truncate text-sm font-semibold" style={{ color }}>{label}</span>
+                    <Pips level={level} color={color} />
+                  </div>
+                  <p className="truncate text-xs text-foreground-muted">{desc}</p>
+                </div>
+              </div>
             );
           })}
         </div>
 
+        {/* Tipo de atendimento */}
         {attendanceTags.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 border-t border-border/70 px-4 py-3">
+          <div className="flex flex-wrap items-center gap-2 border-t border-border/70 px-5 py-4">
             <span className="text-xs font-medium text-foreground-muted">Atende:</span>
             {attendanceTags.map((t) => (
               <span key={t} className="rounded-full bg-surface-muted px-2.5 py-1 text-xs font-medium text-heading">{t}</span>
@@ -152,8 +137,8 @@ export function StyleSignature({
       </div>
 
       <p className="mt-2 px-1 text-xs text-foreground-muted">
-        Uma leitura do estilo entre dois polos. Não existe melhor ou pior — ajuda você a
-        sentir o encaixe antes da primeira sessão.
+        Cada atributo mostra a tendência do profissional entre dois polos. Não existe
+        estilo melhor ou pior — ajuda você a sentir o encaixe.
       </p>
     </section>
   );

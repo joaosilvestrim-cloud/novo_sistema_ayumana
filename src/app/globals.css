@@ -224,8 +224,7 @@
 .ayu-pulse-dot { animation: ayu-pulse-dot 2s ease-in-out infinite; }
 
 @media (prefers-reduced-motion: reduce) {
-  .ayu-float, .ayu-float-slow, .ayu-blob, .ayu-rise, .ayu-pulse-dot,
-  .aura-blob, .aura-blob-2 {
+  .ayu-float, .ayu-float-slow, .ayu-blob, .ayu-rise, .ayu-pulse-dot {
     animation: none;
   }
 }
@@ -271,26 +270,4 @@
   padding: 0.1em 0.35em;
   border-radius: 0.3em;
   font-size: 0.9em;
-}
-
-/* Aura generativa do estilo de atendimento */
-@keyframes auraMorph {
-  0%, 100% { border-radius: 46% 54% 60% 40% / 48% 42% 58% 52%; }
-  33% { border-radius: 60% 40% 45% 55% / 55% 58% 42% 45%; }
-  66% { border-radius: 42% 58% 52% 48% / 62% 40% 60% 38%; }
-}
-@keyframes auraFloat {
-  0%, 100% { transform: translate(-50%, -50%) rotate(0deg) scale(1); }
-  50% { transform: translate(-50%, -52%) rotate(8deg) scale(1.04); }
-}
-@keyframes auraPulse {
-  0%, 100% { opacity: 0.85; }
-  50% { opacity: 1; }
-}
-.aura-blob {
-  animation: auraMorph 9s ease-in-out infinite, auraFloat 11s ease-in-out infinite;
-  will-change: border-radius, transform;
-}
-.aura-blob-2 {
-  animation: auraMorph 7s ease-in-out infinite reverse, auraFloat 9s ease-in-out infinite;
 }
