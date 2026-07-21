@@ -141,9 +141,25 @@ export async function sendPasswordResetAction(formData: FormData) {
     subject: "Redefinição de senha — Ayumana",
     kind: "senha",
     html: emailShell({
-      heading: "Redefinir sua senha",
-      bodyHtml:
-        "Recebemos um pedido para redefinir a senha da sua conta na Ayumana. Clique no botão abaixo para escolher uma nova senha. Se não foi você, ignore este e-mail.",
+      preheader: "Link para criar uma nova senha.",
+      heading: "Vamos criar uma senha nova",
+      intro: "A equipe da Ayumana gerou um link para você redefinir a senha da sua conta.",
+      blocks: [
+        {
+          type: "steps",
+          items: [
+            "Clique no botão abaixo",
+            "Escolha uma senha com pelo menos 8 caracteres",
+            "Entre no painel com a senha nova",
+          ],
+        },
+        {
+          type: "note",
+          tone: "atencao",
+          title: "Se você não pediu isso",
+          text: "Pode ignorar este e-mail. Sua senha atual continua valendo e nada muda.",
+        },
+      ],
       cta: { label: "Definir nova senha", url: link },
     }),
   });

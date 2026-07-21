@@ -28,9 +28,25 @@ export async function requestResetAction(
           subject: "Redefinir sua senha na Ayumana",
           kind: "senha",
           html: emailShell({
-            heading: "Redefinir senha",
-            bodyHtml:
-              "Recebemos um pedido para redefinir sua senha. Clique abaixo para criar uma nova. Se não foi você, ignore este e-mail.",
+            preheader: "Link para criar uma nova senha.",
+            heading: "Vamos criar uma senha nova",
+            intro: "Recebemos um pedido para redefinir a senha da sua conta na Ayumana.",
+            blocks: [
+              {
+                type: "steps",
+                items: [
+                  "Clique no botão abaixo",
+                  "Escolha uma senha com pelo menos 8 caracteres",
+                  "Entre no painel com a senha nova",
+                ],
+              },
+              {
+                type: "note",
+                tone: "atencao",
+                title: "Se não foi você",
+                text: "Pode ignorar este e-mail. Sua senha atual continua valendo e nada muda.",
+              },
+            ],
             cta: { label: "Criar nova senha", url: link },
           }),
         });

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendEmail, emailShell } from "@/lib/email";
+import { sendEmail, emailShell, type EmailBlock } from "@/lib/email";
 import type { PlanTier } from "@/lib/types";
 
 /** Endereço que aparece no "para" dos comunicados; a base vai em cópia oculta. */
@@ -96,10 +96,25 @@ export async function sendBroadcastAction(formData: FormData) {
     if (!lista.length) volta("Nenhum destinatário encontrado para esse público.");
   }
 
+  // Cada linha em branco vira um parágrafo; linhas que começam com "- " viram lista.
+  const paragrafos = corpo.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+  const blocks: EmailBlock[] = [];
+  for (const p of paragrafos) {
+    const linhas = p.split("\n").map((l) => l.trim()).filter(Boolean);
+    const soBullets = linhas.length > 1 && linhas.every((l) => /^[-•*]\s+/.test(l));
+    if (soBullets) {
+      blocks.push({ type: "list", items: linhas.map((l) => l.replace(/^[-•*]\s+/, "")) });
+    } else {
+      blocks.push({ type: "paragraph", text: linhas.join("<br/>") });
+    }
+  }
+
   const html = emailShell({
+    preheader: paragrafos[0]?.slice(0, 120),
     heading: titulo || assunto,
-    bodyHtml: corpo.replace(/\n/g, "<br/>"),
+    blocks,
     cta: ctaLabel && ctaUrl ? { label: ctaLabel, url: ctaUrl } : undefined,
+    footerNote: "Você recebeu este e-mail porque tem cadastro na Ayumana.",
   });
 
   // Envio em blocos com cópia oculta: ninguém vê o e-mail de ninguém, e a base
