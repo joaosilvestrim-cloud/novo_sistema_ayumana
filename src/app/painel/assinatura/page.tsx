@@ -38,8 +38,11 @@ export default async function AssinaturaPage({
   const renewal = fmtDate(psy?.subscription_period_end ?? null);
   const hasActivePaid = PAID.has(current) && status !== "cancelada";
 
+  const erro = typeof sp.erro === "string" ? sp.erro : null;
   const notice =
-    sp.dev
+    erro
+      ? { tone: "danger" as const, text: erro }
+      : sp.dev
       ? { tone: "warning" as const, text: "Plano trocado em modo de teste (pagamento não configurado)." }
       : sp.aguardando
       ? { tone: "warning" as const, text: "Assinatura criada. Conclua o pagamento para ativá-la." }
@@ -59,13 +62,15 @@ export default async function AssinaturaPage({
 
       {notice && (
         <div
-          className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
-            notice.tone === "warning"
+          className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-sm ${
+            notice.tone === "danger"
+              ? "border-danger/30 bg-danger/10 text-danger"
+              : notice.tone === "warning"
               ? "border-yellow-200 bg-yellow-400/10 text-yellow-700"
               : "border-border bg-surface-muted text-foreground-muted"
           }`}
         >
-          <Info className="h-4 w-4 shrink-0" />
+          <Info className="mt-0.5 h-4 w-4 shrink-0" />
           {notice.text}
         </div>
       )}

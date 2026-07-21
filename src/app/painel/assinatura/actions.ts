@@ -37,12 +37,22 @@ async function loadContext() {
   return { supabase, user, profile, psy };
 }
 
+/** Volta para a tela de assinatura mostrando o motivo da falha. */
+function fail(msg: string): string {
+  return `/painel/assinatura?erro=${encodeURIComponent(msg)}`;
+}
+
 export async function selectPlanAction(formData: FormData) {
   const plan = String(formData.get("plan") ?? "") as PlanTier;
-  if (!SELF_SERVICE.includes(plan)) return;
+  if (!SELF_SERVICE.includes(plan)) {
+    redirect(fail("Este plano não é contratável pelo site. Fale com a equipe."));
+  }
 
   const ctx = await loadContext();
-  if (!ctx || !ctx.psy) return;
+  if (!ctx) redirect("/login");
+  if (!ctx.psy) {
+    redirect(fail("Você ainda não tem um perfil profissional. Complete o cadastro em Meu perfil antes de assinar."));
+  }
   const admin = createAdminClient();
 
   // Downgrade para o Essencial: cancela assinatura ativa.
@@ -90,32 +100,39 @@ export async function selectPlanAction(formData: FormData) {
     redirect("/painel/assinatura?dev=1");
   }
 
-  // Fluxo real Asaas.
-  const customerId = await ensureCustomer({
-    existingId: ctx.psy.asaas_customer_id,
-    name: ctx.profile?.full_name || "Psicólogo(a) Ayumana",
-    email: ctx.profile?.email || ctx.user.email || "",
-  });
+  // Fluxo real Asaas. Qualquer falha vira mensagem na tela, nunca silêncio.
+  let dest = "/painel/assinatura?aguardando=1";
+  try {
+    const customerId = await ensureCustomer({
+      existingId: ctx.psy.asaas_customer_id,
+      name: ctx.profile?.full_name || "Psicólogo(a) Ayumana",
+      email: ctx.profile?.email || ctx.user.email || "",
+    });
 
-  const { subscriptionId, checkoutUrl } = await createSubscription({
-    customerId,
-    valueReais,
-    description: `Ayumana — Plano ${planRow?.name ?? plan}`,
-    externalReference: ctx.psy.id,
-  });
+    const { subscriptionId, checkoutUrl } = await createSubscription({
+      customerId,
+      valueReais,
+      description: `Ayumana — Plano ${planRow?.name ?? plan}`,
+      externalReference: ctx.psy.id,
+    });
 
-  await admin
-    .from("psychologists")
-    .update({
-      plan_tier: plan,
-      asaas_customer_id: customerId,
-      asaas_subscription_id: subscriptionId,
-      subscription_status: "atrasada", // ativa quando o 1º pagamento confirmar
-    })
-    .eq("id", ctx.psy.id);
+    await admin
+      .from("psychologists")
+      .update({
+        plan_tier: plan,
+        asaas_customer_id: customerId,
+        asaas_subscription_id: subscriptionId,
+        subscription_status: "atrasada", // ativa quando o 1º pagamento confirmar
+      })
+      .eq("id", ctx.psy.id);
+
+    dest = checkoutUrl ?? "/painel/assinatura?aguardando=1";
+  } catch (e) {
+    dest = fail(`Asaas: ${(e as Error).message}`);
+  }
 
   revalidatePath("/painel/assinatura");
-  redirect(checkoutUrl ?? "/painel/assinatura?aguardando=1");
+  redirect(dest);
 }
 
 export async function cancelSubscriptionAction() {
