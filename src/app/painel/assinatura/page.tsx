@@ -37,6 +37,8 @@ export default async function AssinaturaPage({
   const s = SUBSCRIPTION_LABELS[status];
   const renewal = fmtDate(psy?.subscription_period_end ?? null);
   const hasActivePaid = PAID.has(current) && status !== "cancelada";
+  // Só pedimos CPF/CNPJ na primeira assinatura (depois reusamos o cliente no Asaas).
+  const needsCpf = !psy?.asaas_customer_id;
 
   const erro = typeof sp.erro === "string" ? sp.erro : null;
   const notice =
@@ -148,6 +150,25 @@ export default async function AssinaturaPage({
               ) : (
                 <form action={selectPlanAction} className="mt-5">
                   <input type="hidden" name="plan" value={plan.id} />
+                  {needsCpf && plan.id !== "essencial" && (
+                    <div className="mb-3">
+                      <label htmlFor={`cpf-${plan.id}`} className="mb-1 block text-xs font-medium text-heading">
+                        CPF ou CNPJ
+                      </label>
+                      <input
+                        id={`cpf-${plan.id}`}
+                        name="cpf_cnpj"
+                        inputMode="numeric"
+                        required
+                        placeholder="Somente números"
+                        className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-brand"
+                      />
+                      <p className="mt-1 text-[11px] text-foreground-muted">
+                        Exigido pelo Asaas para emitir a cobrança. Enviamos direto para o
+                        provedor de pagamento e não guardamos no nosso banco.
+                      </p>
+                    </div>
+                  )}
                   <button
                     className={`h-10 w-full rounded-lg text-sm font-medium transition-colors ${
                       plan.id === "essencial"
