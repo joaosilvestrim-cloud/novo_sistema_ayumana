@@ -142,6 +142,16 @@ export async function selectPlanAction(formData: FormData) {
   // Fluxo real Asaas. Qualquer falha vira mensagem na tela, nunca silêncio.
   let dest = "/painel/assinatura?aguardando=1";
   try {
+    // Troca de plano: cancela a assinatura anterior antes de criar a nova,
+    // senão o psicólogo fica com duas cobranças ativas no Asaas.
+    if (ctx.psy.asaas_subscription_id) {
+      try {
+        await cancelSubscription(ctx.psy.asaas_subscription_id);
+      } catch {
+        // se já não existir lá, segue
+      }
+    }
+
     const customerId = await ensureCustomer({
       existingId: ctx.psy.asaas_customer_id,
       name: ctx.profile?.full_name || "Psicólogo(a) Ayumana",
