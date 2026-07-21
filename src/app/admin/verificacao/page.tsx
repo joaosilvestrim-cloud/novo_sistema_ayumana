@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { Badge } from "@/components/ui/badge";
 import { VERIFICATION_LABELS } from "@/lib/types";
 import { cfpConfigured, nomesBatem, type CfpStatus } from "@/lib/crp/cfp";
-import { approveAction, rejectAction, checkCfpAction, checkCfpBatchAction } from "./actions";
+import { approveAction, rejectAction, checkCfpAction, checkCfpBatchAction, markCfpManualAction } from "./actions";
 
 export const metadata = { title: "Verificação de CRP" };
 
@@ -51,7 +51,9 @@ function CfpBanner({ r }: { r: Row }) {
 
   const texto =
     r.crp_auto_status === "ativo"
-      ? `Registro ATIVO no CFP em nome de ${r.crp_auto_nome || "—"}.`
+      ? r.crp_auto_nome
+        ? `Registro ATIVO no CFP em nome de ${r.crp_auto_nome}.`
+        : "Registro ATIVO no CFP."
       : r.crp_auto_status === "irregular"
         ? `Registro encontrado, mas a situação é "${r.crp_auto_situacao}".`
         : r.crp_auto_status === "nao_encontrado"
@@ -79,7 +81,11 @@ function CfpBanner({ r }: { r: Row }) {
           Atenção: o nome do cadastro ({nome || "—"}) não bate com o do conselho.
         </p>
       )}
-      <p className="mt-1 pl-6 text-xs opacity-80">Consultado em {quando}.</p>
+      <p className="mt-1 pl-6 text-xs opacity-80">
+        {r.crp_auto_situacao?.startsWith("Conferido à mão")
+          ? `${r.crp_auto_situacao} em ${quando}.`
+          : `Consultado em ${quando}.`}
+      </p>
     </div>
   );
 }
@@ -124,10 +130,10 @@ export default async function VerificacaoPage() {
       </div>
 
       {!cfpConfigured() ? (
-        <p className="rounded-xl border border-yellow-500/40 bg-yellow-400/10 px-4 py-3 text-sm text-yellow-800">
-          A consulta automática ao CFP está desligada. Configure{" "}
-          <code>INFOSIMPLES_TOKEN</code> para validar o CRP direto no Cadastro Nacional.
-          Enquanto isso, a conferência continua manual pelo documento.
+        <p className="rounded-xl border border-border bg-surface-muted px-4 py-3 text-sm text-foreground-muted">
+          Conferência do CRP no modo gratuito: use o botão <strong>Abrir no CFP</strong> de
+          cada pessoa, resolva o captcha no site do conselho e registre o que viu.
+          O resultado fica gravado igual ao da consulta automática.
         </p>
       ) : (
         <form action={checkCfpBatchAction} className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-background px-4 py-3">
@@ -210,13 +216,46 @@ export default async function VerificacaoPage() {
                 <CfpBanner r={r} />
 
                 {/* Ações */}
+                {/* Conferência no CFP: automática se houver provedor, manual sempre. */}
+                <div className="mt-4 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface-muted px-3 py-2">
+                  <a
+                    href="https://cadastro.cfp.org.br/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-background px-3 text-sm font-medium hover:bg-surface-muted"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" /> Abrir no CFP
+                  </a>
+                  <span className="text-sm text-foreground-muted">
+                    Busque <strong className="text-heading">{r.crp_number || "—"}</strong>
+                    {r.crp_uf ? ` na região ${r.crp_uf}` : ""} e registre:
+                  </span>
+                  {(["ativo", "irregular", "nao_encontrado"] as const).map((res) => (
+                    <form key={res} action={markCfpManualAction}>
+                      <input type="hidden" name="id" value={r.id} />
+                      <input type="hidden" name="resultado" value={res} />
+                      <button
+                        className={`h-9 rounded-lg border px-3 text-sm font-medium ${
+                          res === "ativo"
+                            ? "border-green-600/40 text-green-700 hover:bg-green-50"
+                            : "border-danger/40 text-danger hover:bg-danger/10"
+                        }`}
+                      >
+                        {res === "ativo" ? "Ativo" : res === "irregular" ? "Irregular" : "Não achei"}
+                      </button>
+                    </form>
+                  ))}
+                  {cfpConfigured() && (
+                    <form action={checkCfpAction} className="ml-auto">
+                      <input type="hidden" name="id" value={r.id} />
+                      <button className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-background px-3 text-sm font-medium hover:bg-surface-muted">
+                        <RefreshCw className="h-3.5 w-3.5" /> Consultar automático
+                      </button>
+                    </form>
+                  )}
+                </div>
+
                 <div className="mt-5 flex flex-wrap items-end gap-3 border-t border-border pt-5">
-                  <form action={checkCfpAction}>
-                    <input type="hidden" name="id" value={r.id} />
-                    <button className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-border px-4 text-sm font-medium hover:bg-surface-muted">
-                      <RefreshCw className="h-4 w-4" /> Consultar CFP
-                    </button>
-                  </form>
 
                   <form action={approveAction}>
                     <input type="hidden" name="id" value={r.id} />

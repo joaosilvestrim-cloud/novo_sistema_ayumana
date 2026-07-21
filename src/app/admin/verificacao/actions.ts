@@ -17,6 +17,40 @@ export async function checkCfpAction(formData: FormData) {
 }
 
 /**
+ * Registra a conferência feita à mão no site do CFP. É o caminho gratuito:
+ * o admin abre o Cadastro Nacional, resolve o captcha, olha a situação e
+ * marca aqui. Grava nas mesmas colunas da consulta automática.
+ */
+export async function markCfpManualAction(formData: FormData) {
+  const me = await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  const resultado = String(formData.get("resultado") ?? "");
+  const nomeCfp = String(formData.get("nome_cfp") ?? "").trim();
+  if (!id || !["ativo", "irregular", "nao_encontrado"].includes(resultado)) return;
+
+  const supabase = createAdminClient();
+  const { data: quem } = await supabase
+    .from("profiles")
+    .select("full_name, email")
+    .eq("id", me.id)
+    .maybeSingle();
+  const autor = (quem?.full_name as string) || (quem?.email as string) || "admin";
+
+  await supabase
+    .from("psychologists")
+    .update({
+      crp_auto_status: resultado,
+      crp_auto_nome: nomeCfp || null,
+      crp_auto_situacao: `Conferido à mão no site do CFP por ${autor}`,
+      crp_auto_checked_at: new Date().toISOString(),
+      crp_auto_payload: null,
+    })
+    .eq("id", id);
+
+  revalidatePath("/admin/verificacao");
+}
+
+/**
  * Consulta em lote quem ainda não foi checado. Limitado por clique porque cada
  * consulta é cobrada pelo provedor.
  */
