@@ -44,6 +44,20 @@ async function asaas<T>(path: string, opts: AsaasFetchOpts = {}): Promise<T> {
   return data as T;
 }
 
+/** Chamada só de leitura, para validar a chave sem criar nada. */
+export async function getAccountInfo(): Promise<{
+  name?: string;
+  email?: string;
+  companyType?: string;
+}> {
+  return asaas("/myAccount");
+}
+
+/** Ambiente configurado (sandbox|production). */
+export function asaasEnv(): "sandbox" | "production" {
+  return ENV;
+}
+
 /** Cria (ou reaproveita) o cliente Asaas do profissional. */
 export async function ensureCustomer(params: {
   existingId?: string | null;
