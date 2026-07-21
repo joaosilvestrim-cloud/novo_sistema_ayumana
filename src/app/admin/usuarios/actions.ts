@@ -152,6 +152,9 @@ export async function sendPasswordResetAction(formData: FormData) {
 const TRIAL_DIAS = 30;
 const TRIAL_TIER = "ideal"; // plano "Voz"
 
+/** Zera as marcas de aviso para o novo teste avisar de novo. */
+const TRIAL_RESET = { trial_notified_7: false, trial_notified_1: false };
+
 function trialFim(dias = TRIAL_DIAS): string {
   const d = new Date();
   d.setDate(d.getDate() + dias);
@@ -167,7 +170,7 @@ export async function grantTrialAction(formData: FormData) {
   const admin = createAdminClient();
   await admin
     .from("psychologists")
-    .update({ trial_tier: TRIAL_TIER, trial_ends_at: trialFim(dias) })
+    .update({ trial_tier: TRIAL_TIER, trial_ends_at: trialFim(dias), ...TRIAL_RESET })
     .eq("id", psyId);
   revalidatePath("/admin/usuarios");
   revalidatePath(`/admin/usuarios`);
@@ -210,7 +213,7 @@ export async function bulkUsersAction(formData: FormData) {
   } else if (op === "trial" && psyIds.length) {
     await admin
       .from("psychologists")
-      .update({ trial_tier: TRIAL_TIER, trial_ends_at: trialFim() })
+      .update({ trial_tier: TRIAL_TIER, trial_ends_at: trialFim(), ...TRIAL_RESET })
       .in("id", psyIds);
   } else if (op === "trial_end" && psyIds.length) {
     await admin

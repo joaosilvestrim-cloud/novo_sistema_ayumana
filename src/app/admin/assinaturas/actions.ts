@@ -16,7 +16,12 @@ export async function grantTrialAllAction() {
 
   await admin
     .from("psychologists")
-    .update({ trial_tier: TIER, trial_ends_at: fim.toISOString() })
+    .update({
+      trial_tier: TIER,
+      trial_ends_at: fim.toISOString(),
+      trial_notified_7: false,
+      trial_notified_1: false,
+    })
     .not("id", "is", null);
 
   revalidatePath("/admin/assinaturas");

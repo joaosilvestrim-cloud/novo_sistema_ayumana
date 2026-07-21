@@ -96,6 +96,35 @@ export async function sendCrpRejected(to: string, name: string | null, reason: s
   });
 }
 
+/** Aviso de que o teste gratuito está acabando (7 dias antes e 1 dia antes). */
+export async function sendTrialEnding(
+  to: string,
+  name: string | null,
+  dias: number,
+  planoNome: string
+) {
+  const nome = name?.split(" ")[0] || "";
+  const quando = dias <= 1 ? "termina amanhã" : `termina em ${dias} dias`;
+  return sendEmail({
+    to,
+    subject:
+      dias <= 1
+        ? `Seu teste do plano ${planoNome} termina amanhã`
+        : `Faltam ${dias} dias do seu teste do plano ${planoNome}`,
+    html: emailShell({
+      heading: `Seu teste ${quando}${nome ? `, ${nome}` : ""}`,
+      bodyHtml: `Você está usando o plano <strong>${planoNome}</strong> de graça na Ayumana, e ele ${quando}.<br/><br/>
+        Quando o teste acabar, seu perfil volta ao plano gratuito e você perde:
+        <br/>• prioridade na busca
+        <br/>• exibição do valor da sessão
+        <br/>• vídeo de apresentação no perfil
+        <br/>• participação no fórum
+        <br/><br/>Para continuar com tudo isso, é só assinar. Sem fidelidade, cancela quando quiser.`,
+      cta: { label: "Manter meu plano", url: `${SITE}/painel/assinatura` },
+    }),
+  });
+}
+
 export async function sendClaimProfile(to: string, name: string | null, link: string) {
   const nome = name?.split(" ")[0] || "";
   return sendEmail({
