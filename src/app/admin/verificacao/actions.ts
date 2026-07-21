@@ -4,6 +4,39 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendCrpApproved, sendCrpRejected } from "@/lib/email";
+import { verificarCrpNoCfp } from "@/lib/crp/verify";
+
+/** Reconsulta o Cadastro Nacional do CFP para um psicólogo. */
+export async function checkCfpAction(formData: FormData) {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+  await verificarCrpNoCfp(id);
+  revalidatePath("/admin/verificacao");
+  revalidatePath(`/admin/usuarios/${id}`);
+}
+
+/**
+ * Consulta em lote quem ainda não foi checado. Limitado por clique porque cada
+ * consulta é cobrada pelo provedor.
+ */
+export async function checkCfpBatchAction(formData: FormData) {
+  await requireAdmin();
+  const limite = Math.min(Number(formData.get("limite") ?? 25) || 25, 50);
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("psychologists")
+    .select("id")
+    .is("crp_auto_checked_at", null)
+    .not("crp_number", "is", null)
+    .not("crp_uf", "is", null)
+    .limit(limite);
+
+  for (const row of data ?? []) {
+    await verificarCrpNoCfp(row.id as string);
+  }
+  revalidatePath("/admin/verificacao");
+}
 
 /** Busca e-mail e nome do psicólogo para notificação. */
 async function contact(supabase: ReturnType<typeof createAdminClient>, id: string) {

@@ -1,5 +1,6 @@
 import "server-only";
 import { Resend } from "resend";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const FROM = process.env.EMAIL_FROM || "Ayumana <contato@ayumana.com.br>";
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://ayumana.com.br";
@@ -13,25 +14,101 @@ function client(): Resend | null {
   return key ? new Resend(key) : null;
 }
 
-/** Envia um e-mail. Retorna false silenciosamente se o Resend não estiver configurado. */
+/** Tipos de notificação, usados para filtrar no admin. */
+export type NotificationKind =
+  | "crp_aprovado"
+  | "crp_reprovado"
+  | "trial_7"
+  | "trial_1"
+  | "senha"
+  | "suporte"
+  | "broadcast"
+  | "outro";
+
+/** Texto puro a partir do HTML, para o resumo na listagem do admin. */
+function toPreview(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 300);
+}
+
+/** Grava o envio no log. Nunca derruba o fluxo se falhar. */
+async function logNotification(row: {
+  kind: NotificationKind;
+  to: string | string[];
+  bcc?: string[];
+  subject: string;
+  html: string;
+  ok: boolean;
+  error?: string | null;
+  profileId?: string | null;
+  createdBy?: string | null;
+}) {
+  try {
+    const admin = createAdminClient();
+    const destinos = row.bcc?.length ? row.bcc : Array.isArray(row.to) ? row.to : [row.to];
+    await admin.from("notifications").insert(
+      destinos.map((to_email) => ({
+        kind: row.kind,
+        to_email,
+        subject: row.subject,
+        preview: toPreview(row.html),
+        status: row.ok ? "enviado" : "falhou",
+        error: row.error ?? null,
+        profile_id: row.profileId ?? null,
+        created_by: row.createdBy ?? null,
+      }))
+    );
+  } catch {
+    // log é acessório: nunca impede o envio
+  }
+}
+
+/** Envia um e-mail e registra no log. Retorna false se o Resend não estiver configurado. */
 export async function sendEmail(params: {
   to: string | string[];
   subject: string;
   html: string;
+  /** Cópia oculta: usada nos comunicados em massa, um bloco por chamada. */
+  bcc?: string[];
+  kind?: NotificationKind;
+  profileId?: string | null;
+  createdBy?: string | null;
+  log?: boolean;
 }): Promise<boolean> {
+  const kind = params.kind ?? "outro";
+  const registrar = params.log !== false;
   const resend = client();
-  if (!resend) return false;
+
+  if (!resend) {
+    if (registrar) {
+      await logNotification({ ...params, kind, ok: false, error: "Resend não configurado" });
+    }
+    return false;
+  }
+
+  let ok = false;
+  let erro: string | null = null;
   try {
     const { error } = await resend.emails.send({
       from: FROM,
       to: params.to,
+      ...(params.bcc?.length ? { bcc: params.bcc } : {}),
       subject: params.subject,
       html: params.html,
     });
-    return !error;
-  } catch {
-    return false;
+    ok = !error;
+    erro = error?.message ?? null;
+  } catch (e) {
+    erro = e instanceof Error ? e.message : "Falha desconhecida no envio";
   }
+
+  if (registrar) await logNotification({ ...params, kind, ok, error: erro });
+  return ok;
 }
 
 /** Template base com a marca Ayumana (estilos inline p/ clientes de e-mail). */
@@ -75,6 +152,7 @@ export async function sendCrpApproved(to: string, name: string | null, slug: str
   return sendEmail({
     to,
     subject: "Seu perfil na Ayumana foi aprovado ✅",
+    kind: "crp_aprovado",
     html: emailShell({
       heading: `Tudo certo${nome ? `, ${nome}` : ""}!`,
       bodyHtml: `Seu CRP foi verificado e seu perfil já está <strong>publicado</strong> na Ayumana. A partir de agora você aparece na busca e pode receber contatos direto pelo WhatsApp.`,
@@ -88,6 +166,7 @@ export async function sendCrpRejected(to: string, name: string | null, reason: s
   return sendEmail({
     to,
     subject: "Sobre a verificação do seu perfil na Ayumana",
+    kind: "crp_reprovado",
     html: emailShell({
       heading: `Precisamos de um ajuste${nome ? `, ${nome}` : ""}`,
       bodyHtml: `Não conseguimos concluir a verificação do seu CRP. Motivo:<br/><br/><em style="color:#1e2b2a;">${reason}</em><br/><br/>Corrija os dados no seu painel e envie novamente para revisão.`,
@@ -111,6 +190,7 @@ export async function sendTrialEnding(
       dias <= 1
         ? `Seu teste do plano ${planoNome} termina amanhã`
         : `Faltam ${dias} dias do seu teste do plano ${planoNome}`,
+    kind: dias <= 1 ? "trial_1" : "trial_7",
     html: emailShell({
       heading: `Seu teste ${quando}${nome ? `, ${nome}` : ""}`,
       bodyHtml: `Você está usando o plano <strong>${planoNome}</strong> de graça na Ayumana, e ele ${quando}.<br/><br/>
@@ -121,6 +201,53 @@ export async function sendTrialEnding(
         <br/>• participação no fórum
         <br/><br/>Para continuar com tudo isso, é só assinar. Sem fidelidade, cancela quando quiser.`,
       cta: { label: "Manter meu plano", url: `${SITE}/painel/assinatura` },
+    }),
+  });
+}
+
+/** Para onde vão os pedidos de suporte. Pode ser sobrescrito por env. */
+export const SUPPORT_EMAILS = (
+  process.env.SUPPORT_EMAILS || "joao.silvestrim@a2f.com.br,luiz.alcoba@a2f.com.br"
+)
+  .split(",")
+  .map((e) => e.trim())
+  .filter(Boolean);
+
+export const SUPPORT_WHATSAPP = process.env.SUPPORT_WHATSAPP || "5511981559500";
+
+/** Avisa o time quando um psicólogo pede ajuda pelo painel. */
+export async function sendSupportRequest(params: {
+  name: string | null;
+  email: string | null;
+  phone?: string | null;
+  plan?: string | null;
+  message?: string | null;
+  profileId?: string | null;
+}) {
+  const linhas = [
+    `<strong>Quem pediu:</strong> ${params.name || "—"}`,
+    `<strong>E-mail:</strong> ${params.email || "—"}`,
+    params.phone ? `<strong>WhatsApp:</strong> ${params.phone}` : null,
+    params.plan ? `<strong>Plano:</strong> ${params.plan}` : null,
+  ]
+    .filter(Boolean)
+    .join("<br/>");
+
+  const msg = params.message?.trim();
+
+  return sendEmail({
+    to: SUPPORT_EMAILS,
+    subject: `Pedido de ajuda na Ayumana — ${params.name || params.email || "psicólogo"}`,
+    kind: "suporte",
+    profileId: params.profileId ?? null,
+    html: emailShell({
+      heading: "Alguém clicou em suporte",
+      bodyHtml: `${linhas}${
+        msg ? `<br/><br/><strong>Mensagem:</strong><br/><em>${msg}</em>` : ""
+      }<br/><br/>A pessoa foi direcionada ao WhatsApp do suporte.`,
+      cta: params.profileId
+        ? { label: "Abrir no admin", url: `${SITE}/admin/usuarios/${params.profileId}` }
+        : undefined,
     }),
   });
 }

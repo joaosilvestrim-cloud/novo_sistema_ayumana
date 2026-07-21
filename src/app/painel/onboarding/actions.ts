@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { slugify } from "@/lib/slug";
+import { verificarCrpNoCfp } from "@/lib/crp/verify";
 import type { Audience } from "@/lib/types";
 
 const BUCKET = process.env.SUPABASE_CRP_BUCKET || "crp-documentos";
@@ -271,6 +272,16 @@ export async function saveOnboardingAction(
     .eq("id", psyId);
   if (updErr) {
     return { error: `Não foi possível salvar: ${updErr.message}` };
+  }
+
+  // Consulta o CFP assim que a pessoa envia para verificação, para o admin já
+  // abrir a fila com a resposta oficial na tela. Falha aqui não trava o envio.
+  if (intent === "submit") {
+    try {
+      await verificarCrpNoCfp(psyId, { timeoutMs: 12_000 });
+    } catch {
+      // segue para a conferência manual
+    }
   }
 
   // Sincroniza joins (substitui tudo).

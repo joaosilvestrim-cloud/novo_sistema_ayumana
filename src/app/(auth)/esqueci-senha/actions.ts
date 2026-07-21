@@ -26,6 +26,7 @@ export async function requestResetAction(
         await sendEmail({
           to: email,
           subject: "Redefinir sua senha na Ayumana",
+          kind: "senha",
           html: emailShell({
             heading: "Redefinir senha",
             bodyHtml:

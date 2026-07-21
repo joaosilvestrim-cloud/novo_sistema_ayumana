@@ -3,6 +3,7 @@ import { LayoutDashboard, UserRound, CreditCard, MessagesSquare, LogOut } from "
 import { requireUser, getProfile } from "@/lib/auth";
 import { Logo } from "@/components/ui/logo";
 import { signOutAction } from "@/app/(auth)/actions";
+import { SupportButton } from "@/components/painel/support-button";
 
 const NAV = [
   { href: "/painel", label: "Início", icon: LayoutDashboard },
@@ -34,6 +35,7 @@ export default async function PainelLayout({
                 Área admin
               </Link>
             )}
+            <SupportButton />
             <span className="hidden text-sm text-foreground-muted sm:inline">
               {profile?.full_name || profile?.email}
             </span>
