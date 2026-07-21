@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   Settings2, X, ExternalLink, Trash2, KeyRound, ShieldCheck,
-  Eye, EyeOff, BadgeCheck, AlertCircle,
+  Eye, EyeOff, BadgeCheck, AlertCircle, Gift,
 } from "lucide-react";
 import { PLAN_LABEL } from "@/lib/plan-labels";
 import { VERIFICATION_LABELS, type PlanTier, type VerificationStatus, type UserRole } from "@/lib/types";
@@ -12,6 +12,7 @@ import { ConfirmButton } from "@/components/admin/confirm-button";
 import {
   setRoleAction, togglePublishAction, quickApproveAction,
   changePlanAction, deleteUserAction, sendPasswordResetAction,
+  grantTrialAction, revokeTrialAction,
 } from "@/app/admin/usuarios/actions";
 
 const TIERS: PlanTier[] = ["essencial", "destaque", "ideal", "presenca"];
@@ -25,6 +26,8 @@ export type ManageUser = {
   slug: string | null;
   role: UserRole;
   plan: PlanTier | null;
+  trialTier?: PlanTier | null;
+  trialEndsAt?: string | null;
   verification: VerificationStatus | null;
   published: boolean;
   profileCompleted: boolean;
@@ -35,6 +38,7 @@ const btn = "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bord
 export function UserManageModal({ u, canDelete }: { u: ManageUser; canDelete: boolean }) {
   const [open, setOpen] = useState(false);
   const v = u.verification ? VERIFICATION_LABELS[u.verification] : null;
+  const emTeste = !!u.trialEndsAt && new Date(u.trialEndsAt) > new Date();
 
   return (
     <>
@@ -96,6 +100,40 @@ export function UserManageModal({ u, canDelete }: { u: ManageUser; canDelete: bo
                       Salvar
                     </button>
                   </form>
+                </div>
+              )}
+
+              {/* Teste gratuito */}
+              {u.psyId && (
+                <div>
+                  <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-foreground-muted">Teste gratuito</p>
+                  {emTeste ? (
+                    <p className="mb-2 text-sm text-brand-dark">
+                      Em teste do {u.trialTier ? PLAN_LABEL[u.trialTier] : "Voz"} até{" "}
+                      {new Date(u.trialEndsAt!).toLocaleDateString("pt-BR")}.
+                    </p>
+                  ) : (
+                    <p className="mb-2 text-sm text-foreground-muted">Sem teste ativo.</p>
+                  )}
+                  <div className="flex flex-wrap gap-2">
+                    <form action={grantTrialAction} className="flex items-center gap-2">
+                      <input type="hidden" name="psy_id" value={u.psyId} />
+                      <select name="dias" defaultValue="30" className="h-9 rounded-lg border border-border bg-background px-2 text-sm">
+                        <option value="7">7 dias</option>
+                        <option value="15">15 dias</option>
+                        <option value="30">30 dias</option>
+                        <option value="60">60 dias</option>
+                        <option value="90">90 dias</option>
+                      </select>
+                      <button className={btn}><Gift className="h-4 w-4" /> {emTeste ? "Renovar" : "Conceder"} Voz</button>
+                    </form>
+                    {emTeste && (
+                      <form action={revokeTrialAction}>
+                        <input type="hidden" name="psy_id" value={u.psyId} />
+                        <button className={btn}>Encerrar teste</button>
+                      </form>
+                    )}
+                  </div>
                 </div>
               )}
 

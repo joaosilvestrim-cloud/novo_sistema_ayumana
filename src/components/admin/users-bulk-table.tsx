@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { AlertCircle, Eye, EyeOff, BadgeCheck, Trash2, X } from "lucide-react";
+import { AlertCircle, Eye, EyeOff, BadgeCheck, Trash2, X, Gift } from "lucide-react";
 import type { AdminUser } from "@/lib/admin";
 import { Badge } from "@/components/ui/badge";
 import { UserManageModal } from "@/components/admin/user-manage-modal";
@@ -69,6 +69,12 @@ export function UsersBulkTable({ rows, meId }: { rows: AdminUser[]; meId: string
               Aplicar plano
             </button>
           </span>
+          <button type="button" onClick={() => run("trial")} className="inline-flex h-8 items-center gap-1 rounded-md border border-brand/50 bg-background px-2.5 text-xs text-brand-dark hover:bg-brand/10">
+            <Gift className="h-3.5 w-3.5" /> Dar 30 dias de Voz
+          </button>
+          <button type="button" onClick={() => run("trial_end")} className="inline-flex h-8 items-center rounded-md border border-border bg-background px-2.5 text-xs hover:bg-surface-muted">
+            Encerrar teste
+          </button>
           <button type="button" onClick={() => run("delete")} className="inline-flex h-8 items-center gap-1 rounded-md border border-danger/40 bg-background px-2.5 text-xs text-danger hover:bg-danger/10">
             <Trash2 className="h-3.5 w-3.5" /> Excluir
           </button>
@@ -117,7 +123,15 @@ export function UsersBulkTable({ rows, meId }: { rows: AdminUser[]; meId: string
                   <td className="px-4 py-3">
                     {u.role === "admin" ? <Badge tone="brand">Admin</Badge> : u.role === "conteudo" ? <Badge tone="warning">Conteúdo</Badge> : <Badge tone="neutral">Psicólogo</Badge>}
                   </td>
-                  <td className="px-4 py-3">{u.plan ? PLAN_LABEL[u.plan] : "—"}</td>
+                  <td className="px-4 py-3">
+                    {u.plan ? PLAN_LABEL[u.plan] : "—"}
+                    {u.trialEndsAt && new Date(u.trialEndsAt) > new Date() && (
+                      <span className="mt-1 block text-[11px] font-medium text-brand-dark">
+                        Teste {u.trialTier ? PLAN_LABEL[u.trialTier] : ""} até{" "}
+                        {new Date(u.trialEndsAt).toLocaleDateString("pt-BR")}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">{v ? <Badge tone={v.tone}>{v.label}</Badge> : "—"}</td>
                   <td className="px-4 py-3">{u.published ? <Badge tone="success">Sim</Badge> : <Badge tone="neutral">Não</Badge>}</td>
                   <td className="px-4 py-3">

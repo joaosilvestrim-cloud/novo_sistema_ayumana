@@ -149,6 +149,45 @@ export async function sendPasswordResetAction(formData: FormData) {
   revalidatePath("/admin/usuarios");
 }
 
+const TRIAL_DIAS = 30;
+const TRIAL_TIER = "ideal"; // plano "Voz"
+
+function trialFim(dias = TRIAL_DIAS): string {
+  const d = new Date();
+  d.setDate(d.getDate() + dias);
+  return d.toISOString();
+}
+
+/** Concede o teste gratuito a UM psicólogo. */
+export async function grantTrialAction(formData: FormData) {
+  await requireAdmin();
+  const psyId = String(formData.get("psy_id") ?? "");
+  const dias = Number(formData.get("dias") ?? TRIAL_DIAS) || TRIAL_DIAS;
+  if (!psyId) return;
+  const admin = createAdminClient();
+  await admin
+    .from("psychologists")
+    .update({ trial_tier: TRIAL_TIER, trial_ends_at: trialFim(dias) })
+    .eq("id", psyId);
+  revalidatePath("/admin/usuarios");
+  revalidatePath(`/admin/usuarios`);
+  revalidatePath("/psicologos");
+}
+
+/** Encerra o teste de UM psicólogo (volta ao plano contratado na hora). */
+export async function revokeTrialAction(formData: FormData) {
+  await requireAdmin();
+  const psyId = String(formData.get("psy_id") ?? "");
+  if (!psyId) return;
+  const admin = createAdminClient();
+  await admin
+    .from("psychologists")
+    .update({ trial_tier: null, trial_ends_at: null })
+    .eq("id", psyId);
+  revalidatePath("/admin/usuarios");
+  revalidatePath("/psicologos");
+}
+
 export async function bulkUsersAction(formData: FormData) {
   const me = await requireAdmin();
   const op = String(formData.get("op") ?? "");
@@ -168,6 +207,16 @@ export async function bulkUsersAction(formData: FormData) {
     }).in("id", psyIds);
   } else if (op === "plan" && PLAN_TIERS.includes(plan as (typeof PLAN_TIERS)[number]) && psyIds.length) {
     await admin.from("psychologists").update({ plan_tier: plan }).in("id", psyIds);
+  } else if (op === "trial" && psyIds.length) {
+    await admin
+      .from("psychologists")
+      .update({ trial_tier: TRIAL_TIER, trial_ends_at: trialFim() })
+      .in("id", psyIds);
+  } else if (op === "trial_end" && psyIds.length) {
+    await admin
+      .from("psychologists")
+      .update({ trial_tier: null, trial_ends_at: null })
+      .in("id", psyIds);
   } else if (op === "delete") {
     for (const pid of profileIds) {
       if (pid === me.id) continue; // nunca a própria conta

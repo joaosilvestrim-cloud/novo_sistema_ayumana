@@ -119,6 +119,8 @@ export type AdminUser = {
   published: boolean;
   profileCompleted: boolean;
   subscription: SubscriptionStatus | null;
+  trialTier: PlanTier | null;
+  trialEndsAt: string | null;
   createdAt: string | null;
 };
 
@@ -159,7 +161,7 @@ export async function getUsersOverview(): Promise<AdminUser[]> {
     supabase.from("profiles").select("id, full_name, email, role, created_at").order("created_at", { ascending: false }),
     supabase
       .from("psychologists")
-      .select("id, profile_id, slug, city, plan_tier, verification_status, is_published, subscription_status, profile_completed"),
+      .select("id, profile_id, slug, city, plan_tier, verification_status, is_published, subscription_status, profile_completed, trial_tier, trial_ends_at"),
   ]);
 
   const psyByProfile = new Map((psys ?? []).map((p) => [p.profile_id, p]));
@@ -179,6 +181,8 @@ export async function getUsersOverview(): Promise<AdminUser[]> {
       published: psy?.is_published ?? false,
       profileCompleted: psy?.profile_completed ?? false,
       subscription: (psy?.subscription_status as SubscriptionStatus) ?? null,
+      trialTier: (psy?.trial_tier as PlanTier) ?? null,
+      trialEndsAt: psy?.trial_ends_at ?? null,
       createdAt: pr.created_at,
     };
   });
