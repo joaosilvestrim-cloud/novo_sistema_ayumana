@@ -2,6 +2,8 @@ import { Check, CalendarClock, Info } from "lucide-react";
 import { getMyPsychologist } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { isAsaasConfigured } from "@/lib/payments/asaas";
+import { trialAtivo, trialDiasRestantes } from "@/lib/plan-features";
+import { PLAN_LABEL } from "@/lib/plan-labels";
 import { Badge } from "@/components/ui/badge";
 import {
   SUBSCRIPTION_LABELS,
@@ -39,6 +41,10 @@ export default async function AssinaturaPage({
   const hasActivePaid = PAID.has(current) && status !== "cancelada";
   // Só pedimos CPF/CNPJ na primeira assinatura (depois reusamos o cliente no Asaas).
   const needsCpf = !psy?.asaas_customer_id;
+  // Teste gratuito em andamento?
+  const emTeste = psy ? trialAtivo(psy) : false;
+  const diasTeste = psy ? trialDiasRestantes(psy) : 0;
+  const planoTeste = psy?.trial_tier ? PLAN_LABEL[psy.trial_tier] : null;
 
   const erro = typeof sp.erro === "string" ? sp.erro : null;
   const notice =
@@ -49,7 +55,7 @@ export default async function AssinaturaPage({
       : sp.aguardando
       ? { tone: "warning" as const, text: "Assinatura criada. Conclua o pagamento para ativá-la." }
       : sp.cancelado
-      ? { tone: "neutral" as const, text: "Assinatura cancelada. Você voltou ao plano Essencial." }
+      ? { tone: "neutral" as const, text: "Assinatura cancelada. Você voltou ao plano Raiz." }
       : null;
 
   return (
@@ -77,6 +83,21 @@ export default async function AssinaturaPage({
         </div>
       )}
 
+      {/* Teste gratuito em andamento */}
+      {emTeste && planoTeste && (
+        <div className="rounded-2xl border border-brand/40 bg-brand/5 p-5">
+          <p className="font-medium text-brand-dark">
+            Você está testando o plano {planoTeste} de graça.
+          </p>
+          <p className="mt-1 text-sm text-foreground-muted">
+            {diasTeste === 1 ? "Termina amanhã." : `Faltam ${diasTeste} dias.`} Quando o
+            teste acabar, seu perfil volta para o plano {PLAN_LABEL[current]} e você perde
+            prioridade na busca, vídeo de apresentação e participação no fórum. Assine
+            antes para não perder nada.
+          </p>
+        </div>
+      )}
+
       {/* Status atual */}
       <div className="rounded-2xl border border-border bg-background p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -84,7 +105,7 @@ export default async function AssinaturaPage({
             <p className="text-sm text-foreground-muted">Plano atual</p>
             <div className="mt-0.5 flex items-center gap-2">
               <span className="text-xl font-semibold text-brand-dark">
-                {plans.find((p) => p.id === current)?.name ?? "Essencial"}
+                {plans.find((p) => p.id === current)?.name ?? "Raiz"}
               </span>
               {current !== "essencial" && <Badge tone={s.tone}>{s.label}</Badge>}
             </div>
@@ -177,7 +198,7 @@ export default async function AssinaturaPage({
                     }`}
                   >
                     {plan.id === "essencial"
-                      ? "Voltar ao Essencial"
+                      ? "Voltar ao Raiz"
                       : `Assinar ${plan.name}`}
                   </button>
                 </form>

@@ -55,7 +55,7 @@ import {
   COUNTRIES,
   type Audience,
 } from "@/lib/types";
-import { planHas } from "@/lib/plan-features";
+import { planHas, effectivePlan } from "@/lib/plan-features";
 
 /** Primeiro nome ignorando pronomes de tratamento (Dr., Dra., Prof.). */
 function firstNameOf(name?: string | null): string | undefined {
@@ -110,14 +110,15 @@ export default async function PerfilPage({
 
   const wa = whatsappLink(p.phone_whatsapp, p.whatsapp_message);
   const ig = instagramHandle(p.instagram);
-  const paid = planHas(p.plan_tier, "showPrice");
+  const plano = effectivePlan(p); // respeita o teste gratuito, se estiver no prazo
+  const paid = planHas(plano, "showPrice");
   const price = paid ? formatPrice(p.session_price_cents) : null;
   const pricePresencial = paid ? formatPrice(p.session_price_in_person_cents) : null;
   const hasSchedule = !!p.schedule && DAY_ORDER.some((d) => p.schedule?.[d]);
   const location = [p.city, p.state].filter(Boolean).join(" / ");
   const forumAnswers = await listAnswersByPsychologist(p.id);
   const primeiroNome = firstNameOf(p.display_name) ?? "o profissional";
-  const showVideo = planHas(p.plan_tier, "video") && !!p.video_url;
+  const showVideo = planHas(plano, "video") && !!p.video_url;
   const countryNames = p.countries
     .map((c) => COUNTRIES.find((x) => x.code === c)?.name)
     .filter(Boolean) as string[];
@@ -183,12 +184,17 @@ export default async function PerfilPage({
                       {[p.city, p.state].filter(Boolean).join(" / ")}
                     </span>
                   )}
-                  {p.attends_abroad && (
-                    <Badge tone="brand">
-                      <Globe2 className="h-3.5 w-3.5" /> Atende no exterior
-                    </Badge>
-                  )}
-                  {p.accepting_patients && planHas(p.plan_tier, "agendaAberta") && (
+                  {p.attends_abroad &&
+                    (planHas(plano, "exteriorDestaque") ? (
+                      <Badge tone="brand">
+                        <Globe2 className="h-3.5 w-3.5" /> Atende no exterior
+                      </Badge>
+                    ) : (
+                      <span className="inline-flex items-center gap-1">
+                        <Globe2 className="h-4 w-4" /> Atende no exterior
+                      </span>
+                    ))}
+                  {p.accepting_patients && planHas(plano, "agendaAberta") && (
                     <Badge tone="success">
                       <Check className="h-3.5 w-3.5" /> Aceitando novos pacientes
                     </Badge>

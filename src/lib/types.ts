@@ -132,6 +132,8 @@ export type Psychologist = {
   is_published: boolean;
   asaas_customer_id: string | null;
   asaas_subscription_id: string | null;
+  trial_tier: PlanTier | null;
+  trial_ends_at: string | null;
   subscription_status: SubscriptionStatus;
   subscription_period_end: string | null;
   created_at: string;

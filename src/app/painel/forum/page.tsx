@@ -21,7 +21,7 @@ export default async function PainelForumPage() {
         <div className="flex items-start gap-3 rounded-2xl border border-border bg-background p-6">
           <Lock className="mt-0.5 h-5 w-5 text-foreground-muted" />
           <div>
-            <p className="font-medium text-heading">Recurso dos planos Ideal e Presença</p>
+            <p className="font-medium text-heading">Recurso dos planos Voz e Presença</p>
             <p className="mt-1 text-sm text-foreground-muted">
               Responder perguntas dá visibilidade e prova de autoridade. Faça
               upgrade para participar.{" "}

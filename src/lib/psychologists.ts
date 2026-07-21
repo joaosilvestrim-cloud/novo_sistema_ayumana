@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { effectivePlan } from "@/lib/plan-features";
 import type { Audience, Gender, PlanTier, Psychologist } from "@/lib/types";
 
 export type PsychologistCard = Psychologist & {
@@ -207,10 +208,11 @@ export async function listPsychologists(filters: CatalogFilters): Promise<{
     rows = rows.filter((r) => r.countries.includes(filters.pais!));
   }
 
-  // Ordena por prioridade de plano e depois por mais recente.
+  // Ordena por prioridade do plano EFETIVO (o teste gratuito conta) e depois
+  // por mais recente.
   rows.sort((a, b) => {
-    const pa = PLAN_PRIORITY[a.plan_tier] ?? 0;
-    const pb = PLAN_PRIORITY[b.plan_tier] ?? 0;
+    const pa = PLAN_PRIORITY[effectivePlan(a)] ?? 0;
+    const pb = PLAN_PRIORITY[effectivePlan(b)] ?? 0;
     if (pb !== pa) return pb - pa;
     return (b.created_at ?? "").localeCompare(a.created_at ?? "");
   });

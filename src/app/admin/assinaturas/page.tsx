@@ -1,7 +1,9 @@
 import Link from "next/link";
-import { CreditCard, AlertCircle } from "lucide-react";
+import { CreditCard, AlertCircle, Gift } from "lucide-react";
 import { getMetrics } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { ConfirmButton } from "@/components/admin/confirm-button";
+import { grantTrialAllAction, endTrialAllAction } from "./actions";
 import { formatPrice } from "@/lib/whatsapp";
 import { Badge } from "@/components/ui/badge";
 import { PLAN_LABEL } from "@/lib/plan-labels";
@@ -20,6 +22,12 @@ export default async function AdminAssinaturasPage() {
     .select("id, display_name, slug, plan_tier, subscription_status, subscription_period_end, profile_id")
     .in("plan_tier", PAID)
     .order("subscription_status", { ascending: true });
+
+  const { count: emTesteCount } = await supabase
+    .from("psychologists")
+    .select("id", { count: "exact", head: true })
+    .gt("trial_ends_at", new Date().toISOString());
+  const emTeste = emTesteCount ?? 0;
 
   const rows = (subs as {
     id: string; display_name: string | null; slug: string | null;
@@ -55,6 +63,39 @@ export default async function AdminAssinaturasPage() {
           <p className="text-sm text-foreground-muted">Pagamentos pendentes</p>
         </div>
       </div>
+
+      {/* Teste gratuito */}
+      <section className="rounded-2xl border border-brand/40 bg-brand/5 p-6">
+        <h2 className="text-lg">Teste gratuito do plano Voz</h2>
+        <p className="mt-1 text-sm text-foreground-muted">
+          Libera os recursos do Voz por 30 dias para todos os psicólogos. A expiração é
+          automática: quando o prazo vence, cada perfil volta sozinho ao plano contratado,
+          sem depender de nenhuma rotina agendada.
+        </p>
+        <p className="mt-2 text-sm">
+          <strong className="text-heading">{emTeste}</strong> perfis com teste ativo agora.
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <form action={grantTrialAllAction}>
+            <ConfirmButton
+              message="Conceder 30 dias do plano Voz a TODOS os psicólogos? Isso reinicia o prazo de quem já está em teste."
+              className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary-hover"
+            >
+              <Gift className="h-4 w-4" /> Conceder 30 dias a todos
+            </ConfirmButton>
+          </form>
+          {emTeste > 0 && (
+            <form action={endTrialAllAction}>
+              <ConfirmButton
+                message="Encerrar o teste de todos agora? Cada perfil volta imediatamente ao plano contratado."
+                className="inline-flex h-10 items-center gap-2 rounded-lg border border-danger/40 px-4 text-sm font-medium text-danger hover:bg-danger/10"
+              >
+                Encerrar teste de todos
+              </ConfirmButton>
+            </form>
+          )}
+        </div>
+      </section>
 
       {/* Assinantes por plano */}
       <section className="rounded-2xl border border-border bg-background p-6">

@@ -126,7 +126,7 @@ export default async function PainelHome() {
             <FileText className="h-5 w-5 text-teal-600" />
             <div>
               <p className="font-medium text-heading">
-                Plano {plan?.name ?? "Essencial"}
+                Plano {plan?.name ?? "Raiz"}
               </p>
               <p className="text-sm text-foreground-muted">
                 {plan?.price_label ?? "Grátis"}

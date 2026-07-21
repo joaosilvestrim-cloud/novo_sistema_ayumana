@@ -137,7 +137,7 @@ export default async function QuestionPage({
             <div className="rounded-2xl border border-border bg-surface p-5 text-sm text-foreground-muted">
               É psicólogo?{" "}
               <Link href="/para-psicologos" className="font-medium text-brand-dark hover:underline">
-                Assine o plano Ideal
+                Assine o plano Voz
               </Link>{" "}
               para responder no fórum e aparecer para quem procura.
             </div>

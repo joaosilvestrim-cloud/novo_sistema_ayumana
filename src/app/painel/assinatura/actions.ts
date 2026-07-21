@@ -82,7 +82,7 @@ export async function selectPlanAction(formData: FormData) {
   }
   const admin = createAdminClient();
 
-  // Downgrade para o Essencial: cancela assinatura ativa.
+  // Downgrade para o Raiz (essencial): cancela assinatura ativa.
   if (plan === "essencial") {
     if (isAsaasConfigured() && ctx.psy.asaas_subscription_id) {
       try {

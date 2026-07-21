@@ -1,9 +1,10 @@
 import { Fragment } from "react";
 import { Check, X } from "lucide-react";
 
-const PLANS = ["Essencial", "Destaque", "Ideal", "Presença"] as const;
+const PLANS = ["Raiz", "Alcance", "Voz", "Presença"] as const;
+const POPULAR = "Voz";
 
-// valores por plano: [Essencial, Destaque, Ideal, Presença]
+// valores por plano: [Raiz, Alcance, Voz, Presença]
 const GROUPS: { title: string; rows: { label: string; desc: string; v: boolean[] }[] }[] = [
   {
     title: "Presença na plataforma",
@@ -54,7 +55,10 @@ export function ComparePlans() {
     <section className="mx-auto max-w-5xl px-4 py-16">
       <div className="mx-auto max-w-2xl text-center">
         <h2 className="text-3xl font-semibold text-heading">Compare os planos</h2>
-        <p className="mt-3 text-foreground-muted">
+        <p className="mt-3 text-lg font-medium text-brand-dark">
+          Crie raiz. Ganhe alcance. Tenha voz. Construa presença.
+        </p>
+        <p className="mt-2 text-foreground-muted">
           Todos dão acesso à plataforma. Os pagos aumentam sua visibilidade e o
           alcance do seu perfil.
         </p>
@@ -71,13 +75,18 @@ export function ComparePlans() {
                 <th key={p} className="px-3 py-4 text-center">
                   <span
                     className={
-                      p === "Ideal"
+                      p === POPULAR
                         ? "inline-block rounded-full bg-brand/15 px-3 py-1 text-sm font-semibold text-brand-dark"
                         : "text-sm font-semibold text-heading"
                     }
                   >
                     {p}
                   </span>
+                  {p === POPULAR && (
+                    <span className="mt-1 block text-[10px] font-medium uppercase tracking-wide text-brand">
+                      Mais popular
+                    </span>
+                  )}
                 </th>
               ))}
             </tr>
@@ -108,7 +117,7 @@ export function ComparePlans() {
       </div>
 
       <p className="mt-4 text-center text-xs text-foreground-muted">
-        Você começa no Essencial grátis e muda de plano quando quiser, sem
+        Você começa no Raiz, grátis, e muda de plano quando quiser, sem
         fidelidade.
       </p>
     </section>

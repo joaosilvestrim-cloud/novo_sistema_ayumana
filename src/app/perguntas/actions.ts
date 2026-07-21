@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { slugify } from "@/lib/slug";
+import { planHas, effectivePlan } from "@/lib/plan-features";
 
 export type AskState = { error: string | null; ok?: boolean };
 
@@ -60,13 +61,14 @@ export async function answerQuestionAction(
 
   const { data: psy } = await supabase
     .from("psychologists")
-    .select("id, plan_tier, verification_status")
+    .select("id, plan_tier, trial_tier, trial_ends_at, verification_status")
     .eq("profile_id", user.id)
     .maybeSingle();
 
   if (!psy) return { error: "Complete seu perfil de psicólogo antes de responder." };
-  if (!["ideal", "presenca"].includes(psy.plan_tier)) {
-    return { error: "Responder no fórum é um recurso dos planos Ideal e Presença." };
+  // Usa o plano efetivo: quem está no teste gratuito também pode responder.
+  if (!planHas(effectivePlan(psy), "forum")) {
+    return { error: "Responder no fórum é um recurso dos planos Voz e Presença." };
   }
   if (psy.verification_status !== "aprovado") {
     return { error: "Seu CRP precisa estar verificado para responder." };
