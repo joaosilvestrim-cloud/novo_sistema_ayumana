@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { CreditCard, AlertCircle, Gift } from "lucide-react";
+import { CreditCard, AlertCircle, Gift, CheckCircle2 } from "lucide-react";
 import { getMetrics } from "@/lib/admin";
+import { isAsaasConfigured, asaasEnv } from "@/lib/payments/asaas";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ConfirmButton } from "@/components/admin/confirm-button";
 import { grantTrialAllAction, endTrialAllAction } from "./actions";
@@ -143,11 +144,29 @@ export default async function AdminAssinaturasPage() {
         )}
       </section>
 
-      {m.assinaturas.mrrCents === 0 && (
-        <div className="flex items-start gap-2 rounded-lg border border-border bg-surface-muted px-4 py-3 text-sm text-foreground-muted">
+      {/*
+        O aviso olha a configuração, não o faturamento. Antes ele aparecia
+        sempre que o MRR era zero, dizendo que faltava configurar o Asaas
+        mesmo com a chave no ar.
+      */}
+      {!isAsaasConfigured() ? (
+        <div className="flex items-start gap-2 rounded-lg border border-yellow-500/40 bg-yellow-400/10 px-4 py-3 text-sm text-yellow-800">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-          A cobrança recorrente ativa quando o Asaas for configurado (variáveis
-          <code className="mx-1">ASAAS_API_KEY</code>). Por ora os planos pagos são atribuídos em modo de teste.
+          <span>
+            Cobrança recorrente desligada nesta implantação: falta a variável
+            <code className="mx-1">ASAAS_API_KEY</code>. Os planos pagos são atribuídos em modo de teste.
+            <Link href="/admin/integracoes" className="ml-1 font-medium underline">Ver diagnóstico</Link>
+          </span>
+        </div>
+      ) : (
+        <div className="flex items-start gap-2 rounded-lg border border-border bg-surface-muted px-4 py-3 text-sm text-foreground-muted">
+          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
+          <span>
+            Cobrança recorrente ligada no Asaas
+            <strong className="mx-1 text-heading">{asaasEnv() === "production" ? "produção" : "sandbox"}</strong>.
+            {m.assinaturas.mrrCents === 0 && " Ainda não há pagamento confirmado, por isso o faturamento está zerado."}
+            <Link href="/admin/integracoes" className="ml-1 font-medium underline">Testar conexão</Link>
+          </span>
         </div>
       )}
     </div>

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { FileText, MapPin, ExternalLink, RefreshCw, ShieldCheck, ShieldAlert, ShieldQuestion } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Badge } from "@/components/ui/badge";
@@ -90,16 +91,40 @@ function CfpBanner({ r }: { r: Row }) {
   );
 }
 
-export default async function VerificacaoPage() {
-  const supabase = createAdminClient();
+const COLUNAS =
+  "id, display_name, crp_number, crp_uf, crp_document_path, city, state, verification_status, verification_submitted_at, profile_completed, crp_auto_status, crp_auto_nome, crp_auto_situacao, crp_auto_checked_at, profiles!psychologists_profile_id_fkey(full_name, email)";
 
-  const { data, error } = await supabase
+export default async function VerificacaoPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ fila?: string }>;
+}) {
+  const supabase = createAdminClient();
+  const sp = await searchParams;
+  const fila = sp.fila === "herdados" ? "herdados" : "pendentes";
+
+  // Quantos selos vieram da importação e nunca passaram por conferência.
+  const { count: herdadosCount } = await supabase
     .from("psychologists")
-    .select(
-      "id, display_name, crp_number, crp_uf, crp_document_path, city, state, verification_status, verification_submitted_at, profile_completed, crp_auto_status, crp_auto_nome, crp_auto_situacao, crp_auto_checked_at, profiles!psychologists_profile_id_fkey(full_name, email)"
-    )
-    .eq("verification_status", "pendente")
-    .order("verification_submitted_at", { ascending: true });
+    .select("id", { count: "exact", head: true })
+    .eq("verification_status", "aprovado")
+    .is("crp_auto_checked_at", null);
+  const herdados = herdadosCount ?? 0;
+
+  const { count: pendentesCount } = await supabase
+    .from("psychologists")
+    .select("id", { count: "exact", head: true })
+    .eq("verification_status", "pendente");
+
+  const base = supabase.from("psychologists").select(COLUNAS);
+  const { data, error } =
+    fila === "herdados"
+      ? await base
+          .eq("verification_status", "aprovado")
+          .is("crp_auto_checked_at", null)
+          .order("display_name")
+          .limit(60)
+      : await base.eq("verification_status", "pendente").order("verification_submitted_at", { ascending: true });
 
   const rows = (data as Row[] | null) ?? [];
 
@@ -118,16 +143,45 @@ export default async function VerificacaoPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl">Verificação de CRP</h1>
-          <p className="mt-1 text-foreground-muted">
-            Valide o registro no Cadastro Nacional de Psicólogos e aprove os
-            perfis pendentes.
-          </p>
-        </div>
-        <Badge tone="warning">{rows.length} pendente(s)</Badge>
+      <div>
+        <h1 className="text-2xl">Verificação de CRP</h1>
+        <p className="mt-1 text-foreground-muted">
+          Valide o registro no Cadastro Nacional de Psicólogos e aprove os perfis.
+        </p>
       </div>
+
+      {/* Duas filas: quem pediu verificação agora e quem herdou o selo da importação. */}
+      <div className="flex flex-wrap gap-2">
+        <Link
+          href="/admin/verificacao"
+          className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium ${
+            fila === "pendentes" ? "border-brand bg-brand/10 text-brand-dark" : "border-border hover:bg-surface-muted"
+          }`}
+        >
+          Pedidos novos
+          <span className="rounded-full bg-background px-2 text-xs font-bold">{pendentesCount ?? 0}</span>
+        </Link>
+        <Link
+          href="/admin/verificacao?fila=herdados"
+          className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium ${
+            fila === "herdados" ? "border-brand bg-brand/10 text-brand-dark" : "border-border hover:bg-surface-muted"
+          }`}
+        >
+          Selos herdados da importação
+          <span className={`rounded-full px-2 text-xs font-bold ${herdados > 0 ? "bg-yellow-400/30 text-yellow-800" : "bg-background"}`}>
+            {herdados}
+          </span>
+        </Link>
+      </div>
+
+      {fila === "herdados" && (
+        <p className="rounded-xl border border-yellow-500/40 bg-yellow-400/10 px-4 py-3 text-sm text-yellow-900">
+          Estes {herdados} perfis estão marcados como aprovados, mas o registro nunca foi
+          conferido no conselho: o selo veio junto na importação da base antiga. Eles
+          continuam publicados. Conferir aqui não muda nada na vitrine, só registra a
+          checagem e tira a pessoa desta fila. Mostrando os 60 primeiros.
+        </p>
+      )}
 
       {!cfpConfigured() ? (
         <p className="rounded-xl border border-border bg-surface-muted px-4 py-3 text-sm text-foreground-muted">
@@ -160,7 +214,9 @@ export default async function VerificacaoPage() {
 
       {rows.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border bg-background p-12 text-center text-foreground-muted">
-          Nenhuma verificação pendente. 🎉
+          {fila === "herdados"
+            ? "Todos os selos já passaram por conferência. 🎉"
+            : "Nenhuma verificação pendente. 🎉"}
         </div>
       ) : (
         <ul className="space-y-4">
@@ -256,13 +312,14 @@ export default async function VerificacaoPage() {
                 </div>
 
                 <div className="mt-5 flex flex-wrap items-end gap-3 border-t border-border pt-5">
-
-                  <form action={approveAction}>
-                    <input type="hidden" name="id" value={r.id} />
-                    <button className="h-10 rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-hover">
-                      Aprovar e publicar
-                    </button>
-                  </form>
+                  {r.verification_status !== "aprovado" && (
+                    <form action={approveAction}>
+                      <input type="hidden" name="id" value={r.id} />
+                      <button className="h-10 rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-hover">
+                        Aprovar e publicar
+                      </button>
+                    </form>
+                  )}
 
                   <form action={rejectAction} className="flex flex-1 items-end gap-2">
                     <input type="hidden" name="id" value={r.id} />
@@ -272,7 +329,7 @@ export default async function VerificacaoPage() {
                       className="h-10 min-w-0 flex-1 rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-danger"
                     />
                     <button className="h-10 rounded-lg border border-danger px-4 text-sm font-medium text-danger transition-colors hover:bg-danger/10">
-                      Reprovar
+                      {r.verification_status === "aprovado" ? "Tirar o selo e despublicar" : "Reprovar"}
                     </button>
                   </form>
                 </div>
