@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ExternalLink, Sparkles, Plus } from "lucide-react";
-import { getStudioClient, listItems, listCycles, currentCycle, cycleLabel, PECAS_POR_CICLO } from "@/lib/studio";
+import { ArrowLeft, ExternalLink, Sparkles, Plus, AlertTriangle, CheckCircle2, Hourglass } from "lucide-react";
+import {
+  getStudioClient, listItemsDetailed, listCycles, currentCycle, cycleLabel,
+  resumoCiclo, PECAS_POR_CICLO,
+} from "@/lib/studio";
 import { AvatarBubble } from "@/components/ui/avatar-bubble";
-import { ContentCard } from "@/components/studio/content-card";
-import { CONTENT_STATUS } from "@/lib/types";
+import { StudioBoard } from "@/components/studio/board";
 import { generateCycleAction, createItemAction } from "@/app/estudio/actions";
 
 export default async function ClienteBoard({
@@ -21,36 +23,77 @@ export default async function ClienteBoard({
 
   const cycles = await listCycles(id);
   const cycle = sp.cycle && cycles.includes(sp.cycle) ? sp.cycle : currentCycle();
-  const items = await listItems(id, cycle);
+  const items = await listItemsDetailed(id, cycle);
+  const r = resumoCiclo(items);
+  const mensagensNovas = items.reduce((s, i) => s + i.novasParaEstudio, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <Link href="/estudio" className="inline-flex items-center gap-1 text-sm text-foreground-muted hover:text-heading">
         <ArrowLeft className="h-4 w-4" /> Voltar
       </Link>
 
-      {/* Cabeçalho do cliente */}
-      <div className="flex flex-col gap-4 rounded-2xl border border-border bg-background p-5 sm:flex-row sm:items-center">
-        <AvatarBubble src={client.avatar_url} name={client.display_name} seed={client.id} size={110} className="w-16 shrink-0" />
-        <div className="min-w-0 flex-1">
-          <h1 className="text-xl">{client.display_name || "—"}</h1>
-          <p className="text-sm text-foreground-muted">{client.city || "—"}</p>
+      {/* Cabeçalho do cliente com o pulso do ciclo */}
+      <div className="rounded-2xl border border-border bg-background p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          <AvatarBubble src={client.avatar_url} name={client.display_name} seed={client.id} size={110} className="w-16 shrink-0" />
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl">{client.display_name || "—"}</h1>
+            <p className="text-sm text-foreground-muted">{client.city || "—"}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {client.instagram && (
+              <a href={`https://instagram.com/${client.instagram}`} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm hover:bg-surface-muted">
+                <ExternalLink className="h-4 w-4" /> @{client.instagram}
+              </a>
+            )}
+            {client.slug && (
+              <a href={`/psicologo/${client.slug}`} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm hover:bg-surface-muted">
+                <ExternalLink className="h-4 w-4" /> Ver perfil
+              </a>
+            )}
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {client.instagram && (
-            <a href={`https://instagram.com/${client.instagram}`} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm hover:bg-surface-muted">
-              <ExternalLink className="h-4 w-4" /> @{client.instagram}
-            </a>
-          )}
-          {client.slug && (
-            <a href={`/psicologo/${client.slug}`} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm hover:bg-surface-muted">
-              <ExternalLink className="h-4 w-4" /> Ver perfil
-            </a>
-          )}
-        </div>
+
+        {items.length > 0 && (
+          <div className="mt-5 border-t border-border pt-4">
+            <div className="mb-2 flex items-center justify-between text-sm">
+              <span className="font-medium text-heading">
+                {r.prontas} de {r.total} peças entregues em {cycleLabel(cycle)}
+              </span>
+              <span className="text-foreground-muted">{r.progresso}%</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-surface-muted">
+              <div className="h-full rounded-full bg-[var(--ayu-verde,#73A533)] transition-all" style={{ width: `${r.progresso}%` }} />
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-2 text-xs">
+              {r.comVoce > 0 && (
+                <span className="inline-flex items-center gap-1.5 rounded-lg bg-amber-100 px-2.5 py-1 font-medium text-amber-900">
+                  <Hourglass className="h-3.5 w-3.5" /> {r.comVoce} esperando o psicólogo
+                </span>
+              )}
+              {mensagensNovas > 0 && (
+                <span className="inline-flex items-center gap-1.5 rounded-lg bg-brand/15 px-2.5 py-1 font-medium text-brand-dark">
+                  {mensagensNovas} mensagem(ns) sem ler
+                </span>
+              )}
+              {r.atrasadas > 0 && (
+                <span className="inline-flex items-center gap-1.5 rounded-lg bg-red-50 px-2.5 py-1 font-medium text-red-700">
+                  <AlertTriangle className="h-3.5 w-3.5" /> {r.atrasadas} fora do prazo
+                </span>
+              )}
+              {r.comVoce === 0 && r.atrasadas === 0 && mensagensNovas === 0 && (
+                <span className="inline-flex items-center gap-1.5 rounded-lg bg-lime-50 px-2.5 py-1 font-medium text-lime-700">
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Nada travado por aqui
+                </span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Seletor de competência */}
+      {/* Competência */}
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm text-foreground-muted">Competência:</span>
         {cycles.map((c) => (
@@ -74,11 +117,10 @@ export default async function ClienteBoard({
         </div>
       ) : (
         <>
-          {/* Nova peça avulsa */}
           <form action={createItemAction} className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-background p-3">
             <input type="hidden" name="psy_id" value={id} />
             <input type="hidden" name="cycle" value={cycle} />
-            <input name="title" placeholder="Título da nova peça" className="h-9 flex-1 rounded-lg border border-border bg-background px-3 text-sm" />
+            <input name="title" placeholder="Título da nova peça" className="h-9 min-w-[180px] flex-1 rounded-lg border border-border bg-background px-3 text-sm" />
             <select name="format" className="h-9 rounded-lg border border-border bg-background px-2 text-sm">
               <option value="post">Post</option><option value="story">Story</option><option value="reel">Reel</option><option value="carrossel">Carrossel</option><option value="outro">Outro</option>
             </select>
@@ -87,23 +129,7 @@ export default async function ClienteBoard({
             </button>
           </form>
 
-          {/* Kanban por status */}
-          <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
-            {CONTENT_STATUS.map((col) => {
-              const cards = items.filter((i) => i.status === col.key);
-              return (
-                <div key={col.key} className="rounded-2xl bg-surface-muted/40 p-2">
-                  <div className="flex items-center justify-between px-2 py-1.5">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-foreground-muted">{col.label}</span>
-                    <span className="rounded-full bg-background px-2 text-xs text-foreground-muted">{cards.length}</span>
-                  </div>
-                  <div className="space-y-2">
-                    {cards.map((it) => <ContentCard key={it.id} item={it} psyId={id} />)}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <StudioBoard items={items} psyId={id} psyNome={client.display_name} />
         </>
       )}
     </div>

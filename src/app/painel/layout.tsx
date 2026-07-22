@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { LayoutDashboard, UserRound, CreditCard, MessagesSquare, LogOut } from "lucide-react";
-import { requireUser, getProfile } from "@/lib/auth";
+import { LayoutDashboard, UserRound, CreditCard, MessagesSquare, LogOut, Palette } from "lucide-react";
+import { requireUser, getProfile, getMyPsychologist } from "@/lib/auth";
+import { effectivePlan } from "@/lib/plan-features";
 import { Logo } from "@/components/ui/logo";
 import { signOutAction } from "@/app/(auth)/actions";
 import { SupportButton } from "@/components/painel/support-button";
@@ -20,6 +21,19 @@ export default async function PainelLayout({
   await requireUser();
   const profile = await getProfile();
   const isAdmin = profile?.role === "admin";
+
+  // "Meu conteúdo" só aparece para quem tem o Estúdio no plano.
+  const psy = profile?.role === "psicologo" ? await getMyPsychologist() : null;
+  const temEstudio =
+    !!psy &&
+    effectivePlan({
+      plan_tier: psy.plan_tier,
+      trial_tier: psy.trial_tier,
+      trial_ends_at: psy.trial_ends_at,
+    }) === "presenca";
+  const nav = temEstudio
+    ? [...NAV.slice(0, 2), { href: "/painel/conteudo", label: "Meu conteúdo", icon: Palette }, ...NAV.slice(2)]
+    : NAV;
 
   return (
     <div className="flex min-h-screen flex-col bg-surface">
@@ -55,7 +69,7 @@ export default async function PainelLayout({
       <div className="mx-auto grid w-full max-w-6xl flex-1 gap-8 px-4 py-8 md:grid-cols-[220px_1fr]">
         <aside className="md:sticky md:top-8 md:self-start">
           <nav className="flex gap-1 md:flex-col">
-            {NAV.map(({ href, label, icon: Icon }) => (
+            {nav.map(({ href, label, icon: Icon }) => (
               <Link
                 key={href}
                 href={href}

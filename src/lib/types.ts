@@ -19,16 +19,65 @@ export type ContentItem = {
   position: number;
   created_at: string;
   updated_at: string;
+  due_date: string | null;
+  caption: string | null;
+  hashtags: string | null;
+  requested_by: string | null;
+  approved_at: string | null;
+  delivered_at: string | null;
+  psy_seen_at: string | null;
+  studio_seen_at: string | null;
+  last_touch_by: "psicologo" | "estudio" | null;
 };
 
-export const CONTENT_STATUS: { key: ContentStatusKey; label: string; tone: "neutral" | "warning" | "success" | "brand" }[] = [
-  { key: "briefing", label: "Briefing", tone: "neutral" },
-  { key: "producao", label: "Em produção", tone: "brand" },
-  { key: "revisao", label: "Em revisão", tone: "warning" },
-  { key: "ajustes", label: "Ajustes", tone: "warning" },
-  { key: "aprovado", label: "Aprovado", tone: "success" },
-  { key: "entregue", label: "Entregue", tone: "success" },
+export type ContentComment = {
+  id: string;
+  item_id: string;
+  author_id: string | null;
+  author_name: string | null;
+  author_side: "psicologo" | "estudio";
+  body: string;
+  kind: "mensagem" | "aprovacao" | "ajuste" | "sistema";
+  created_at: string;
+};
+
+export type ContentVersion = {
+  id: string;
+  item_id: string;
+  version: number;
+  url: string;
+  mime: string | null;
+  uploaded_by: string | null;
+  note: string | null;
+  created_at: string;
+};
+
+/**
+ * Quem está com a bola em cada etapa. É o que organiza a tela do psicólogo:
+ * ele não quer saber de "produção" ou "ajustes", quer saber se precisa agir.
+ */
+export type ContentSide = "estudio" | "psicologo" | "pronto";
+
+export const CONTENT_STATUS: {
+  key: ContentStatusKey;
+  label: string;
+  tone: "neutral" | "warning" | "success" | "brand";
+  side: ContentSide;
+  /** Como o psicólogo lê essa etapa. */
+  psyLabel: string;
+  hint: string;
+}[] = [
+  { key: "briefing", label: "Briefing", tone: "neutral", side: "estudio", psyLabel: "Na fila", hint: "Definindo o tema e a linha da peça" },
+  { key: "producao", label: "Em produção", tone: "brand", side: "estudio", psyLabel: "Sendo criada", hint: "A equipe está desenhando a arte" },
+  { key: "revisao", label: "Com o psicólogo", tone: "warning", side: "psicologo", psyLabel: "Esperando você", hint: "Dê o aval ou peça um ajuste" },
+  { key: "ajustes", label: "Ajustando", tone: "warning", side: "estudio", psyLabel: "Ajustando", hint: "Aplicando o que você pediu" },
+  { key: "aprovado", label: "Aprovado", tone: "success", side: "estudio", psyLabel: "Aprovada", hint: "Fechando os arquivos finais" },
+  { key: "entregue", label: "Entregue", tone: "success", side: "pronto", psyLabel: "Pronta para publicar", hint: "Baixe e publique quando quiser" },
 ];
+
+export const CONTENT_STATUS_MAP = Object.fromEntries(
+  CONTENT_STATUS.map((s) => [s.key, s])
+) as Record<ContentStatusKey, (typeof CONTENT_STATUS)[number]>;
 
 export const CONTENT_FORMAT_LABEL: Record<ContentFormat, string> = {
   post: "Post",
