@@ -30,7 +30,7 @@ async function loadContext() {
 
   const { data: psy } = await supabase
     .from("psychologists")
-    .select("id, plan_tier, asaas_customer_id, asaas_subscription_id")
+    .select("id, plan_tier, pending_plan_tier, asaas_customer_id, asaas_subscription_id")
     .eq("profile_id", user.id)
     .maybeSingle();
 
@@ -97,6 +97,8 @@ export async function selectPlanAction(formData: FormData) {
         plan_tier: "essencial",
         subscription_status: "cancelada",
         asaas_subscription_id: null,
+        pending_plan_tier: null,
+        pending_since: null,
       })
       .eq("id", ctx.psy.id);
     revalidatePath("/painel/assinatura");
@@ -166,13 +168,17 @@ export async function selectPlanAction(formData: FormData) {
       externalReference: ctx.psy.id,
     });
 
+    // O plano NÃO é aplicado aqui. Fica em pending_plan_tier até o webhook
+    // do Asaas confirmar o pagamento. Sem isso, quem assina e nunca paga
+    // ficaria com o plano pago para sempre.
     await admin
       .from("psychologists")
       .update({
-        plan_tier: plan,
+        pending_plan_tier: plan,
+        pending_since: new Date().toISOString(),
         asaas_customer_id: customerId,
         asaas_subscription_id: subscriptionId,
-        subscription_status: "atrasada", // ativa quando o 1º pagamento confirmar
+        subscription_status: "atrasada", // vira "ativa" quando o pagamento confirmar
       })
       .eq("id", ctx.psy.id);
 
@@ -204,6 +210,8 @@ export async function cancelSubscriptionAction() {
       plan_tier: "essencial",
       subscription_status: "cancelada",
       asaas_subscription_id: null,
+      pending_plan_tier: null,
+      pending_since: null,
     })
     .eq("id", ctx.psy.id);
 

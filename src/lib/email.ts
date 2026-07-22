@@ -25,6 +25,7 @@ export type NotificationKind =
   | "trial_7"
   | "trial_1"
   | "senha"
+  | "pagamento"
   | "suporte"
   | "broadcast"
   | "outro";
@@ -231,6 +232,41 @@ export async function sendTrialEnding(
       cta: { label: "Manter meu plano", url: `${SITE}/painel/assinatura` },
       secondary: { label: "Ver o que cada plano inclui", url: `${SITE}/para-psicologos` },
       footerNote: "Você recebeu este e-mail porque está com um teste gratuito ativo na Ayumana.",
+    }),
+  });
+}
+
+/** Confirma para o psicólogo que o pagamento caiu e o plano está valendo. */
+export async function sendPlanActivated(to: string, name: string | null, planoNome: string) {
+  const nome = name?.split(" ")[0] || "";
+  return sendEmail({
+    to,
+    subject: `Pagamento confirmado — seu plano ${planoNome} está ativo`,
+    kind: "pagamento",
+    html: emailShell({
+      preheader: "Recebemos seu pagamento e o plano já está valendo.",
+      heading: `Pagamento confirmado${nome ? `, ${nome}` : ""}`,
+      intro: `Recebemos seu pagamento e o plano ${planoNome} já está ativo no seu perfil.`,
+      blocks: [
+        { type: "paragraph", text: "O que já está valendo agora:" },
+        {
+          type: "list",
+          tone: "positivo",
+          items: [
+            "Seu perfil ganhou prioridade na busca",
+            "O valor da sessão aparece para quem procura",
+            "Você pode responder no fórum e ser encontrado pelas respostas",
+          ],
+        },
+        {
+          type: "note",
+          tone: "info",
+          title: "Sobre a cobrança",
+          text: "A renovação é mensal e automática. Não tem fidelidade nem multa: você cancela pelo painel quando quiser.",
+        },
+      ],
+      cta: { label: "Ver meu painel", url: `${SITE}/painel/assinatura` },
+      footerNote: "Você recebeu este e-mail porque assinou um plano na Ayumana.",
     }),
   });
 }

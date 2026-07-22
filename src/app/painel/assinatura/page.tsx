@@ -41,6 +41,8 @@ export default async function AssinaturaPage({
   const hasActivePaid = PAID.has(current) && status !== "cancelada";
   // Só pedimos CPF/CNPJ na primeira assinatura (depois reusamos o cliente no Asaas).
   const needsCpf = !psy?.asaas_customer_id;
+  // Assinatura criada e ainda sem pagamento confirmado.
+  const aguardando = !!psy?.pending_plan_tier;
   // Teste gratuito em andamento?
   const emTeste = psy ? trialAtivo(psy) : false;
   const diasTeste = psy ? trialDiasRestantes(psy) : 0;
@@ -80,6 +82,24 @@ export default async function AssinaturaPage({
         >
           <Info className="mt-0.5 h-4 w-4 shrink-0" />
           {notice.text}
+        </div>
+      )}
+
+      {/* Assinatura criada, esperando o pagamento cair */}
+      {aguardando && (
+        <div className="rounded-2xl border border-yellow-500/40 bg-yellow-400/10 p-5">
+          <p className="font-medium text-yellow-800">
+            Falta pagar para o plano {PLAN_LABEL[psy!.pending_plan_tier!]} entrar no ar.
+          </p>
+          <p className="mt-1 text-sm text-yellow-900/90">
+            A cobrança foi emitida no Asaas e está esperando o pagamento. Assim que
+            cair, seu plano é liberado automaticamente e você recebe um aviso.
+            Você continua no plano {PLAN_LABEL[current]} até lá.
+          </p>
+          <p className="mt-2 text-xs text-yellow-900/70">
+            Pagou por Pix e ainda aparece assim? O Asaas leva alguns minutos para
+            confirmar. Se passar de uma hora, fale com a gente pelo botão de ajuda.
+          </p>
         </div>
       )}
 

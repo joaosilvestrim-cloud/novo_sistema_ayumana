@@ -183,6 +183,9 @@ export type Psychologist = {
   asaas_subscription_id: string | null;
   trial_tier: PlanTier | null;
   trial_ends_at: string | null;
+  /** Plano contratado no checkout, valendo só depois do pagamento confirmar. */
+  pending_plan_tier: PlanTier | null;
+  pending_since: string | null;
   subscription_status: SubscriptionStatus;
   subscription_period_end: string | null;
   created_at: string;
