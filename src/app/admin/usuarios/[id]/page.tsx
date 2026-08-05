@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import {
   ArrowLeft, ExternalLink, BadgeCheck, Eye, EyeOff, ShieldCheck,
   KeyRound, Trash2, User, MapPin, Phone, Calendar, CreditCard,
+  Unlock, CheckCircle2, AlertCircle,
 } from "lucide-react";
 import { getUserDetail } from "@/lib/admin";
 import { requireAdmin } from "@/lib/auth";
@@ -16,7 +17,7 @@ import {
 } from "@/lib/types";
 import {
   setRoleAction, togglePublishAction, quickApproveAction,
-  changePlanAction, deleteUserAction, sendPasswordResetAction,
+  changePlanAction, deleteUserAction, sendPasswordResetAction, setPasswordAction,
 } from "../actions";
 
 export const metadata = { title: "Gerenciar usuário" };
@@ -33,9 +34,28 @@ function fmtDate(iso: string | null | undefined) {
   }
 }
 
-export default async function UserDetailPage({ params }: { params: Promise<{ id: string }> }) {
+function Info({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-2">
+      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-foreground-muted" />
+      <div>
+        <dt className="text-xs text-foreground-muted">{label}</dt>
+        <dd className="text-sm text-heading">{value || "—"}</dd>
+      </div>
+    </div>
+  );
+}
+
+export default async function UserDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ ok?: string; erro?: string }>;
+}) {
   const me = await requireAdmin();
   const { id } = await params;
+  const sp = await searchParams;
   const detail = await getUserDetail(id);
   if (!detail) notFound();
 
@@ -52,21 +72,22 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
   const sub = subscription ? SUBSCRIPTION_LABELS[subscription] : null;
   const canDelete = profile.id !== me.id;
 
-  const Info = ({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: React.ReactNode }) => (
-    <div className="flex items-start gap-2">
-      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-foreground-muted" />
-      <div>
-        <dt className="text-xs text-foreground-muted">{label}</dt>
-        <dd className="text-sm text-heading">{value || "—"}</dd>
-      </div>
-    </div>
-  );
-
   return (
     <div className="space-y-6">
       <Link href="/admin/usuarios" className="inline-flex items-center gap-1 text-sm text-foreground-muted hover:text-heading">
         <ArrowLeft className="h-4 w-4" /> Voltar para usuários
       </Link>
+
+      {sp.ok && (
+        <p className="flex items-center gap-2 rounded-xl border border-green-600/40 bg-green-50 px-4 py-3 text-sm text-green-800">
+          <CheckCircle2 className="h-4 w-4 shrink-0" /> {sp.ok}
+        </p>
+      )}
+      {sp.erro && (
+        <p className="flex items-center gap-2 rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
+          <AlertCircle className="h-4 w-4 shrink-0" /> {sp.erro}
+        </p>
+      )}
 
       {/* Cabeçalho */}
       <div className="flex flex-col gap-4 rounded-2xl border border-border bg-background p-6 sm:flex-row sm:items-center">
@@ -169,10 +190,39 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
             <form action={sendPasswordResetAction}>
               <input type="hidden" name="email" value={profile.email} />
               <ConfirmButton message={`Enviar e-mail de redefinição de senha para ${profile.email}?`} className={btn}>
-                <KeyRound className="h-4 w-4" /> Redefinir senha
+                <KeyRound className="h-4 w-4" /> Redefinir senha (por e-mail)
               </ConfirmButton>
             </form>
           )}
+        </div>
+
+        {/* Liberar acesso sem depender de e-mail: destrava quem trava no link. */}
+        <div className="mt-5 border-t border-border pt-4">
+          <p className="mb-1 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-foreground-muted">
+            <Unlock className="h-3.5 w-3.5" /> Liberar acesso manualmente
+          </p>
+          <p className="mb-2 text-xs text-foreground-muted">
+            Define a senha na hora e confirma o e-mail. Use quando a pessoa não
+            consegue pelo link. Depois passe a senha a ela por WhatsApp.
+          </p>
+          <form action={setPasswordAction} className="flex flex-wrap items-end gap-2">
+            <input type="hidden" name="profile_id" value={profile.id} />
+            <input
+              name="password"
+              type="text"
+              minLength={8}
+              required
+              placeholder="Senha temporária (mín. 8)"
+              defaultValue={`ayumana${new Date().getFullYear()}`}
+              className="h-9 min-w-[220px] flex-1 rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-brand"
+            />
+            <ConfirmButton
+              message={`Definir esta senha para ${profile.email} e liberar o acesso? A pessoa entra com ela e pode trocar depois.`}
+              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary-hover"
+            >
+              <Unlock className="h-4 w-4" /> Definir e liberar
+            </ConfirmButton>
+          </form>
         </div>
 
         {canDelete && (

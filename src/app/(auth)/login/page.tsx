@@ -13,6 +13,7 @@ function LoginForm() {
   const params = useSearchParams();
   const next = params.get("next") ?? "/painel";
   const confirmar = params.get("confirme");
+  const erro = params.get("erro");
   const [state, action] = useActionState(signInAction, initial);
 
   return (
@@ -25,6 +26,18 @@ function LoginForm() {
       {confirmar && (
         <div className="mt-4 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-sm text-teal-700">
           Enviamos um e-mail de confirmação. Confirme sua conta e faça login.
+        </div>
+      )}
+
+      {erro === "expirado" && (
+        <div className="mt-4 rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-2 text-sm text-yellow-800">
+          O link já tinha sido usado ou expirou. Peça um novo, ou fale com a
+          gente pelo WhatsApp que a gente libera seu acesso na hora.
+        </div>
+      )}
+      {erro === "link" && (
+        <div className="mt-4 rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-2 text-sm text-yellow-800">
+          Esse link parece incompleto. Peça um novo pelo botão de acesso.
         </div>
       )}
 

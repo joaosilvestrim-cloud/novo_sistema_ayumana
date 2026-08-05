@@ -71,6 +71,32 @@ export async function createUserAction(
   return { error: null, ok: true, email };
 }
 
+/**
+ * Define a senha de um usuário direto, confirmando o e-mail de quebra.
+ * É o plano B para quem trava no link de confirmação: não depende de e-mail
+ * nenhum. O admin define a senha e a passa à pessoa por WhatsApp.
+ */
+export async function setPasswordAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const profileId = String(formData.get("profile_id") ?? "");
+  const senha = String(formData.get("password") ?? "");
+  if (!profileId || senha.length < 8) {
+    redirect(`/admin/usuarios/${profileId}?erro=${encodeURIComponent("A senha precisa ter ao menos 8 caracteres.")}`);
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin.auth.admin.updateUserById(profileId, {
+    password: senha,
+    email_confirm: true, // libera quem estava preso na confirmação de e-mail
+  });
+
+  if (error) {
+    redirect(`/admin/usuarios/${profileId}?erro=${encodeURIComponent(`Não deu: ${error.message}`)}`);
+  }
+  revalidatePath(`/admin/usuarios/${profileId}`);
+  redirect(`/admin/usuarios/${profileId}?ok=${encodeURIComponent("Senha definida e acesso liberado. Passe a senha à pessoa.")}`);
+}
+
 export async function toggleAdminAction(formData: FormData) {
   const me = await requireAdmin();
   const profileId = String(formData.get("profile_id") ?? "");
