@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   Settings2, X, ExternalLink, Trash2, KeyRound, ShieldCheck,
-  Eye, EyeOff, BadgeCheck, AlertCircle, Gift,
+  Eye, EyeOff, BadgeCheck, AlertCircle, Gift, Unlock,
 } from "lucide-react";
 import { PLAN_LABEL } from "@/lib/plan-labels";
 import { VERIFICATION_LABELS, type PlanTier, type VerificationStatus, type UserRole } from "@/lib/types";
@@ -12,7 +12,7 @@ import { ConfirmButton } from "@/components/admin/confirm-button";
 import {
   setRoleAction, togglePublishAction, quickApproveAction,
   changePlanAction, deleteUserAction, sendPasswordResetAction,
-  grantTrialAction, revokeTrialAction,
+  grantTrialAction, revokeTrialAction, setPasswordAction,
 } from "@/app/admin/usuarios/actions";
 
 const TIERS: PlanTier[] = ["essencial", "destaque", "ideal", "presenca"];
@@ -182,10 +182,37 @@ export function UserManageModal({ u, canDelete }: { u: ManageUser; canDelete: bo
                         message={`Enviar e-mail de redefinição de senha para ${u.email}?`}
                         className={btn}
                       >
-                        <KeyRound className="h-4 w-4" /> Redefinir senha
+                        <KeyRound className="h-4 w-4" /> Redefinir por e-mail
                       </ConfirmButton>
                     </form>
                   )}
+                </div>
+
+                {/* Destrava quem não consegue pelo link. Não usa e-mail. */}
+                <div className="mt-3 rounded-lg border border-border bg-surface-muted/50 p-3">
+                  <p className="mb-1 flex items-center gap-1.5 text-xs font-medium text-heading">
+                    <Unlock className="h-3.5 w-3.5" /> Liberar acesso na hora
+                  </p>
+                  <p className="mb-2 text-xs text-foreground-muted">
+                    Define a senha e confirma o e-mail. Depois passe a senha à pessoa por WhatsApp.
+                  </p>
+                  <form action={setPasswordAction} className="flex flex-wrap items-end gap-2">
+                    <input type="hidden" name="profile_id" value={u.profileId} />
+                    <input
+                      name="password"
+                      type="text"
+                      minLength={8}
+                      required
+                      defaultValue={`ayumana${new Date().getFullYear()}`}
+                      className="h-9 min-w-[160px] flex-1 rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-brand"
+                    />
+                    <ConfirmButton
+                      message={`Definir esta senha para ${u.email} e liberar o acesso?`}
+                      className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary-hover"
+                    >
+                      <Unlock className="h-4 w-4" /> Definir e liberar
+                    </ConfirmButton>
+                  </form>
                 </div>
               </div>
 
