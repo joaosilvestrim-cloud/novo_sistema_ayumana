@@ -1,15 +1,18 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, Suspense } from "react";
 import Link from "next/link";
-import { CheckCircle2 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { CheckCircle2, AlertCircle } from "lucide-react";
 import { Field, Input } from "@/components/ui/field";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { requestResetAction, type ResetState } from "./actions";
 
 const initial: ResetState = { done: false };
 
-export default function EsqueciSenhaPage() {
+function EsqueciSenhaForm() {
+  const params = useSearchParams();
+  const expirado = params.get("erro") === "expirado";
   const [state, action] = useActionState(requestResetAction, initial);
 
   if (state.done) {
@@ -34,6 +37,14 @@ export default function EsqueciSenhaPage() {
       <p className="mt-1 text-sm text-foreground-muted">
         Informe seu e-mail e enviaremos um link para criar uma nova senha.
       </p>
+
+      {expirado && (
+        <div className="mt-4 flex items-start gap-2 rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-2 text-sm text-yellow-800">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          O link anterior já tinha sido usado ou expirou. Peça um novo aqui embaixo.
+        </div>
+      )}
+
       <form action={action} className="mt-6 space-y-4">
         <Field label="E-mail" htmlFor="email">
           <Input id="email" name="email" type="email" autoComplete="email" required />
@@ -46,5 +57,13 @@ export default function EsqueciSenhaPage() {
         </Link>
       </p>
     </div>
+  );
+}
+
+export default function EsqueciSenhaPage() {
+  return (
+    <Suspense>
+      <EsqueciSenhaForm />
+    </Suspense>
   );
 }
