@@ -21,7 +21,12 @@ export async function requestResetAction(
         email,
         options: { redirectTo: `${SITE}/redefinir-senha` },
       });
-      const link = data?.properties?.action_link;
+      // Passa pela rota /auth/confirm (verifyOtp no servidor) em vez do
+      // action_link cru, que não fixava a sessão na página de nova senha.
+      const hashed = data?.properties?.hashed_token;
+      const link = hashed
+        ? `${SITE}/auth/confirm?token_hash=${hashed}&type=recovery`
+        : data?.properties?.action_link;
       if (link) {
         await sendEmail({
           to: email,

@@ -75,6 +75,37 @@ export async function signUpAction(
   redirect("/painel/onboarding");
 }
 
+/**
+ * Salva a nova senha. Roda no servidor, onde o client Supabase lê a sessão
+ * de recuperação pelos cookies. Antes isso era feito no browser e falhava
+ * quando o cookie de sessão não chegava ao JS.
+ */
+export async function updatePasswordAction(
+  _prev: AuthState,
+  formData: FormData
+): Promise<AuthState> {
+  const password = String(formData.get("password") ?? "");
+  if (password.length < 8) {
+    return { error: "A senha precisa ter ao menos 8 caracteres." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { error: "Link inválido ou expirado. Peça um novo link de redefinição." };
+  }
+
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) {
+    return { error: "Não foi possível salvar a senha. Peça um novo link e tente de novo." };
+  }
+
+  revalidatePath("/", "layout");
+  redirect("/painel");
+}
+
 export async function signOutAction() {
   const supabase = await createClient();
   await supabase.auth.signOut();

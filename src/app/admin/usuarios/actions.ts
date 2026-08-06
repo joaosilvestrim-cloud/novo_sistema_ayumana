@@ -159,7 +159,12 @@ export async function sendPasswordResetAction(formData: FormData) {
     email,
     options: { redirectTo: `${site}/redefinir-senha` },
   });
-  const link = data?.properties?.action_link;
+  // Rota /auth/confirm em vez do action_link cru, para a sessão valer na
+  // página de nova senha.
+  const hashed = data?.properties?.hashed_token;
+  const link = hashed
+    ? `${site}/auth/confirm?token_hash=${hashed}&type=recovery`
+    : data?.properties?.action_link;
   if (error || !link) return;
 
   await sendEmail({
