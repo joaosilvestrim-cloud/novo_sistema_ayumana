@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { LifeBuoy, X, MessageCircle } from "lucide-react";
 import { requestSupportAction } from "@/app/painel/suporte/actions";
 
@@ -83,6 +84,13 @@ export function SupportButton({ compact = false }: { compact?: boolean }) {
                 <MessageCircle className="h-4 w-4" />
                 {pending ? "Abrindo..." : "Falar no WhatsApp"}
               </button>
+
+              <p className="text-center text-xs text-foreground-muted">
+                Dúvida sobre planos e como assinar?{" "}
+                <Link href="/painel/ajuda" onClick={() => setOpen(false)} className="font-medium text-brand-dark hover:underline">
+                  Ver a Central de Ajuda
+                </Link>
+              </p>
             </div>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LayoutDashboard, UserRound, CreditCard, MessagesSquare, LogOut, Palette } from "lucide-react";
+import { LayoutDashboard, UserRound, CreditCard, MessagesSquare, LogOut, Palette, LifeBuoy } from "lucide-react";
 import { requireUser, getProfile, getMyPsychologist } from "@/lib/auth";
 import { effectivePlan } from "@/lib/plan-features";
 import { Logo } from "@/components/ui/logo";
@@ -11,6 +11,7 @@ const NAV = [
   { href: "/painel/onboarding", label: "Meu perfil", icon: UserRound },
   { href: "/painel/forum", label: "Fórum", icon: MessagesSquare },
   { href: "/painel/assinatura", label: "Assinatura", icon: CreditCard },
+  { href: "/painel/ajuda", label: "Ajuda e planos", icon: LifeBuoy },
 ];
 
 export default async function PainelLayout({
