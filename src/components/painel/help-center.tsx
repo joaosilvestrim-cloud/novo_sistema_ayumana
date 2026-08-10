@@ -7,22 +7,30 @@ import {
   Leaf, TrendingUp, Mic, Palette, ArrowRight, CircleHelp, Star,
 } from "lucide-react";
 import type { PlanTier } from "@/lib/types";
+import { yearlyCents, formatCents, annualSavings, type BillingPeriod } from "@/lib/pricing";
 
-/** Ordem dos planos, do grátis ao topo. */
+/** Ordem dos planos, do grátis ao topo. mensalCents alimenta o cálculo anual. */
 const PLANS: {
   tier: PlanTier;
   nome: string;
-  preco: string;
+  mensalCents: number;
   chamada: string;
   cor: string;
   icon: React.ElementType;
   selfService: boolean;
 }[] = [
-  { tier: "essencial", nome: "Raiz", preco: "Grátis", chamada: "Seu perfil no ar, para sempre.", cor: "#73A533", icon: Leaf, selfService: true },
-  { tier: "destaque", nome: "Alcance", preco: "R$ 24,90/mês", chamada: "Mais visto na busca.", cor: "#53C4CC", icon: TrendingUp, selfService: true },
-  { tier: "ideal", nome: "Voz", preco: "R$ 39,90/mês", chamada: "Autoridade e topo da busca.", cor: "#F5C84B", icon: Mic, selfService: true },
-  { tier: "presenca", nome: "Presença", preco: "R$ 297/mês", chamada: "A gente cuida das suas redes.", cor: "#05474A", icon: Palette, selfService: false },
+  { tier: "essencial", nome: "Raiz", mensalCents: 0, chamada: "Seu perfil no ar, para sempre.", cor: "#73A533", icon: Leaf, selfService: true },
+  { tier: "destaque", nome: "Alcance", mensalCents: 2490, chamada: "Mais visto na busca.", cor: "#53C4CC", icon: TrendingUp, selfService: true },
+  { tier: "ideal", nome: "Voz", mensalCents: 3990, chamada: "Autoridade e topo da busca.", cor: "#F5C84B", icon: Mic, selfService: true },
+  { tier: "presenca", nome: "Presença", mensalCents: 29700, chamada: "A gente cuida das suas redes.", cor: "#05474A", icon: Palette, selfService: false },
 ];
+
+/** Rótulo de preço conforme o período. Presença é sempre mensal; Raiz é grátis. */
+function precoLabel(p: (typeof PLANS)[number], period: BillingPeriod): string {
+  if (p.mensalCents === 0) return "Grátis";
+  if (period === "yearly" && p.selfService) return `${formatCents(yearlyCents(p.mensalCents))}/ano`;
+  return `${formatCents(p.mensalCents)}/mês`;
+}
 
 /** Recursos em ordem, com o índice do plano mínimo que libera cada um. */
 const FEATURES: { label: string; desc: string; min: number }[] = [
@@ -65,6 +73,7 @@ export function HelpCenter({
   const idxAtual = publico ? -1 : PLANS.findIndex((p) => p.tier === currentPlan);
   // No site, começa destacando o plano mais popular (Voz).
   const [sel, setSel] = useState(publico ? 2 : Math.max(0, idxAtual));
+  const [period, setPeriod] = useState<BillingPeriod>("monthly");
   const [comparar, setComparar] = useState(false);
   const [aberto, setAberto] = useState<number | null>(0);
 
@@ -77,6 +86,25 @@ export function HelpCenter({
 
   return (
     <div className="space-y-8">
+      {/* Alternador mensal / anual */}
+      <div className="flex justify-center">
+        <div className="inline-flex rounded-xl border border-border bg-surface-muted p-1">
+          <button
+            onClick={() => setPeriod("monthly")}
+            className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${period === "monthly" ? "bg-background text-heading shadow-sm" : "text-foreground-muted"}`}
+          >
+            Mensal
+          </button>
+          <button
+            onClick={() => setPeriod("yearly")}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${period === "yearly" ? "bg-background text-heading shadow-sm" : "text-foreground-muted"}`}
+          >
+            Anual
+            <span className="rounded-full bg-brand/15 px-1.5 py-0.5 text-[10px] font-bold text-brand-dark">-25%</span>
+          </button>
+        </div>
+      </div>
+
       {/* Seletor de planos */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {PLANS.map((p, i) => {
@@ -104,7 +132,7 @@ export function HelpCenter({
                 {p.nome}
                 {p.tier === "ideal" && <Star className="h-3.5 w-3.5 fill-[#F5C84B] text-[#F5C84B]" />}
               </p>
-              <p className="text-sm font-medium" style={{ color: p.cor === "#F5C84B" ? "#05474A" : p.cor }}>{p.preco}</p>
+              <p className="text-sm font-medium" style={{ color: p.cor === "#F5C84B" ? "#05474A" : p.cor }}>{precoLabel(p, period)}</p>
               <p className="mt-1 text-xs text-foreground-muted">{p.chamada}</p>
             </button>
           );
@@ -123,7 +151,12 @@ export function HelpCenter({
             </div>
             <p className="text-sm text-foreground-muted">{plano.chamada}</p>
           </div>
-          <p className="text-2xl font-bold" style={{ color: plano.cor === "#F5C84B" ? "#05474A" : plano.cor }}>{plano.preco}</p>
+          <div className="text-right">
+            <p className="text-2xl font-bold" style={{ color: plano.cor === "#F5C84B" ? "#05474A" : plano.cor }}>{precoLabel(plano, period)}</p>
+            {period === "yearly" && plano.selfService && plano.mensalCents > 0 && (
+              <p className="text-xs text-foreground-muted">economize {formatCents(annualSavings(plano.mensalCents).cents)} no ano</p>
+            )}
+          </div>
         </div>
 
         <div className="grid gap-6 p-5 md:grid-cols-2">
