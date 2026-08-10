@@ -193,6 +193,11 @@ export type Psychologist = {
   coupon_ends_at: string | null;
   pending_billing_period: "monthly" | "yearly" | null;
   pending_coupon_code: string | null;
+  pending_coupon_pct: number | null;
+  pending_coupon_duration: string | null;
+  /** Desconto reservado pelo admin, aplicado sozinho no próximo checkout. */
+  admin_discount_pct: number | null;
+  admin_discount_duration: string | null;
   subscription_status: SubscriptionStatus;
   subscription_period_end: string | null;
   created_at: string;

@@ -10,7 +10,7 @@ import {
   createSubscription,
   cancelSubscription,
 } from "@/lib/payments/asaas";
-import { chargeCents, asaasCycle, couponEndsAt, type BillingPeriod } from "@/lib/pricing";
+import { chargeCents, asaasCycle, couponEndsAt, type BillingPeriod, type CouponDuration } from "@/lib/pricing";
 import { validateCoupon, incrementCouponUse, type Coupon } from "@/lib/coupons";
 import type { PlanTier } from "@/lib/types";
 
@@ -32,7 +32,7 @@ async function loadContext() {
 
   const { data: psy } = await supabase
     .from("psychologists")
-    .select("id, plan_tier, pending_plan_tier, asaas_customer_id, asaas_subscription_id")
+    .select("id, plan_tier, pending_plan_tier, asaas_customer_id, asaas_subscription_id, admin_discount_pct, admin_discount_duration")
     .eq("profile_id", user.id)
     .maybeSingle();
 
@@ -112,6 +112,8 @@ export async function selectPlanAction(formData: FormData) {
         pending_since: null,
         pending_billing_period: null,
         pending_coupon_code: null,
+        pending_coupon_pct: null,
+        pending_coupon_duration: null,
         billing_period: "monthly",
         coupon_code: null,
         coupon_pct: null,
@@ -138,7 +140,8 @@ export async function selectPlanAction(formData: FormData) {
     .single();
   const monthlyCents = planRow?.price_cents ?? 0;
 
-  // Cupom (opcional). Se inválido, avisa em vez de cobrar cheio sem avisar.
+  // Desconto de duas fontes. O cupom digitado tem prioridade; se não houver,
+  // usa o desconto que o admin reservou na conta do cliente.
   let coupon: Coupon | null = null;
   const rawCoupon = String(formData.get("coupon") ?? "").trim();
   if (rawCoupon) {
@@ -149,9 +152,15 @@ export async function selectPlanAction(formData: FormData) {
     coupon = check.coupon;
   }
 
-  const cobradoCents = chargeCents(monthlyCents, period, coupon?.percent ?? null);
+  // Desconto efetivo: código digitado, ou o reservado pelo admin.
+  const descontoPct = coupon?.percent ?? ctx.psy.admin_discount_pct ?? null;
+  const descontoDur: CouponDuration =
+    coupon?.duration ?? (ctx.psy.admin_discount_duration as CouponDuration) ?? "forever";
+  const descontoCode = coupon?.code ?? null; // só código conta uso
+
+  const cobradoCents = chargeCents(monthlyCents, period, descontoPct);
   const valueReais = cobradoCents / 100;
-  const fimCupom = coupon ? couponEndsAt(coupon.duration, period) : null;
+  const fimCupom = descontoPct ? couponEndsAt(descontoDur, period) : null;
 
   // Modo dev (sem chaves): troca direta, assinatura "ativa" fictícia.
   if (!isAsaasConfigured()) {
@@ -161,12 +170,12 @@ export async function selectPlanAction(formData: FormData) {
         plan_tier: plan,
         subscription_status: "ativa",
         billing_period: period,
-        coupon_code: coupon?.code ?? null,
-        coupon_pct: coupon?.percent ?? null,
+        coupon_code: descontoCode,
+        coupon_pct: descontoPct,
         coupon_ends_at: fimCupom ? fimCupom.toISOString() : null,
       })
       .eq("id", ctx.psy.id);
-    if (coupon) await incrementCouponUse(coupon.code);
+    if (descontoCode) await incrementCouponUse(descontoCode);
     revalidatePath("/painel/assinatura");
     revalidatePath("/painel");
     redirect("/painel/assinatura?dev=1");
@@ -206,12 +215,13 @@ export async function selectPlanAction(formData: FormData) {
 
     // Descrição transparente: é o texto que o cliente vê na fatura do Asaas.
     let descricao = `Ayumana — Plano ${planRow?.name ?? plan} · ${period === "yearly" ? "Anual" : "Mensal"}`;
-    if (coupon) {
+    if (descontoPct) {
       const janela =
-        coupon.duration === "first_year" ? " no 1º ano"
-        : coupon.duration === "first_payment" ? " na 1ª cobrança"
+        descontoDur === "first_year" ? " no 1º ano"
+        : descontoDur === "first_payment" ? " na 1ª cobrança"
         : "";
-      descricao += ` · Cupom ${coupon.code} (-${coupon.percent}%${janela})`;
+      const fonte = descontoCode ? `Cupom ${descontoCode}` : "Desconto";
+      descricao += ` · ${fonte} (-${descontoPct}%${janela})`;
     }
 
     const { subscriptionId, checkoutUrl } = await createSubscription({
@@ -231,7 +241,9 @@ export async function selectPlanAction(formData: FormData) {
       .update({
         pending_plan_tier: plan,
         pending_billing_period: period,
-        pending_coupon_code: coupon?.code ?? null,
+        pending_coupon_code: descontoCode,
+        pending_coupon_pct: descontoPct,
+        pending_coupon_duration: descontoPct ? descontoDur : null,
         pending_since: new Date().toISOString(),
         asaas_customer_id: customerId,
         asaas_subscription_id: subscriptionId,

@@ -2,8 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendPlanActivated } from "@/lib/email";
 import { PLAN_LABEL } from "@/lib/plan-labels";
-import { getCoupon } from "@/lib/coupons";
-import { couponEndsAt, type BillingPeriod } from "@/lib/pricing";
+import { couponEndsAt, type BillingPeriod, type CouponDuration } from "@/lib/pricing";
 import type { PlanTier, SubscriptionStatus } from "@/lib/types";
 
 // Eventos que ativam/renovam a assinatura.
@@ -26,6 +25,8 @@ type Psy = {
   pending_plan_tier: PlanTier | null;
   pending_billing_period: string | null;
   pending_coupon_code: string | null;
+  pending_coupon_pct: number | null;
+  pending_coupon_duration: string | null;
 };
 
 /**
@@ -37,7 +38,7 @@ async function acharPsicologo(
   supabase: ReturnType<typeof createAdminClient>,
   ref: { subscriptionId?: string; externalReference?: string; customerId?: string }
 ): Promise<Psy | null> {
-  const cols = "id, plan_tier, pending_plan_tier, pending_billing_period, pending_coupon_code";
+  const cols = "id, plan_tier, pending_plan_tier, pending_billing_period, pending_coupon_code, pending_coupon_pct, pending_coupon_duration";
 
   if (ref.subscriptionId) {
     const { data } = await supabase
@@ -144,21 +145,21 @@ export async function POST(request: NextRequest) {
       update.pending_plan_tier = null;
       update.pending_since = null;
 
-      // Período e cupom escolhidos no checkout também entram agora.
+      // Período e desconto escolhidos no checkout também entram agora.
       const period: BillingPeriod = psy.pending_billing_period === "yearly" ? "yearly" : "monthly";
       update.billing_period = period;
       update.pending_billing_period = null;
 
-      if (psy.pending_coupon_code) {
-        const coupon = await getCoupon(psy.pending_coupon_code);
-        if (coupon) {
-          const fim = couponEndsAt(coupon.duration, period);
-          update.coupon_code = coupon.code;
-          update.coupon_pct = coupon.percent;
-          update.coupon_ends_at = fim ? fim.toISOString() : null;
-        }
+      if (psy.pending_coupon_pct) {
+        const dur = (psy.pending_coupon_duration as CouponDuration) ?? "forever";
+        const fim = couponEndsAt(dur, period);
+        update.coupon_code = psy.pending_coupon_code ?? null;
+        update.coupon_pct = psy.pending_coupon_pct;
+        update.coupon_ends_at = fim ? fim.toISOString() : null;
       }
       update.pending_coupon_code = null;
+      update.pending_coupon_pct = null;
+      update.pending_coupon_duration = null;
 
       resumo = `Pagamento confirmado. Plano liberado: ${psy.pending_plan_tier} (${period === "yearly" ? "anual" : "mensal"}).`;
     } else {
@@ -174,6 +175,8 @@ export async function POST(request: NextRequest) {
     update.pending_since = null;
     update.pending_billing_period = null;
     update.pending_coupon_code = null;
+    update.pending_coupon_pct = null;
+    update.pending_coupon_duration = null;
     update.billing_period = "monthly";
     update.coupon_code = null;
     update.coupon_pct = null;

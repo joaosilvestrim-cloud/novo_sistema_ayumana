@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import {
   ArrowLeft, ExternalLink, BadgeCheck, Eye, EyeOff, ShieldCheck,
   KeyRound, Trash2, User, MapPin, Phone, Calendar, CreditCard,
-  Unlock, CheckCircle2, AlertCircle,
+  Unlock, CheckCircle2, AlertCircle, Percent,
 } from "lucide-react";
 import { getUserDetail } from "@/lib/admin";
 import { requireAdmin } from "@/lib/auth";
@@ -19,6 +19,7 @@ import {
   setRoleAction, togglePublishAction, quickApproveAction,
   changePlanAction, deleteUserAction, sendPasswordResetAction, setPasswordAction,
 } from "../actions";
+import { applyDiscountAction, removeDiscountAction } from "../discount-actions";
 
 export const metadata = { title: "Gerenciar usuário" };
 
@@ -156,6 +157,45 @@ export default async function UserDetailPage({
               </select>
               <button className="h-9 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary-hover">Salvar</button>
             </form>
+          )}
+
+          {/* Desconto do cliente (sem código) */}
+          {psyId && (
+            <div className="mt-4 border-t border-border pt-4">
+              <p className="mb-1 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-foreground-muted">
+                <Percent className="h-3.5 w-3.5" /> Desconto do cliente
+              </p>
+              {s("admin_discount_pct") ? (
+                <div className="mb-2 flex items-center justify-between rounded-lg bg-brand/10 px-3 py-2 text-sm">
+                  <span className="font-medium text-brand-dark">
+                    {s("admin_discount_pct")}% ·{" "}
+                    {s("admin_discount_duration") === "first_year" ? "1º ano"
+                      : s("admin_discount_duration") === "first_payment" ? "1ª cobrança" : "sempre"}
+                  </span>
+                  <form action={removeDiscountAction}>
+                    <input type="hidden" name="profile_id" value={profile.id} />
+                    <button className="text-xs font-medium text-danger hover:underline">Remover</button>
+                  </form>
+                </div>
+              ) : (
+                <p className="mb-2 text-xs text-foreground-muted">
+                  Aplique um desconto sem código. Vale no próximo checkout, ou já na assinatura atual se houver.
+                </p>
+              )}
+              <form action={applyDiscountAction} className="flex flex-wrap items-end gap-2">
+                <input type="hidden" name="profile_id" value={profile.id} />
+                <input name="percent" type="number" min="1" max="100" defaultValue="50" className="h-9 w-20 rounded-lg border border-border bg-background px-2 text-sm" />
+                <span className="pb-2 text-sm text-foreground-muted">%</span>
+                <select name="duration" defaultValue="first_year" className="h-9 rounded-lg border border-border bg-background px-2 text-sm">
+                  <option value="first_year">Primeiro ano</option>
+                  <option value="first_payment">1ª cobrança</option>
+                  <option value="forever">Sempre</option>
+                </select>
+                <button className="h-9 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary-hover">
+                  {s("admin_discount_pct") ? "Atualizar" : "Aplicar"}
+                </button>
+              </form>
+            </div>
           )}
         </section>
       </div>
