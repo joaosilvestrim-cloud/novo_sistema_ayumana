@@ -51,16 +51,27 @@ const FAQ: { q: string; a: string }[] = [
   { q: "O que é o plano Presença?", a: "No Presença, nossa equipe cria as artes das suas redes sociais todo mês e você acompanha por aqui. A vaga é limitada, então a entrada é por contato com a equipe, não pelo botão de assinar." },
 ];
 
-export function HelpCenter({ currentPlan, supportWhatsapp }: { currentPlan: PlanTier; supportWhatsapp: string }) {
-  const idxAtual = PLANS.findIndex((p) => p.tier === currentPlan);
-  const [sel, setSel] = useState(Math.max(0, idxAtual));
+export function HelpCenter({
+  currentPlan,
+  supportWhatsapp,
+  mode = "painel",
+}: {
+  currentPlan?: PlanTier;
+  supportWhatsapp: string;
+  /** "painel" = psicólogo logado; "publico" = visitante do site. */
+  mode?: "painel" | "publico";
+}) {
+  const publico = mode === "publico";
+  const idxAtual = publico ? -1 : PLANS.findIndex((p) => p.tier === currentPlan);
+  // No site, começa destacando o plano mais popular (Voz).
+  const [sel, setSel] = useState(publico ? 2 : Math.max(0, idxAtual));
   const [comparar, setComparar] = useState(false);
   const [aberto, setAberto] = useState<number | null>(0);
 
   const plano = PLANS[sel];
   const incluidos = FEATURES.filter((f) => f.min <= sel);
   const bloqueados = FEATURES.filter((f) => f.min > sel);
-  const ehAtual = sel === idxAtual;
+  const ehAtual = !publico && sel === idxAtual;
 
   const waLink = `https://wa.me/${supportWhatsapp}?text=${encodeURIComponent("Olá! Tenho interesse no plano Presença da Ayumana.")}`;
 
@@ -81,7 +92,7 @@ export function HelpCenter({ currentPlan, supportWhatsapp }: { currentPlan: Plan
               }`}
               style={ativo ? { borderColor: p.cor } : undefined}
             >
-              {meu && (
+              {meu && !publico && (
                 <span className="absolute right-2 top-2 rounded-full bg-brand/15 px-2 py-0.5 text-[10px] font-bold text-brand-dark">
                   Seu plano
                 </span>
@@ -153,25 +164,30 @@ export function HelpCenter({ currentPlan, supportWhatsapp }: { currentPlan: Plan
           {/* Como adquirir */}
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-foreground-muted">Como adquirir</p>
-            <ComoAdquirir plano={plano} />
+            <ComoAdquirir plano={plano} publico={publico} />
 
             <div className="mt-5">
               {ehAtual ? (
                 <span className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-border bg-surface-muted text-sm font-medium text-foreground-muted">
                   <Check className="h-4 w-4" /> Este é o seu plano atual
                 </span>
+              ) : !plano.selfService ? (
+                <a href={waLink} target="_blank" rel="noopener noreferrer" className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#25D366] text-sm font-semibold text-white hover:bg-[#1ebe5b]">
+                  <MessageCircle className="h-4 w-4" /> Falar com a equipe
+                </a>
+              ) : publico ? (
+                <Link href="/cadastro" className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary-hover">
+                  {plano.tier === "essencial" ? "Criar meu perfil grátis" : `Começar com o ${plano.nome}`}
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
               ) : plano.tier === "essencial" ? (
                 <Link href="/painel/assinatura" className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-border text-sm font-semibold text-heading hover:bg-surface-muted">
                   Voltar ao Raiz <ArrowRight className="h-4 w-4" />
                 </Link>
-              ) : plano.selfService ? (
+              ) : (
                 <Link href="/painel/assinatura" className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary-hover">
                   <CreditCard className="h-4 w-4" /> Assinar {plano.nome}
                 </Link>
-              ) : (
-                <a href={waLink} target="_blank" rel="noopener noreferrer" className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#25D366] text-sm font-semibold text-white hover:bg-[#1ebe5b]">
-                  <MessageCircle className="h-4 w-4" /> Falar com a equipe
-                </a>
               )}
             </div>
           </div>
@@ -232,23 +248,48 @@ export function HelpCenter({ currentPlan, supportWhatsapp }: { currentPlan: Plan
   );
 }
 
-function ComoAdquirir({ plano }: { plano: (typeof PLANS)[number] }) {
-  const passos =
-    plano.tier === "essencial"
-      ? ["O Raiz é o plano inicial de todo perfil. Você já tem, e é grátis para sempre.", "É só manter seu perfil completo para aparecer bem na busca."]
-      : plano.selfService
-        ? [
-            "Abra Assinatura, no menu do painel.",
-            `Escolha o plano ${plano.nome} e clique em Assinar.`,
-            "Informe seu CPF ou CNPJ. Só pedimos na primeira vez.",
-            "Pague por Pix, boleto ou cartão, na tela do Asaas.",
-            "Assim que o pagamento confirmar, seu plano entra no ar e você recebe um e-mail.",
-          ]
-        : [
-            "Clique em Falar com a equipe aqui embaixo.",
-            "A gente explica como funciona e confirma se há vaga aberta.",
-            "Fazemos seu onboarding e começamos a produzir suas peças no mês seguinte.",
-          ];
+function ComoAdquirir({ plano, publico }: { plano: (typeof PLANS)[number]; publico: boolean }) {
+  let passos: string[];
+  if (!plano.selfService) {
+    passos = publico
+      ? [
+          "Crie seu perfil grátis, leva uns 2 minutos.",
+          "Fale com a equipe pelo WhatsApp aqui embaixo.",
+          "A gente confirma se há vaga e faz seu onboarding. Aí começamos a produzir suas peças.",
+        ]
+      : [
+          "Clique em Falar com a equipe aqui embaixo.",
+          "A gente explica como funciona e confirma se há vaga aberta.",
+          "Fazemos seu onboarding e começamos a produzir suas peças no mês seguinte.",
+        ];
+  } else if (plano.tier === "essencial") {
+    passos = publico
+      ? [
+          "Crie seu perfil grátis, leva uns 2 minutos.",
+          "Complete foto, temas que você atende e valores.",
+          "Pronto: seu perfil já aparece na busca, sem custo nenhum.",
+        ]
+      : [
+          "O Raiz é o plano inicial de todo perfil. Você já tem, e é grátis para sempre.",
+          "É só manter seu perfil completo para aparecer bem na busca.",
+        ];
+  } else {
+    passos = publico
+      ? [
+          "Crie seu perfil grátis, leva uns 2 minutos.",
+          `No seu painel, vá em Assinatura e escolha o plano ${plano.nome}.`,
+          "Informe seu CPF ou CNPJ. Só pedimos na primeira vez.",
+          "Pague por Pix, boleto ou cartão, na tela do Asaas.",
+          "Assim que o pagamento confirmar, seu plano entra no ar.",
+        ]
+      : [
+          "Abra Assinatura, no menu do painel.",
+          `Escolha o plano ${plano.nome} e clique em Assinar.`,
+          "Informe seu CPF ou CNPJ. Só pedimos na primeira vez.",
+          "Pague por Pix, boleto ou cartão, na tela do Asaas.",
+          "Assim que o pagamento confirmar, seu plano entra no ar e você recebe um e-mail.",
+        ];
+  }
 
   return (
     <ol className="space-y-2.5">
