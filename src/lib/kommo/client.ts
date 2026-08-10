@@ -63,6 +63,28 @@ export async function getKommoAccount(): Promise<{ id?: number; name?: string; s
   return kommo("/account");
 }
 
+type PipelinesResponse = {
+  _embedded?: {
+    pipelines?: {
+      id: number;
+      name: string;
+      _embedded?: { statuses?: { id: number; name: string }[] };
+    }[];
+  };
+};
+
+/** Lista funis e etapas com seus ids, para copiar nas variáveis de ambiente. */
+export async function getKommoPipelines(): Promise<
+  { id: number; name: string; stages: { id: number; name: string }[] }[]
+> {
+  const data = await kommo<PipelinesResponse>("/leads/pipelines");
+  return (data._embedded?.pipelines ?? []).map((p) => ({
+    id: p.id,
+    name: p.name,
+    stages: (p._embedded?.statuses ?? []).map((s) => ({ id: s.id, name: s.name })),
+  }));
+}
+
 type ComplexResponse = { id: number; contact_id?: number }[];
 
 /**

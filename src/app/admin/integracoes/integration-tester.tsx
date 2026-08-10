@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { CheckCircle2, XCircle, Loader2, Plug, Webhook, Users } from "lucide-react";
-import { testConnectionAction, testWebhookAction, testKommoAction, type TestState } from "./actions";
+import { testConnectionAction, testWebhookAction, testKommoAction, listKommoPipelinesAction, type TestState } from "./actions";
 
 const initial: TestState = { ok: null, message: "" };
 
@@ -29,7 +29,7 @@ function Result({ state }: { state: TestState }) {
       }`}
     >
       {state.ok ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> : <XCircle className="mt-0.5 h-4 w-4 shrink-0" />}
-      <span className="break-all">{state.message}</span>
+      <span className="whitespace-pre-wrap break-words font-mono text-xs">{state.message}</span>
     </div>
   );
 }
@@ -38,6 +38,7 @@ export function IntegrationTester() {
   const [conn, connAction] = useActionState(testConnectionAction, initial);
   const [hook, hookAction] = useActionState(testWebhookAction, initial);
   const [kommo, kommoAction] = useActionState(testKommoAction, initial);
+  const [pipes, pipesAction] = useActionState(listKommoPipelinesAction, initial);
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
@@ -76,10 +77,16 @@ export function IntegrationTester() {
         <p className="mt-1 text-sm text-foreground-muted">
           Faz uma leitura da sua conta no Kommo para validar o token. <strong>Não cria lead.</strong>
         </p>
-        <form action={kommoAction} className="mt-4">
-          <Btn>Testar Kommo</Btn>
-        </form>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <form action={kommoAction}>
+            <Btn>Testar Kommo</Btn>
+          </form>
+          <form action={pipesAction}>
+            <Btn>Listar funis e etapas</Btn>
+          </form>
+        </div>
         <Result state={kommo} />
+        <Result state={pipes} />
       </section>
     </div>
   );

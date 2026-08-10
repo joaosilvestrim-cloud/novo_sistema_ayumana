@@ -2,9 +2,28 @@
 
 import { requireAdmin } from "@/lib/auth";
 import { getAccountInfo, isAsaasConfigured, asaasEnv } from "@/lib/payments/asaas";
-import { getKommoAccount, isKommoConfigured } from "@/lib/kommo/client";
+import { getKommoAccount, getKommoPipelines, isKommoConfigured } from "@/lib/kommo/client";
 
 export type TestState = { ok: boolean | null; message: string };
+
+/** Lista os funis e etapas do Kommo, com os ids para colar nas variáveis. */
+export async function listKommoPipelinesAction(_prev: TestState, _fd: FormData): Promise<TestState> {
+  await requireAdmin();
+  if (!process.env.KOMMO_SUBDOMAIN || !process.env.KOMMO_ACCESS_TOKEN) {
+    return { ok: false, message: "Defina KOMMO_SUBDOMAIN e KOMMO_ACCESS_TOKEN primeiro." };
+  }
+  try {
+    const funis = await getKommoPipelines();
+    if (!funis.length) return { ok: false, message: "Nenhum funil encontrado na conta." };
+    const txt = funis
+      .map((f) => `Funil "${f.name}" → KOMMO_PIPELINE_ID=${f.id}\n` +
+        f.stages.map((s) => `   • ${s.name} = ${s.id}`).join("\n"))
+      .join("\n\n");
+    return { ok: true, message: txt };
+  } catch (e) {
+    return { ok: false, message: `Falhou: ${(e as Error).message}` };
+  }
+}
 
 /** Testa o token do Kommo com uma leitura da conta. Não cria nada. */
 export async function testKommoAction(_prev: TestState, _fd: FormData): Promise<TestState> {
