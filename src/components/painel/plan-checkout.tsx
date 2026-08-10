@@ -110,6 +110,12 @@ export function PlanCheckout({
         </div>
       </div>
 
+      <p className="-mt-2 text-xs text-foreground-muted">
+        {anual
+          ? "No plano anual a cobrança é uma vez por ano, com 25% de desconto. Sem fidelidade, cancela quando quiser."
+          : "Cobrança todo mês. Sem fidelidade, cancela quando quiser."}
+      </p>
+
       {coupon.status === "erro" && (
         <p className="-mt-2 text-sm text-danger">{coupon.reason}</p>
       )}
@@ -149,7 +155,9 @@ export function PlanCheckout({
                 )}
                 {temCupom && coupon.status === "ok" && coupon.duration !== "forever" && (
                   <p className="mt-0.5 text-xs text-green-700">
-                    {coupon.duration === "first_year" ? "Preço do primeiro ano. Depois volta ao valor normal." : "Só na primeira cobrança."}
+                    {coupon.duration === "first_year"
+                      ? `Preço do 1º ano. Depois ${formatCents(base)}/${anual ? "ano" : "mês"}.`
+                      : `Só na 1ª cobrança. Depois ${formatCents(base)}/${anual ? "ano" : "mês"}.`}
                   </p>
                 )}
               </div>

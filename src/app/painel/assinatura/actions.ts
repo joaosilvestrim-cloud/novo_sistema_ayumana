@@ -204,12 +204,21 @@ export async function selectPlanAction(formData: FormData) {
       cpfCnpj: cpfCnpj || null,
     });
 
-    const periodoTxt = period === "yearly" ? "anual" : "mensal";
+    // Descrição transparente: é o texto que o cliente vê na fatura do Asaas.
+    let descricao = `Ayumana — Plano ${planRow?.name ?? plan} · ${period === "yearly" ? "Anual" : "Mensal"}`;
+    if (coupon) {
+      const janela =
+        coupon.duration === "first_year" ? " no 1º ano"
+        : coupon.duration === "first_payment" ? " na 1ª cobrança"
+        : "";
+      descricao += ` · Cupom ${coupon.code} (-${coupon.percent}%${janela})`;
+    }
+
     const { subscriptionId, checkoutUrl } = await createSubscription({
       customerId,
       valueReais,
       cycle: asaasCycle(period),
-      description: `Ayumana — Plano ${planRow?.name ?? plan} (${periodoTxt})`,
+      description: descricao,
       externalReference: ctx.psy.id,
     });
 
