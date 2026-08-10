@@ -10,6 +10,8 @@ import {
   createSubscription,
   cancelSubscription,
 } from "@/lib/payments/asaas";
+import { chargeCents, asaasCycle, couponEndsAt, type BillingPeriod } from "@/lib/pricing";
+import { validateCoupon, incrementCouponUse, type Coupon } from "@/lib/coupons";
 import type { PlanTier } from "@/lib/types";
 
 const SELF_SERVICE: PlanTier[] = ["essencial", "destaque", "ideal"];
@@ -69,6 +71,15 @@ function validaCpfCnpj(raw: string): boolean {
   return false;
 }
 
+/** Confere um cupom para mostrar o desconto antes de assinar. */
+export async function previewCouponAction(
+  code: string
+): Promise<{ ok: boolean; percent?: number; duration?: string; reason?: string }> {
+  const check = await validateCoupon(code);
+  if (!check.ok) return { ok: false, reason: check.reason };
+  return { ok: true, percent: check.coupon.percent, duration: check.coupon.duration };
+}
+
 export async function selectPlanAction(formData: FormData) {
   const plan = String(formData.get("plan") ?? "") as PlanTier;
   if (!SELF_SERVICE.includes(plan)) {
@@ -99,6 +110,12 @@ export async function selectPlanAction(formData: FormData) {
         asaas_subscription_id: null,
         pending_plan_tier: null,
         pending_since: null,
+        pending_billing_period: null,
+        pending_coupon_code: null,
+        billing_period: "monthly",
+        coupon_code: null,
+        coupon_pct: null,
+        coupon_ends_at: null,
       })
       .eq("id", ctx.psy.id);
     revalidatePath("/painel/assinatura");
@@ -109,6 +126,9 @@ export async function selectPlanAction(formData: FormData) {
   // Planos pagos.
   if (!PAID.includes(plan)) return;
 
+  // Período: mensal ou anual (anual tem desconto).
+  const period: BillingPeriod = String(formData.get("period") ?? "monthly") === "yearly" ? "yearly" : "monthly";
+
   // Preço do plano.
   const supabase = await createClient();
   const { data: planRow } = await supabase
@@ -116,14 +136,37 @@ export async function selectPlanAction(formData: FormData) {
     .select("price_cents, name")
     .eq("id", plan)
     .single();
-  const valueReais = (planRow?.price_cents ?? 0) / 100;
+  const monthlyCents = planRow?.price_cents ?? 0;
+
+  // Cupom (opcional). Se inválido, avisa em vez de cobrar cheio sem avisar.
+  let coupon: Coupon | null = null;
+  const rawCoupon = String(formData.get("coupon") ?? "").trim();
+  if (rawCoupon) {
+    const check = await validateCoupon(rawCoupon);
+    if (!check.ok) {
+      redirect(fail(check.reason));
+    }
+    coupon = check.coupon;
+  }
+
+  const cobradoCents = chargeCents(monthlyCents, period, coupon?.percent ?? null);
+  const valueReais = cobradoCents / 100;
+  const fimCupom = coupon ? couponEndsAt(coupon.duration, period) : null;
 
   // Modo dev (sem chaves): troca direta, assinatura "ativa" fictícia.
   if (!isAsaasConfigured()) {
     await admin
       .from("psychologists")
-      .update({ plan_tier: plan, subscription_status: "ativa" })
+      .update({
+        plan_tier: plan,
+        subscription_status: "ativa",
+        billing_period: period,
+        coupon_code: coupon?.code ?? null,
+        coupon_pct: coupon?.percent ?? null,
+        coupon_ends_at: fimCupom ? fimCupom.toISOString() : null,
+      })
       .eq("id", ctx.psy.id);
+    if (coupon) await incrementCouponUse(coupon.code);
     revalidatePath("/painel/assinatura");
     revalidatePath("/painel");
     redirect("/painel/assinatura?dev=1");
@@ -161,20 +204,25 @@ export async function selectPlanAction(formData: FormData) {
       cpfCnpj: cpfCnpj || null,
     });
 
+    const periodoTxt = period === "yearly" ? "anual" : "mensal";
     const { subscriptionId, checkoutUrl } = await createSubscription({
       customerId,
       valueReais,
-      description: `Ayumana — Plano ${planRow?.name ?? plan}`,
+      cycle: asaasCycle(period),
+      description: `Ayumana — Plano ${planRow?.name ?? plan} (${periodoTxt})`,
       externalReference: ctx.psy.id,
     });
 
     // O plano NÃO é aplicado aqui. Fica em pending_plan_tier até o webhook
     // do Asaas confirmar o pagamento. Sem isso, quem assina e nunca paga
-    // ficaria com o plano pago para sempre.
+    // ficaria com o plano pago para sempre. Período e cupom também ficam
+    // pendentes e são aplicados na confirmação.
     await admin
       .from("psychologists")
       .update({
         pending_plan_tier: plan,
+        pending_billing_period: period,
+        pending_coupon_code: coupon?.code ?? null,
         pending_since: new Date().toISOString(),
         asaas_customer_id: customerId,
         asaas_subscription_id: subscriptionId,

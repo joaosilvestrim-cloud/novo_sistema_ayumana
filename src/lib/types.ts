@@ -186,6 +186,13 @@ export type Psychologist = {
   /** Plano contratado no checkout, valendo só depois do pagamento confirmar. */
   pending_plan_tier: PlanTier | null;
   pending_since: string | null;
+  /** Período de cobrança e cupom em vigor. */
+  billing_period: "monthly" | "yearly";
+  coupon_code: string | null;
+  coupon_pct: number | null;
+  coupon_ends_at: string | null;
+  pending_billing_period: "monthly" | "yearly" | null;
+  pending_coupon_code: string | null;
   subscription_status: SubscriptionStatus;
   subscription_period_end: string | null;
   created_at: string;

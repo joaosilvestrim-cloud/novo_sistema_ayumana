@@ -12,6 +12,7 @@ import {
   Palette,
   Plug,
   Bell,
+  Ticket,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +22,7 @@ const ITEMS = [
   { href: "/admin/moderacao", label: "Moderação", icon: MessagesSquare, badgeKey: "moderacao" },
   { href: "/admin/usuarios", label: "Usuários", icon: Users },
   { href: "/admin/assinaturas", label: "Assinaturas", icon: CreditCard },
+  { href: "/admin/cupons", label: "Cupons", icon: Ticket },
   { href: "/admin/notificacoes", label: "Notificações", icon: Bell },
   { href: "/admin/integracoes", label: "Integrações", icon: Plug },
   { href: "/admin/blog", label: "Blog", icon: Newspaper },

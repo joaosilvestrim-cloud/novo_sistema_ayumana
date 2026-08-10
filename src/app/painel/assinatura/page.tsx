@@ -1,10 +1,11 @@
-import { Check, CalendarClock, Info } from "lucide-react";
+import { CalendarClock, Info } from "lucide-react";
 import { getMyPsychologist } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { isAsaasConfigured } from "@/lib/payments/asaas";
 import { trialAtivo, trialDiasRestantes } from "@/lib/plan-features";
 import { PLAN_LABEL } from "@/lib/plan-labels";
 import { Badge } from "@/components/ui/badge";
+import { PlanCheckout } from "@/components/painel/plan-checkout";
 import {
   SUBSCRIPTION_LABELS,
   type Plan,
@@ -149,83 +150,44 @@ export default async function AssinaturaPage({
         </div>
       </div>
 
-      {/* Planos */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {plans.map((plan) => {
-          const active = plan.id === current;
-          return (
-            <div
-              key={plan.id}
-              className={`rounded-2xl border p-6 ${
-                active ? "border-brand ring-2 ring-brand/20" : "border-border"
-              } bg-background`}
-            >
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg">{plan.name}</h2>
-                {active && <Badge tone="success">Plano atual</Badge>}
-              </div>
-              <p className="mt-1 text-2xl font-semibold text-brand-dark">
-                {plan.price_label}
-              </p>
-              <ul className="mt-4 space-y-2">
-                {plan.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm text-foreground-muted">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
+      {/* Planos pagos com período e cupom */}
+      <PlanCheckout
+        plans={plans.map((p) => ({
+          id: p.id,
+          name: p.name,
+          price_cents: p.price_cents,
+          features: p.features,
+          is_selfservice: p.is_selfservice,
+        }))}
+        current={current}
+        needsCpf={needsCpf}
+      />
 
-              {!plan.is_selfservice ? (
-                <p className="mt-5 rounded-lg bg-surface-muted px-3 py-2 text-xs text-foreground-muted">
-                  Plano Presença tem onboarding humano e lista de espera. Fale com
-                  a equipe.
-                </p>
-              ) : active ? (
-                <button
-                  disabled
-                  className="mt-5 h-10 w-full rounded-lg border border-border text-sm text-foreground-muted"
-                >
-                  Selecionado
-                </button>
-              ) : (
-                <form action={selectPlanAction} className="mt-5">
-                  <input type="hidden" name="plan" value={plan.id} />
-                  {needsCpf && plan.id !== "essencial" && (
-                    <div className="mb-3">
-                      <label htmlFor={`cpf-${plan.id}`} className="mb-1 block text-xs font-medium text-heading">
-                        CPF ou CNPJ
-                      </label>
-                      <input
-                        id={`cpf-${plan.id}`}
-                        name="cpf_cnpj"
-                        inputMode="numeric"
-                        required
-                        placeholder="Somente números"
-                        className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-brand"
-                      />
-                      <p className="mt-1 text-[11px] text-foreground-muted">
-                        Exigido pelo Asaas para emitir a cobrança. Enviamos direto para o
-                        provedor de pagamento e não guardamos no nosso banco.
-                      </p>
-                    </div>
-                  )}
-                  <button
-                    className={`h-10 w-full rounded-lg text-sm font-medium transition-colors ${
-                      plan.id === "essencial"
-                        ? "border border-border text-foreground-muted hover:bg-surface-muted"
-                        : "bg-primary text-primary-foreground hover:bg-primary-hover"
-                    }`}
-                  >
-                    {plan.id === "essencial"
-                      ? "Voltar ao Raiz"
-                      : `Assinar ${plan.name}`}
-                  </button>
-                </form>
-              )}
-            </div>
-          );
-        })}
+      {/* Presença e volta ao Raiz */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="rounded-2xl border border-border bg-background p-6">
+          <h2 className="text-lg">Presença</h2>
+          <p className="mt-1 text-2xl font-semibold text-brand-dark">R$ 297/mês</p>
+          <p className="mt-4 rounded-lg bg-surface-muted px-3 py-2 text-sm text-foreground-muted">
+            O Presença tem onboarding humano e vaga limitada. A entrada é por
+            contato com a equipe.
+          </p>
+        </div>
+
+        {current !== "essencial" && (
+          <div className="rounded-2xl border border-border bg-background p-6">
+            <h2 className="text-lg">Voltar ao Raiz</h2>
+            <p className="mt-1 text-sm text-foreground-muted">
+              O plano gratuito. Seu perfil continua no ar, sem os recursos pagos.
+            </p>
+            <form action={selectPlanAction} className="mt-4">
+              <input type="hidden" name="plan" value="essencial" />
+              <button className="h-10 w-full rounded-lg border border-border text-sm font-medium text-foreground-muted hover:bg-surface-muted">
+                Voltar ao plano gratuito
+              </button>
+            </form>
+          </div>
+        )}
       </div>
 
       {!isAsaasConfigured() && (

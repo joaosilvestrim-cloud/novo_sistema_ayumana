@@ -77,12 +77,13 @@ export async function ensureCustomer(params: {
   return data.id;
 }
 
-/** Cria uma assinatura mensal e devolve id + URL de checkout da 1ª cobrança. */
+/** Cria uma assinatura e devolve id + URL de checkout da 1ª cobrança. */
 export async function createSubscription(params: {
   customerId: string;
   valueReais: number;
   description: string;
   externalReference: string;
+  cycle?: "MONTHLY" | "YEARLY";
 }): Promise<{ subscriptionId: string; checkoutUrl: string | null }> {
   const nextDueDate = isoDatePlusDays(0);
   const sub = await asaas<{ id: string }>("/subscriptions", {
@@ -92,7 +93,7 @@ export async function createSubscription(params: {
       billingType: "UNDEFINED", // deixa o cliente escolher Pix/boleto/cartão
       value: params.valueReais,
       nextDueDate,
-      cycle: "MONTHLY",
+      cycle: params.cycle ?? "MONTHLY",
       description: params.description,
       externalReference: params.externalReference,
     },
@@ -115,6 +116,21 @@ export async function createSubscription(params: {
 /** Cancela a assinatura no Asaas. */
 export async function cancelSubscription(subscriptionId: string): Promise<void> {
   await asaas(`/subscriptions/${subscriptionId}`, { method: "DELETE" });
+}
+
+/**
+ * Troca o valor de uma assinatura já existente. Usado quando o desconto do
+ * cupom expira e o preço volta ao cheio. updatePendingPayments atualiza as
+ * cobranças ainda em aberto.
+ */
+export async function updateSubscriptionValue(
+  subscriptionId: string,
+  valueReais: number
+): Promise<void> {
+  await asaas(`/subscriptions/${subscriptionId}`, {
+    method: "POST",
+    body: { value: valueReais, updatePendingPayments: true },
+  });
 }
 
 function isoDatePlusDays(days: number): string {

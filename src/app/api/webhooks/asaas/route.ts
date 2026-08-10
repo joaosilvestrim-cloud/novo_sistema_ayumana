@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendPlanActivated } from "@/lib/email";
 import { PLAN_LABEL } from "@/lib/plan-labels";
+import { getCoupon } from "@/lib/coupons";
+import { couponEndsAt, type BillingPeriod } from "@/lib/pricing";
 import type { PlanTier, SubscriptionStatus } from "@/lib/types";
 
 // Eventos que ativam/renovam a assinatura.
@@ -22,6 +24,8 @@ type Psy = {
   id: string;
   plan_tier: PlanTier;
   pending_plan_tier: PlanTier | null;
+  pending_billing_period: string | null;
+  pending_coupon_code: string | null;
 };
 
 /**
@@ -33,7 +37,7 @@ async function acharPsicologo(
   supabase: ReturnType<typeof createAdminClient>,
   ref: { subscriptionId?: string; externalReference?: string; customerId?: string }
 ): Promise<Psy | null> {
-  const cols = "id, plan_tier, pending_plan_tier";
+  const cols = "id, plan_tier, pending_plan_tier, pending_billing_period, pending_coupon_code";
 
   if (ref.subscriptionId) {
     const { data } = await supabase
@@ -139,7 +143,24 @@ export async function POST(request: NextRequest) {
       update.plan_tier = psy.pending_plan_tier;
       update.pending_plan_tier = null;
       update.pending_since = null;
-      resumo = `Pagamento confirmado. Plano liberado: ${psy.pending_plan_tier}.`;
+
+      // Período e cupom escolhidos no checkout também entram agora.
+      const period: BillingPeriod = psy.pending_billing_period === "yearly" ? "yearly" : "monthly";
+      update.billing_period = period;
+      update.pending_billing_period = null;
+
+      if (psy.pending_coupon_code) {
+        const coupon = await getCoupon(psy.pending_coupon_code);
+        if (coupon) {
+          const fim = couponEndsAt(coupon.duration, period);
+          update.coupon_code = coupon.code;
+          update.coupon_pct = coupon.percent;
+          update.coupon_ends_at = fim ? fim.toISOString() : null;
+        }
+      }
+      update.pending_coupon_code = null;
+
+      resumo = `Pagamento confirmado. Plano liberado: ${psy.pending_plan_tier} (${period === "yearly" ? "anual" : "mensal"}).`;
     } else {
       resumo = "Pagamento confirmado. Assinatura renovada.";
     }
@@ -151,6 +172,12 @@ export async function POST(request: NextRequest) {
     update.plan_tier = "essencial";
     update.pending_plan_tier = null;
     update.pending_since = null;
+    update.pending_billing_period = null;
+    update.pending_coupon_code = null;
+    update.billing_period = "monthly";
+    update.coupon_code = null;
+    update.coupon_pct = null;
+    update.coupon_ends_at = null;
     update.asaas_subscription_id = null;
     resumo = "Assinatura encerrada. Voltou ao plano gratuito.";
   } else {
