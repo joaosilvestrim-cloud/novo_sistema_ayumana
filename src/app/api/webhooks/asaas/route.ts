@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendPlanActivated } from "@/lib/email";
 import { PLAN_LABEL } from "@/lib/plan-labels";
 import { couponEndsAt, type BillingPeriod, type CouponDuration } from "@/lib/pricing";
+import { syncKommo } from "@/lib/kommo/sync";
 import type { PlanTier, SubscriptionStatus } from "@/lib/types";
 
 // Eventos que ativam/renovam a assinatura.
@@ -224,6 +225,13 @@ export async function POST(request: NextRequest) {
     } catch {
       // segue
     }
+  }
+
+  // Espelha no Kommo (best-effort). O Kommo dispara a comunicação por etapa.
+  if (ACTIVATE.has(event) && psy.pending_plan_tier) {
+    await syncKommo(psy.id, "compra");
+  } else if (CANCEL.has(event)) {
+    await syncKommo(psy.id, "cancelado");
   }
 
   await fechar(psy.id, true, resumo);

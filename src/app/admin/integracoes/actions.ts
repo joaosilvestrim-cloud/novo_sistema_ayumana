@@ -2,8 +2,23 @@
 
 import { requireAdmin } from "@/lib/auth";
 import { getAccountInfo, isAsaasConfigured, asaasEnv } from "@/lib/payments/asaas";
+import { getKommoAccount, isKommoConfigured } from "@/lib/kommo/client";
 
 export type TestState = { ok: boolean | null; message: string };
+
+/** Testa o token do Kommo com uma leitura da conta. Não cria nada. */
+export async function testKommoAction(_prev: TestState, _fd: FormData): Promise<TestState> {
+  await requireAdmin();
+  if (!isKommoConfigured()) {
+    return { ok: false, message: "Faltam variáveis do Kommo (subdomínio, token ou funil)." };
+  }
+  try {
+    const acc = await getKommoAccount();
+    return { ok: true, message: `Conectado ao Kommo — ${acc.name || acc.subdomain || "conta"}. Nenhum lead foi criado.` };
+  } catch (e) {
+    return { ok: false, message: `Falhou: ${(e as Error).message}` };
+  }
+}
 
 /** Teste 1 — só leitura. Valida a chave sem criar cliente nem cobrança. */
 export async function testConnectionAction(_prev: TestState, _fd: FormData): Promise<TestState> {

@@ -2,8 +2,8 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { CheckCircle2, XCircle, Loader2, Plug, Webhook } from "lucide-react";
-import { testConnectionAction, testWebhookAction, type TestState } from "./actions";
+import { CheckCircle2, XCircle, Loader2, Plug, Webhook, Users } from "lucide-react";
+import { testConnectionAction, testWebhookAction, testKommoAction, type TestState } from "./actions";
 
 const initial: TestState = { ok: null, message: "" };
 
@@ -37,6 +37,7 @@ function Result({ state }: { state: TestState }) {
 export function IntegrationTester() {
   const [conn, connAction] = useActionState(testConnectionAction, initial);
   const [hook, hookAction] = useActionState(testWebhookAction, initial);
+  const [kommo, kommoAction] = useActionState(testKommoAction, initial);
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
@@ -66,6 +67,19 @@ export function IntegrationTester() {
           <Btn>Testar webhook</Btn>
         </form>
         <Result state={hook} />
+      </section>
+
+      <section className="rounded-2xl border border-border bg-background p-6 lg:col-span-2">
+        <h2 className="flex items-center gap-2 text-lg">
+          <Users className="h-5 w-5 text-teal-600" /> 3. Conexão com o Kommo
+        </h2>
+        <p className="mt-1 text-sm text-foreground-muted">
+          Faz uma leitura da sua conta no Kommo para validar o token. <strong>Não cria lead.</strong>
+        </p>
+        <form action={kommoAction} className="mt-4">
+          <Btn>Testar Kommo</Btn>
+        </form>
+        <Result state={kommo} />
       </section>
     </div>
   );

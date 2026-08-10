@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { slugify } from "@/lib/slug";
 import { verificarCrpNoCfp } from "@/lib/crp/verify";
+import { syncKommo } from "@/lib/kommo/sync";
 import type { Audience } from "@/lib/types";
 
 const BUCKET = process.env.SUPABASE_CRP_BUCKET || "crp-documentos";
@@ -305,6 +306,9 @@ export async function saveOnboardingAction(
       .from("psychologist_countries")
       .insert(countryCodes.map((country_code) => ({ psychologist_id: psyId, country_code })));
   }
+
+  // Espelha o novo cadastro no Kommo (só cria o lead na primeira vez).
+  await syncKommo(psyId, "cadastro", { onlyIfNew: true });
 
   revalidatePath("/painel");
   if (intent === "submit") {

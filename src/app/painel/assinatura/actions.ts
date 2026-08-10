@@ -12,6 +12,7 @@ import {
 } from "@/lib/payments/asaas";
 import { chargeCents, asaasCycle, couponEndsAt, type BillingPeriod, type CouponDuration } from "@/lib/pricing";
 import { validateCoupon, incrementCouponUse, type Coupon } from "@/lib/coupons";
+import { syncKommo } from "@/lib/kommo/sync";
 import type { PlanTier } from "@/lib/types";
 
 const SELF_SERVICE: PlanTier[] = ["essencial", "destaque", "ideal"];
@@ -284,6 +285,7 @@ export async function cancelSubscriptionAction() {
     })
     .eq("id", ctx.psy.id);
 
+  await syncKommo(ctx.psy.id, "cancelado");
   revalidatePath("/painel/assinatura");
   revalidatePath("/painel");
   redirect("/painel/assinatura?cancelado=1");

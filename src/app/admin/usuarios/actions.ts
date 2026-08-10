@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail, emailShell } from "@/lib/email";
+import { syncKommo } from "@/lib/kommo/sync";
 
 export type CreateUserState = { error: string | null; ok?: boolean; email?: string };
 
@@ -220,6 +221,7 @@ export async function grantTrialAction(formData: FormData) {
     .from("psychologists")
     .update({ trial_tier: TRIAL_TIER, trial_ends_at: trialFim(dias), ...TRIAL_RESET })
     .eq("id", psyId);
+  await syncKommo(psyId, "teste");
   revalidatePath("/admin/usuarios");
   revalidatePath(`/admin/usuarios`);
   revalidatePath("/psicologos");

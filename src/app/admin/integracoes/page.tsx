@@ -3,6 +3,7 @@ import { AlertCircle, CheckCircle2, Radio, Clock, XCircle } from "lucide-react";
 import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAsaasConfigured, asaasEnv } from "@/lib/payments/asaas";
+import { isKommoConfigured } from "@/lib/kommo/client";
 import { PLAN_LABEL } from "@/lib/plan-labels";
 import type { PlanTier } from "@/lib/types";
 import { IntegrationTester } from "./integration-tester";
@@ -54,6 +55,7 @@ export default async function IntegracoesPage() {
   const configured = isAsaasConfigured();
   const env = asaasEnv();
   const hasWebhookToken = !!process.env.ASAAS_WEBHOOK_TOKEN;
+  const kommoOk = isKommoConfigured();
 
   const admin = createAdminClient();
 
@@ -90,6 +92,7 @@ export default async function IntegracoesPage() {
           <Row label="ASAAS_API_KEY definida" ok={configured} hint={configured ? undefined : "Cadastre na Vercel (Production) e faça Redeploy."} />
           <Row label={`Ambiente: ${env}`} ok={true} hint={env === "sandbox" ? "Modo de testes: nenhuma cobrança real." : "Produção: cobranças reais."} />
           <Row label="ASAAS_WEBHOOK_TOKEN definida" ok={hasWebhookToken} hint={hasWebhookToken ? undefined : "Precisa ser o mesmo token do webhook no Asaas."} />
+          <Row label="Kommo (CRM) conectado" ok={kommoOk} hint={kommoOk ? "Cadastro, teste, compra e cancelamento viram lead no funil." : "Faltam KOMMO_SUBDOMAIN, KOMMO_ACCESS_TOKEN e KOMMO_PIPELINE_ID (+ os ids das etapas)."} />
           <Row
             label={eventos.length ? `Webhook já recebeu ${eventos.length} evento(s)` : "Webhook ainda não recebeu nenhum evento"}
             ok={eventos.length > 0}
