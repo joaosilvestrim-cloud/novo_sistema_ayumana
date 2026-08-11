@@ -1,6 +1,6 @@
 import Script from "next/script";
 
-/** GA4 — só renderiza se NEXT_PUBLIC_GA_ID estiver definido. */
+/** GA4, só renderiza se NEXT_PUBLIC_GA_ID estiver definido. */
 export function Analytics() {
   const id = process.env.NEXT_PUBLIC_GA_ID;
   if (!id) return null;

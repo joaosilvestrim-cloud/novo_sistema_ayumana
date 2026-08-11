@@ -55,7 +55,7 @@ export async function syncKommo(
     } else {
       // Primeiro contato: cria lead + contato e guarda os ids.
       const { leadId, contactId } = await createLeadWithContact({
-        name: `Ayumana — ${nome}`,
+        name: `Ayumana · ${nome}`,
         price: extra?.priceReais,
         statusId: status,
         contact: {

@@ -205,7 +205,7 @@ export default async function PerfilPage({
 
             {p.headline && <p className="text-lg text-heading">{p.headline}</p>}
 
-            {/* Contato rápido — visível só no mobile (a sidebar cobre o desktop) */}
+            {/* Contato rápido, visível só no mobile (a sidebar cobre o desktop) */}
             {(price || pricePresencial || wa) && (
               <div className="rounded-2xl border border-border bg-background p-4 md:hidden">
                 {(price || pricePresencial) && (
@@ -507,7 +507,7 @@ export default async function PerfilPage({
               </div>
             </div>
 
-            {/* Horário de atendimento — ao lado, não no fim da página */}
+            {/* Horário de atendimento, ao lado, não no fim da página */}
             {hasSchedule && (
               <div className="rounded-2xl border border-border bg-background p-5">
                 <h2 className="mb-2 flex items-center gap-2 text-base">

@@ -2,7 +2,7 @@ import "server-only";
 import { createClient } from "@supabase/supabase-js";
 
 /**
- * Client com service_role. IGNORA RLS — use APENAS no servidor, em fluxos
+ * Client com service_role. IGNORA RLS, use APENAS no servidor, em fluxos
  * confiáveis (verificação admin, escrita privilegiada). Nunca importe em
  * Client Components.
  */

@@ -35,7 +35,7 @@ export function Logo({
 
   if (href) {
     return (
-      <Link href={href} aria-label="Ayumana — início" className="inline-flex">
+      <Link href={href} aria-label="Ayumana, início" className="inline-flex">
         {img}
       </Link>
     );

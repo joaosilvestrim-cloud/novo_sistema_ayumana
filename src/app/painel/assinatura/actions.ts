@@ -215,7 +215,7 @@ export async function selectPlanAction(formData: FormData) {
     });
 
     // Descrição transparente: é o texto que o cliente vê na fatura do Asaas.
-    let descricao = `Ayumana — Plano ${planRow?.name ?? plan} · ${period === "yearly" ? "Anual" : "Mensal"}`;
+    let descricao = `Ayumana · Plano ${planRow?.name ?? plan} · ${period === "yearly" ? "Anual" : "Mensal"}`;
     if (descontoPct) {
       const janela =
         descontoDur === "first_year" ? " no 1º ano"

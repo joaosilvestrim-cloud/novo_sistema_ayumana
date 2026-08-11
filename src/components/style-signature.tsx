@@ -138,7 +138,7 @@ export function StyleSignature({
 
       <p className="mt-2 px-1 text-xs text-foreground-muted">
         Cada atributo mostra a tendência do profissional entre dois polos. Não existe
-        estilo melhor ou pior — ajuda você a sentir o encaixe.
+        estilo melhor ou pior, ajuda você a sentir o encaixe.
       </p>
     </section>
   );

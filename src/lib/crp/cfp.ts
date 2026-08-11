@@ -8,7 +8,7 @@ import "server-only";
  * mantém essa integração. Hoje o provedor suportado é a Infosimples.
  *
  * Sem token configurado, a função devolve "nao_configurado" e o fluxo segue
- * com a conferência manual do documento pelo admin — nada quebra.
+ * com a conferência manual do documento pelo admin, nada quebra.
  */
 
 export type CfpStatus =

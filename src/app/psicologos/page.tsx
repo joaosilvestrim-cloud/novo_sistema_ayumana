@@ -97,7 +97,7 @@ export default async function CatalogoPage({
               <div className="rounded-2xl border border-dashed border-border bg-background p-12 text-center">
                 <p className="text-heading">Nenhum profissional encontrado.</p>
                 <p className="mt-1 text-sm text-foreground-muted">
-                  Tente remover alguns filtros. O catálogo está crescendo — novos
+                  Tente remover alguns filtros. O catálogo está crescendo, novos
                   perfis entram a cada semana.
                 </p>
               </div>

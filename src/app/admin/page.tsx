@@ -109,7 +109,7 @@ export default async function AdminDashboard() {
         />
       </div>
 
-      {/* KPIs de usuários — clique abre a lista já filtrada */}
+      {/* KPIs de usuários, clique abre a lista já filtrada */}
       <section>
         <h2 className="mb-3 text-lg">Usuários</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

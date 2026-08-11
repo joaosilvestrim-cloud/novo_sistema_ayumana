@@ -47,7 +47,7 @@ export default async function PainelForumPage() {
       <div>
         <h1 className="text-2xl">Perguntas para responder</h1>
         <p className="mt-1 text-foreground-muted">
-          Responda com cuidado — suas respostas aparecem no seu perfil e atraem
+          Responda com cuidado, suas respostas aparecem no seu perfil e atraem
           pacientes.
         </p>
       </div>

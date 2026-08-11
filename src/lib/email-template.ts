@@ -239,7 +239,7 @@ ${
         <tr>
           <td align="center" style="padding:22px 12px 8px;font-family:${FONTE};font-size:12px;line-height:1.7;color:${C.suave};">
             ${opts.footerNote ? `${opts.footerNote}<br/><br/>` : ""}
-            <strong style="color:${C.petroleo};">Ayumana</strong> — terapia em português, onde você estiver.<br/>
+            <strong style="color:${C.petroleo};">Ayumana</strong>, terapia em português, onde você estiver.<br/>
             <a href="${SITE}" style="color:${C.suave};text-decoration:underline;">ayumana.com.br</a>
             &nbsp;·&nbsp;
             <a href="${SITE}/painel" style="color:${C.suave};text-decoration:underline;">Meu painel</a><br/><br/>

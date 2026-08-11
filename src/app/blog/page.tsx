@@ -67,7 +67,7 @@ export default async function BlogPage({
         <header className="mb-8">
           <h1 className="text-4xl font-semibold text-heading">Blog</h1>
           <p className="mt-2 text-foreground-muted">
-            Saúde mental em português — com carinho especial para quem vive fora
+            Saúde mental em português, com carinho especial para quem vive fora
             do Brasil.
           </p>
         </header>

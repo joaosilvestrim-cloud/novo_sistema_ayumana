@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Renderiza markdown (e HTML embutido) com o estilo Ayumana.
- * rehype-raw permite conteúdo importado em HTML — usar só com conteúdo confiável
+ * rehype-raw permite conteúdo importado em HTML, usar só com conteúdo confiável
  * (autoria do admin / migração), nunca com input de usuário anônimo.
  */
 export function Markdown({

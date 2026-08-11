@@ -272,7 +272,7 @@ export type ForumAnswer = {
   published_at: string | null;
 };
 
-/** Países-alvo iniciais (diferencial exterior — Blueprint §4). */
+/** Países-alvo iniciais (diferencial exterior, Blueprint §4). */
 export const COUNTRIES = [
   { code: "PT", name: "Portugal" },
   { code: "US", name: "Estados Unidos" },

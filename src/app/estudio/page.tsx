@@ -66,7 +66,7 @@ export default async function EstudioHome() {
           <h2 className="text-lg">Clientes ({clients.length})</h2>
           {precisamDeVoce > 0 && (
             <span className="inline-flex items-center gap-1.5 rounded-lg bg-brand/15 px-2.5 py-1 text-xs font-semibold text-brand-dark">
-              {precisamDeVoce} precisam de você — estão no topo
+              {precisamDeVoce} precisam de você, estão no topo
             </span>
           )}
         </div>

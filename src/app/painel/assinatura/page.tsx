@@ -192,7 +192,7 @@ export default async function AssinaturaPage({
 
       {!isAsaasConfigured() && (
         <p className="text-center text-xs text-foreground-muted">
-          Pagamento em modo de teste — configure <code>ASAAS_API_KEY</code> para
+          Pagamento em modo de teste, configure <code>ASAAS_API_KEY</code> para
           ativar o checkout real.
         </p>
       )}

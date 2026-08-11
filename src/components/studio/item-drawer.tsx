@@ -160,7 +160,7 @@ export function ItemDrawer({
                     target="_blank"
                     rel="noopener noreferrer"
                     className="group relative h-14 w-14 overflow-hidden rounded-lg border border-border"
-                    title={`Versão ${v.version} — ${new Date(v.created_at).toLocaleDateString("pt-BR")}`}
+                    title={`Versão ${v.version}, ${new Date(v.created_at).toLocaleDateString("pt-BR")}`}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={v.url} alt={`v${v.version}`} className="h-full w-full object-cover" />

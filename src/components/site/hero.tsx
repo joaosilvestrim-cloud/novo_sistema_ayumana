@@ -53,7 +53,7 @@ export function Hero({ people = [] }: { people?: HeroPerson[] }) {
 
           <p className="mt-6 max-w-lg text-lg text-foreground-muted">
             Psicólogos brasileiros com CRP verificado. Encontre, filtre por fuso
-            horário e fale direto pelo WhatsApp — no Brasil ou no exterior.
+            horário e fale direto pelo WhatsApp, no Brasil ou no exterior.
           </p>
 
           {/* Busca */}

@@ -33,13 +33,13 @@ export async function testKommoAction(_prev: TestState, _fd: FormData): Promise<
   }
   try {
     const acc = await getKommoAccount();
-    return { ok: true, message: `Conectado ao Kommo — ${acc.name || acc.subdomain || "conta"}. Nenhum lead foi criado.` };
+    return { ok: true, message: `Conectado ao Kommo, ${acc.name || acc.subdomain || "conta"}. Nenhum lead foi criado.` };
   } catch (e) {
     return { ok: false, message: `Falhou: ${(e as Error).message}` };
   }
 }
 
-/** Teste 1 — só leitura. Valida a chave sem criar cliente nem cobrança. */
+/** Teste 1, só leitura. Valida a chave sem criar cliente nem cobrança. */
 export async function testConnectionAction(_prev: TestState, _fd: FormData): Promise<TestState> {
   await requireAdmin();
   if (!isAsaasConfigured()) {
@@ -48,14 +48,14 @@ export async function testConnectionAction(_prev: TestState, _fd: FormData): Pro
   try {
     const acc = await getAccountInfo();
     const quem = acc.name || acc.email || "conta sem nome";
-    return { ok: true, message: `Conectado em ${asaasEnv()} — ${quem}. Nenhum dado foi criado.` };
+    return { ok: true, message: `Conectado em ${asaasEnv()}, ${quem}. Nenhum dado foi criado.` };
   } catch (e) {
     return { ok: false, message: `Falhou: ${(e as Error).message}` };
   }
 }
 
 /**
- * Teste 2 — dispara um evento sintético no nosso próprio webhook, com o token
+ * Teste 2, dispara um evento sintético no nosso próprio webhook, com o token
  * do ambiente. Valida URL + token sem envolver o Asaas e sem mexer em ninguém
  * (o evento não bate com nenhuma assinatura, então é ignorado).
  */

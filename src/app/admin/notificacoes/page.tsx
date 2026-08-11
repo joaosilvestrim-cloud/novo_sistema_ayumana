@@ -16,8 +16,8 @@ const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) 
 const KIND_LABEL: Record<string, string> = {
   crp_aprovado: "CRP aprovado",
   crp_reprovado: "CRP reprovado",
-  trial_7: "Teste — 7 dias",
-  trial_1: "Teste — 1 dia",
+  trial_7: "Teste, 7 dias",
+  trial_1: "Teste, 1 dia",
   senha: "Redefinição de senha",
   suporte: "Pedido de suporte",
   broadcast: "Comunicado",

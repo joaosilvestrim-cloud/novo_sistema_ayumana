@@ -83,7 +83,7 @@ export default async function PainelHome() {
         {status === "pendente" && (
           <p className="mt-4 text-sm text-foreground-muted">
             Recebemos seus dados. Nossa equipe valida seu CRP no Cadastro
-            Nacional de Psicólogos — normalmente em até 2 dias úteis.
+            Nacional de Psicólogos, normalmente em até 2 dias úteis.
           </p>
         )}
       </div>

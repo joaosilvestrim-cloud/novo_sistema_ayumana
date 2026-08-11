@@ -113,7 +113,7 @@ export default async function HomePage() {
                 Feito para quem fala português
               </h2>
               <p className="mt-3 text-foreground-muted">
-                De brasileiros para brasileiros — inclusive para quem mora longe de casa.
+                De brasileiros para brasileiros, inclusive para quem mora longe de casa.
               </p>
             </div>
             <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -130,7 +130,7 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* Você mora fora? — países */}
+        {/* Você mora fora?, países */}
         <section className="border-y border-border bg-brand-dark">
           <div className="mx-auto max-w-6xl px-4 py-16">
             <div className="mx-auto max-w-2xl text-center">

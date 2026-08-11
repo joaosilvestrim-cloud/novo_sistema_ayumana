@@ -170,7 +170,7 @@ export async function sendPasswordResetAction(formData: FormData) {
 
   await sendEmail({
     to: email,
-    subject: "Redefinição de senha — Ayumana",
+    subject: "Redefinição de senha na Ayumana",
     kind: "senha",
     html: emailShell({
       preheader: "Link para criar uma nova senha.",

@@ -241,7 +241,7 @@ export async function sendPlanActivated(to: string, name: string | null, planoNo
   const nome = name?.split(" ")[0] || "";
   return sendEmail({
     to,
-    subject: `Pagamento confirmado — seu plano ${planoNome} está ativo`,
+    subject: `Pagamento confirmado, seu plano ${planoNome} está ativo`,
     kind: "pagamento",
     html: emailShell({
       preheader: "Recebemos seu pagamento e o plano já está valendo.",
@@ -301,7 +301,7 @@ export async function sendSupportRequest(params: {
 
   return sendEmail({
     to: SUPPORT_EMAILS,
-    subject: `Pedido de ajuda na Ayumana — ${params.name || params.email || "psicólogo"}`,
+    subject: `Pedido de ajuda na Ayumana: ${params.name || params.email || "psicólogo"}`,
     kind: "suporte",
     profileId: params.profileId ?? null,
     html: emailShell({

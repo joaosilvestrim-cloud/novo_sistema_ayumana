@@ -23,7 +23,7 @@ export function ShareProfile({
     return `${origin}/psicologo/${slug}`;
   };
 
-  const shareText = `${name ? `Conheça ${name} na Ayumana` : "Veja este perfil na Ayumana"} — terapia em português.`;
+  const shareText = `${name ? `Conheça ${name} na Ayumana` : "Veja este perfil na Ayumana"}, terapia em português.`;
 
   const onCopy = async () => {
     try {

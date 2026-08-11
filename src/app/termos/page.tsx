@@ -8,7 +8,7 @@ export default function TermosPage() {
       <article className="mx-auto max-w-2xl px-4 py-16">
         <h1 className="text-3xl">Termos de Uso</h1>
         <p className="mt-2 text-sm text-foreground-muted">
-          Rascunho inicial — a versão jurídica final será revisada antes do
+          Rascunho inicial. A versão jurídica final será revisada antes do
           lançamento.
         </p>
         <div className="mt-8 space-y-4 text-foreground-muted">

@@ -1,4 +1,4 @@
-// Conteúdo das landing pages por país (SEO programático — Blueprint §4).
+// Conteúdo das landing pages por país (SEO programático, Blueprint §4).
 // slug amigável -> conteúdo específico da dor local.
 
 export type CountryLanding = {
@@ -20,7 +20,7 @@ export const COUNTRY_LANDINGS: CountryLanding[] = [
     demonym: "em Portugal",
     headline: "Psicólogos brasileiros para quem vive em Portugal",
     intro:
-      "Recomeçar em Portugal traz burocracia, saudade e a sensação de estar entre dois mundos. Converse com psicólogos brasileiros que entendem a sua realidade — em português do Brasil, no seu fuso.",
+      "Recomeçar em Portugal traz burocracia, saudade e a sensação de estar entre dois mundos. Converse com psicólogos brasileiros que entendem a sua realidade, em português do Brasil, no seu fuso.",
     pains: [
       "Adaptação e sensação de não pertencer",
       "Saudade da família e da rede de apoio",
@@ -52,7 +52,7 @@ export const COUNTRY_LANDINGS: CountryLanding[] = [
     demonym: "na Irlanda",
     headline: "Psicólogos brasileiros para quem vive na Irlanda",
     intro:
-      "Estudar e trabalhar na Irlanda é desafiador — clima, custo de vida e recomeço. Fale com psicólogos brasileiros que acolhem essa fase, em português.",
+      "Estudar e trabalhar na Irlanda é desafiador, clima, custo de vida e recomeço. Fale com psicólogos brasileiros que acolhem essa fase, em português.",
     pains: [
       "Adaptação de estudantes e recém-chegados",
       "Ansiedade financeira e de moradia",

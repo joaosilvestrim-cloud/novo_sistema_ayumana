@@ -35,7 +35,7 @@ export default async function ParaPsicologosPage() {
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-lg text-foreground-muted">
             A Ayumana conecta psicólogos brasileiros a pacientes no Brasil e no
-            exterior. Sem comissão sobre suas sessões — o contato é direto, no seu
+            exterior. Sem comissão sobre suas sessões, o contato é direto, no seu
             WhatsApp.
           </p>
           <div className="mt-8 flex justify-center gap-3">

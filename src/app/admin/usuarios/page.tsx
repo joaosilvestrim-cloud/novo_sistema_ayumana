@@ -83,7 +83,7 @@ export default async function UsuariosPage({
         </Link>
       </div>
 
-      {/* KPIs — clique filtra a lista */}
+      {/* KPIs, clique filtra a lista */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {[
           { icon: Users, label: "Psicólogos", value: kpis.psicologos, href: "/admin/usuarios?papel=psicologo", tone: "neutral" as const },

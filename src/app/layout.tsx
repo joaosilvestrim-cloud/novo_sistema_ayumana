@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     process.env.NEXT_PUBLIC_SITE_URL || "https://ayumana.com.br"
   ),
   title: {
-    default: "Ayumana — Terapia em português, onde você estiver",
+    default: "Ayumana · Terapia em português, onde você estiver",
     template: "%s · Ayumana",
   },
   description:
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     "saúde mental",
   ],
   openGraph: {
-    title: "Ayumana — Terapia em português, onde você estiver",
+    title: "Ayumana · Terapia em português, onde você estiver",
     description:
       "Psicólogos brasileiros para quem vive no Brasil ou no exterior. Atendimento online em português.",
     type: "website",

@@ -13,8 +13,7 @@ export function CvvBanner() {
             className="font-semibold underline underline-offset-2 hover:text-white"
           >
             CVV 188
-          </a>{" "}
-          — apoio emocional gratuito, 24h.
+          </a>. Apoio emocional gratuito, 24h.
         </span>
       </div>
     </div>

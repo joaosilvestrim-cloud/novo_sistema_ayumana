@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
 /**
- * Client anônimo sem sessão/cookies — para leituras públicas fora do ciclo de
+ * Client anônimo sem sessão/cookies, para leituras públicas fora do ciclo de
  * request (ex.: sitemap). Só lê o que a RLS permite ao público.
  */
 export function createPublicClient() {

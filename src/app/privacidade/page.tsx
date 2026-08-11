@@ -8,7 +8,7 @@ export default function PrivacidadePage() {
       <article className="mx-auto max-w-2xl px-4 py-16 prose-ayumana">
         <h1 className="text-3xl">Política de Privacidade</h1>
         <p className="mt-2 text-sm text-foreground-muted">
-          Rascunho inicial — a versão jurídica final será revisada antes do
+          Rascunho inicial. A versão jurídica final será revisada antes do
           lançamento (LGPD).
         </p>
         <div className="mt-8 space-y-4 text-foreground-muted">
@@ -25,7 +25,7 @@ export default function PrivacidadePage() {
           <p>
             <strong className="text-heading">Pacientes:</strong> a busca é
             pública e o contato acontece diretamente pelo WhatsApp do
-            profissional — a Ayumana não intermedeia as conversas.
+            profissional. A Ayumana não intermedeia as conversas.
           </p>
           <p>
             Para exercer seus direitos de titular de dados, entre em contato pelo
