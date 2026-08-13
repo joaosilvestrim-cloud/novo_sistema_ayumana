@@ -4,6 +4,7 @@ import { getMetrics } from "@/lib/admin";
 import { isAsaasConfigured, asaasEnv } from "@/lib/payments/asaas";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ConfirmButton } from "@/components/admin/confirm-button";
+import { PlanPriceEditor } from "@/components/admin/plan-price-editor";
 import { grantTrialAllAction, endTrialAllAction } from "./actions";
 import { formatPrice } from "@/lib/whatsapp";
 import { Badge } from "@/components/ui/badge";
@@ -68,6 +69,13 @@ export default async function AdminAssinaturasPage() {
   const supabase = createAdminClient();
 
   const nowIso = new Date().toISOString();
+
+  // Planos pagos, para editar o preço.
+  const { data: planosPagos } = await supabase
+    .from("plans")
+    .select("id, name, price_cents")
+    .in("id", ["destaque", "ideal", "presenca"])
+    .order("sort_order");
 
   // Todo mundo com algum sinal de plano: pago, aguardando pagamento ou em teste.
   const { data: subs } = await supabase
@@ -176,6 +184,9 @@ export default async function AdminAssinaturasPage() {
           ))}
         </div>
       </section>
+
+      {/* Editor de preços */}
+      <PlanPriceEditor plans={(planosPagos as { id: string; name: string; price_cents: number }[]) ?? []} />
 
       {/* Grupos por estado real */}
       <Grupo
