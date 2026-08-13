@@ -71,8 +71,31 @@ function CheckPill({
   );
 }
 
-function Actions() {
+function Actions({ approved }: { approved: boolean }) {
   const { pending } = useFormStatus();
+
+  // Já aprovado: um botão só, que salva as alterações sem tirar do ar. A
+  // reverificação só acontece se a pessoa mudar o CRP (tratado no servidor).
+  if (approved) {
+    return (
+      <div className="space-y-2">
+        <button
+          type="submit"
+          name="intent"
+          value="submit"
+          disabled={pending}
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-hover disabled:opacity-50"
+        >
+          {pending && <Loader2 className="h-4 w-4 animate-spin" />}
+          Salvar alterações
+        </button>
+        <p className="text-xs text-foreground-muted">
+          Seu perfil continua publicado. Só passa por nova verificação se você mudar o número do CRP ou o documento.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-wrap gap-3">
       <button
@@ -343,7 +366,7 @@ export function OnboardingForm({
         <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">{state.error}</p>
       )}
 
-      <Actions />
+      <Actions approved={psy?.verification_status === "aprovado"} />
     </form>
   );
 }

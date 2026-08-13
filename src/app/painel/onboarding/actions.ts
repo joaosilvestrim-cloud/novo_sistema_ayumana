@@ -62,7 +62,7 @@ export async function saveOnboardingAction(
   // Garante que a linha do psicólogo existe.
   const { data: existing } = await supabase
     .from("psychologists")
-    .select("id, crp_document_path")
+    .select("id, crp_document_path, crp_number, crp_uf, verification_status")
     .eq("profile_id", user.id)
     .maybeSingle();
 
@@ -262,9 +262,21 @@ export async function saveOnboardingAction(
     profile_completed: profileCompleted,
   };
 
-  // Solicita verificação: nao_enviado/reprovado -> pendente (o trigger valida).
+  // Reverificação só quando faz sentido. Um psicólogo já aprovado que edita a
+  // foto, a bio ou o valor NÃO deve voltar para a fila nem sair do ar. Só volta
+  // a "pendente" se ainda não foi aprovado, ou se mudou o CRP (número, UF ou
+  // documento), que é o que a equipe realmente confere.
   if (intent === "submit") {
-    update.verification_status = "pendente";
+    const jaAprovado = existing?.verification_status === "aprovado";
+    const crpMudou =
+      (existing?.crp_number ?? null) !== (crpNumber || null) ||
+      (existing?.crp_uf ?? null) !== crpUf ||
+      (existing?.crp_document_path ?? null) !== crpDocumentPath;
+
+    if (!jaAprovado || crpMudou) {
+      update.verification_status = "pendente";
+    }
+    // Se já é aprovado e o CRP não mudou, mantém aprovado e publicado.
   }
 
   const { error: updErr } = await supabase
