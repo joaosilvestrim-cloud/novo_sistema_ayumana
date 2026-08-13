@@ -8,32 +8,98 @@ import { grantTrialAllAction, endTrialAllAction } from "./actions";
 import { formatPrice } from "@/lib/whatsapp";
 import { Badge } from "@/components/ui/badge";
 import { PLAN_LABEL } from "@/lib/plan-labels";
-import { SUBSCRIPTION_LABELS, type PlanTier, type SubscriptionStatus } from "@/lib/types";
+import { type PlanTier, type SubscriptionStatus } from "@/lib/types";
 
 export const metadata = { title: "Assinaturas" };
 
-const PAID: PlanTier[] = ["destaque", "ideal", "presenca"];
+type GrupoRow = {
+  id: string; display_name: string | null; slug: string | null;
+  plan_tier: PlanTier; subscription_status: SubscriptionStatus;
+  pending_plan_tier: PlanTier | null; pending_billing_period: string | null; billing_period: string | null;
+  trial_tier: PlanTier | null; trial_ends_at: string | null;
+};
+
+function Grupo({
+  titulo, descricao, rows, plano, badge, vazio,
+}: {
+  titulo: string;
+  descricao: string;
+  rows: GrupoRow[];
+  plano: (r: GrupoRow) => string;
+  badge: (r: GrupoRow) => { tone: "success" | "warning" | "brand" | "neutral"; label: string };
+  vazio: string;
+}) {
+  return (
+    <section className="rounded-2xl border border-border bg-background">
+      <div className="border-b border-border px-6 py-4">
+        <h2 className="text-lg">{titulo} ({rows.length})</h2>
+        <p className="mt-0.5 text-sm text-foreground-muted">{descricao}</p>
+      </div>
+      {rows.length === 0 ? (
+        <div className="px-6 py-8 text-center text-sm text-foreground-muted">{vazio}</div>
+      ) : (
+        <ul className="divide-y divide-border">
+          {rows.map((r) => {
+            const b = badge(r);
+            return (
+              <li key={r.id} className="flex items-center justify-between gap-4 px-6 py-3">
+                <div className="min-w-0">
+                  {r.slug ? (
+                    <Link href={`/psicologo/${r.slug}`} target="_blank" className="font-medium text-heading hover:text-brand-dark">
+                      {r.display_name || "—"}
+                    </Link>
+                  ) : (
+                    <span className="font-medium text-heading">{r.display_name || "—"}</span>
+                  )}
+                  <p className="text-xs text-foreground-muted">{plano(r)}</p>
+                </div>
+                <Badge tone={b.tone}>{b.label}</Badge>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
 
 export default async function AdminAssinaturasPage() {
   const m = await getMetrics();
   const supabase = createAdminClient();
 
+  const nowIso = new Date().toISOString();
+
+  // Todo mundo com algum sinal de plano: pago, aguardando pagamento ou em teste.
   const { data: subs } = await supabase
     .from("psychologists")
-    .select("id, display_name, slug, plan_tier, subscription_status, subscription_period_end, profile_id")
-    .in("plan_tier", PAID)
-    .order("subscription_status", { ascending: true });
+    .select("id, display_name, slug, plan_tier, subscription_status, subscription_period_end, pending_plan_tier, pending_billing_period, billing_period, trial_tier, trial_ends_at, asaas_subscription_id")
+    .or(`plan_tier.neq.essencial,pending_plan_tier.not.is.null,trial_ends_at.gt.${nowIso}`)
+    .order("display_name");
 
-  const { count: emTesteCount } = await supabase
-    .from("psychologists")
-    .select("id", { count: "exact", head: true })
-    .gt("trial_ends_at", new Date().toISOString());
-  const emTeste = emTesteCount ?? 0;
-
-  const rows = (subs as {
+  type Sub = {
     id: string; display_name: string | null; slug: string | null;
     plan_tier: PlanTier; subscription_status: SubscriptionStatus; subscription_period_end: string | null;
-  }[]) ?? [];
+    pending_plan_tier: PlanTier | null; pending_billing_period: string | null; billing_period: string | null;
+    trial_tier: PlanTier | null; trial_ends_at: string | null; asaas_subscription_id: string | null;
+  };
+  const all = (subs as Sub[]) ?? [];
+
+  const emTrial = (r: Sub) => !!r.trial_ends_at && new Date(r.trial_ends_at) > new Date();
+
+  // Cada um cai em um único grupo, por prioridade.
+  const ativos: Sub[] = [];
+  const aguardando: Sub[] = [];
+  const emTesteList: Sub[] = [];
+  const cortesia: Sub[] = [];
+  for (const r of all) {
+    if (r.subscription_status === "ativa" && r.plan_tier !== "essencial") ativos.push(r);
+    else if (r.pending_plan_tier || r.subscription_status === "atrasada") aguardando.push(r);
+    else if (emTrial(r)) emTesteList.push(r);
+    else if (r.plan_tier !== "essencial") cortesia.push(r);
+  }
+  const emTeste = emTesteList.length;
+
+  const periodoLabel = (p: string | null) => (p === "yearly" ? "anual" : "mensal");
 
   return (
     <div className="space-y-8">
@@ -111,38 +177,44 @@ export default async function AdminAssinaturasPage() {
         </div>
       </section>
 
-      {/* Lista de assinantes pagos */}
-      <section className="rounded-2xl border border-border bg-background">
-        <div className="border-b border-border px-6 py-4">
-          <h2 className="text-lg">Planos pagos ({rows.length})</h2>
-        </div>
-        {rows.length === 0 ? (
-          <div className="px-6 py-12 text-center text-foreground-muted">
-            Nenhum psicólogo em plano pago ainda.
-          </div>
-        ) : (
-          <ul className="divide-y divide-border">
-            {rows.map((r) => {
-              const s = SUBSCRIPTION_LABELS[r.subscription_status];
-              return (
-                <li key={r.id} className="flex items-center justify-between gap-4 px-6 py-3">
-                  <div>
-                    {r.slug ? (
-                      <Link href={`/psicologo/${r.slug}`} target="_blank" className="font-medium text-heading hover:text-brand-dark">
-                        {r.display_name}
-                      </Link>
-                    ) : (
-                      <span className="font-medium text-heading">{r.display_name}</span>
-                    )}
-                    <p className="text-xs text-foreground-muted">{PLAN_LABEL[r.plan_tier]}</p>
-                  </div>
-                  <Badge tone={s.tone}>{s.label}</Badge>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
+      {/* Grupos por estado real */}
+      <Grupo
+        titulo="Pagantes ativos"
+        descricao="Pagamento confirmado no Asaas. Estes geram receita."
+        rows={ativos}
+        plano={(r) => `${PLAN_LABEL[r.plan_tier]} · ${periodoLabel(r.billing_period)}`}
+        badge={() => ({ tone: "success" as const, label: "Ativa" })}
+        vazio="Ninguém pagante ainda. Aparece aqui quando o primeiro pagamento confirmar."
+      />
+
+      <Grupo
+        titulo="Aguardando pagamento"
+        descricao="Assinaram e a cobrança foi emitida, mas o pagamento não confirmou. Continuam no plano anterior até pagar."
+        rows={aguardando}
+        plano={(r) => r.pending_plan_tier
+          ? `Quer ${PLAN_LABEL[r.pending_plan_tier]} · ${periodoLabel(r.pending_billing_period)}`
+          : `${PLAN_LABEL[r.plan_tier]} · cobrança vencida`}
+        badge={() => ({ tone: "warning" as const, label: "Aguardando" })}
+        vazio="Ninguém aguardando pagamento."
+      />
+
+      <Grupo
+        titulo="Em teste gratuito"
+        descricao="Usando os recursos do plano de graça. Quando o teste vence, voltam ao plano contratado."
+        rows={emTesteList}
+        plano={(r) => `Testando ${PLAN_LABEL[r.trial_tier ?? "ideal"]}${r.trial_ends_at ? ` até ${new Date(r.trial_ends_at).toLocaleDateString("pt-BR")}` : ""}`}
+        badge={() => ({ tone: "brand" as const, label: "Teste" })}
+        vazio="Ninguém em teste agora."
+      />
+
+      <Grupo
+        titulo="Cortesia / manual"
+        descricao="Plano pago atribuído na mão (demo, parceria, Estúdio), sem cobrança no Asaas."
+        rows={cortesia}
+        plano={(r) => `${PLAN_LABEL[r.plan_tier]} · sem cobrança`}
+        badge={() => ({ tone: "neutral" as const, label: "Manual" })}
+        vazio="Nenhum plano atribuído manualmente."
+      />
 
       {/*
         O aviso olha a configuração, não o faturamento. Antes ele aparecia
