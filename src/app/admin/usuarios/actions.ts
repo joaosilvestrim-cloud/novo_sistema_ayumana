@@ -109,6 +109,7 @@ export async function toggleAdminAction(formData: FormData) {
   const admin = createAdminClient();
   await admin.from("profiles").update({ role: makeAdmin ? "admin" : "psicologo" }).eq("id", profileId);
   revalidatePath("/admin/usuarios");
+  revalidatePath("/admin/usuarios/[id]", "page");
 }
 
 export async function setRoleAction(formData: FormData) {
@@ -120,6 +121,7 @@ export async function setRoleAction(formData: FormData) {
   const admin = createAdminClient();
   await admin.from("profiles").update({ role }).eq("id", profileId);
   revalidatePath("/admin/usuarios");
+  revalidatePath("/admin/usuarios/[id]", "page");
 }
 
 export async function togglePublishAction(formData: FormData) {
@@ -144,7 +146,11 @@ export async function changePlanAction(formData: FormData) {
 
   const admin = createAdminClient();
   await admin.from("psychologists").update({ plan_tier: plan }).eq("id", psyId);
+  // Revalida também a página de detalhe (onde o admin está) e a de assinaturas,
+  // senão a troca salva mas a tela continua mostrando o plano antigo.
   revalidatePath("/admin/usuarios");
+  revalidatePath("/admin/usuarios/[id]", "page");
+  revalidatePath("/admin/assinaturas");
   revalidatePath("/psicologos");
 }
 
@@ -196,6 +202,7 @@ export async function sendPasswordResetAction(formData: FormData) {
     }),
   });
   revalidatePath("/admin/usuarios");
+  revalidatePath("/admin/usuarios/[id]", "page");
 }
 
 const TRIAL_DIAS = 30;
