@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ShieldCheck, MapPin, Heart, HeartHandshake, User, ArrowRight } from "lucide-react";
 import { AvatarBubble, bubbleColor } from "@/components/ui/avatar-bubble";
+import { effectivePlan } from "@/lib/plan-features";
 import type { PsychologistCard as Card } from "@/lib/psychologists";
 
 export function PsychologistCard({
@@ -13,11 +14,13 @@ export function PsychologistCard({
   const mainApproach = p.approaches[0]?.name;
   const location = [p.city, p.state].filter(Boolean).join(" / ");
   const color = bubbleColor(p.id);
+  // Pagantes ganham o anel que respira, sinal discreto de destaque.
+  const premium = effectivePlan(p) !== "essencial";
 
-  return (
+  const card = (
     <Link
       href={`/psicologo/${p.slug}`}
-      className={`group flex gap-4 rounded-3xl border border-border bg-background p-5 transition-shadow hover:shadow-lg ${
+      className={`group relative flex gap-4 rounded-3xl border border-border bg-background p-5 transition-shadow hover:shadow-lg ${
         stacked ? "flex-col" : "flex-col sm:flex-row sm:items-center sm:gap-6 sm:p-6"
       }`}
     >
@@ -48,6 +51,11 @@ export function PsychologistCard({
         >
           <span className="min-w-0 break-words">{p.display_name}</span>
           <ShieldCheck className="mt-1 h-4 w-4 shrink-0 text-green-600" aria-label="CRP verificado" />
+          {premium && (
+            <span className="mt-1 shrink-0 rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-dark">
+              Destaque
+            </span>
+          )}
         </h3>
 
         <div className="mt-2 space-y-1 text-sm text-foreground-muted">
@@ -81,5 +89,18 @@ export function PsychologistCard({
         </div>
       </div>
     </Link>
+  );
+
+  if (!premium) return card;
+
+  // Anel que respira ao redor do card, sinalizando destaque sem palavra nenhuma.
+  return (
+    <div className="relative h-full">
+      <span
+        aria-hidden
+        className="psi-ring pointer-events-none absolute -inset-[3px] rounded-[1.65rem]"
+      />
+      {card}
+    </div>
   );
 }

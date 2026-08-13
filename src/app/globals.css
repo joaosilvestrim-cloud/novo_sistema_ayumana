@@ -271,3 +271,17 @@
   border-radius: 0.3em;
   font-size: 0.9em;
 }
+
+/* Anel que respira nos cards de psicólogos pagantes na vitrine. */
+@keyframes psi-breathe {
+  0%, 100% { opacity: 0.35; }
+  50%      { opacity: 0.85; }
+}
+.psi-ring {
+  background: linear-gradient(120deg, #05474A, #53C4CC, #73A533, #F5C84B, #05474A);
+  animation: psi-breathe 4.5s ease-in-out infinite;
+  filter: blur(1.5px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .psi-ring { animation: none; opacity: 0.6; filter: blur(1px); }
+}
