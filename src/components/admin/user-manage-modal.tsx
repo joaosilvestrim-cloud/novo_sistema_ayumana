@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Settings2, X, ExternalLink, Trash2, KeyRound, ShieldCheck,
@@ -37,8 +38,28 @@ const btn = "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bord
 
 export function UserManageModal({ u, canDelete }: { u: ManageUser; canDelete: boolean }) {
   const [open, setOpen] = useState(false);
+  const [savingPlan, setSavingPlan] = useState(false);
+  const [planMsg, setPlanMsg] = useState<string | null>(null);
+  const router = useRouter();
   const v = u.verification ? VERIFICATION_LABELS[u.verification] : null;
   const emTeste = !!u.trialEndsAt && new Date(u.trialEndsAt) > new Date();
+
+  // Salva o plano e dá retorno na hora. Antes o modal ficava com o valor
+  // antigo depois do Salvar, passando a sensação de que nada acontecia.
+  async function salvarPlano(fd: FormData) {
+    setSavingPlan(true);
+    setPlanMsg(null);
+    try {
+      await changePlanAction(fd);
+      const novo = String(fd.get("plan"));
+      setPlanMsg(`Plano alterado para ${PLAN_LABEL[novo as PlanTier]}.`);
+      router.refresh();
+    } catch {
+      setPlanMsg("Não foi possível salvar. Tente de novo.");
+    } finally {
+      setSavingPlan(false);
+    }
+  }
 
   return (
     <>
@@ -91,15 +112,16 @@ export function UserManageModal({ u, canDelete }: { u: ManageUser; canDelete: bo
               {u.psyId && (
                 <div>
                   <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-foreground-muted">Plano</p>
-                  <form action={changePlanAction} className="flex gap-2">
+                  <form action={salvarPlano} className="flex gap-2">
                     <input type="hidden" name="psy_id" value={u.psyId} />
                     <select name="plan" defaultValue={u.plan ?? "essencial"} className="h-9 flex-1 rounded-lg border border-border bg-background px-2 text-sm">
                       {TIERS.map((t) => <option key={t} value={t}>{PLAN_LABEL[t]}</option>)}
                     </select>
-                    <button className="h-9 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary-hover">
-                      Salvar
+                    <button disabled={savingPlan} className="h-9 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary-hover disabled:opacity-60">
+                      {savingPlan ? "Salvando…" : "Salvar"}
                     </button>
                   </form>
+                  {planMsg && <p className="mt-1.5 text-xs text-brand-dark">{planMsg}</p>}
                 </div>
               )}
 
