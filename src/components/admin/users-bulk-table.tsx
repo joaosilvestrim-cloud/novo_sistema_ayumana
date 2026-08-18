@@ -103,6 +103,10 @@ export function UsersBulkTable({ rows, meId }: { rows: AdminUser[]; meId: string
             {rows.map((u) => {
               const v = u.verification ? VERIFICATION_LABELS[u.verification] : null;
               const sel = selected.has(u.profileId);
+              // Plano efetivo: no teste, vale o plano do teste (Voz), não o
+              // plan_tier cru (que continua Raiz durante a cortesia).
+              const emTeste = !!u.trialEndsAt && new Date(u.trialEndsAt) > new Date();
+              const planoEfetivo = emTeste ? (u.trialTier ?? u.plan) : u.plan;
               return (
                 <tr key={u.profileId} className={`border-b border-border last:border-0 ${sel ? "bg-brand/5" : ""}`}>
                   <td className="px-4 py-3">
@@ -124,12 +128,19 @@ export function UsersBulkTable({ rows, meId }: { rows: AdminUser[]; meId: string
                     {u.role === "admin" ? <Badge tone="brand">Admin</Badge> : u.role === "conteudo" ? <Badge tone="warning">Conteúdo</Badge> : <Badge tone="neutral">Psicólogo</Badge>}
                   </td>
                   <td className="px-4 py-3">
-                    {u.plan ? PLAN_LABEL[u.plan] : "—"}
-                    {u.trialEndsAt && new Date(u.trialEndsAt) > new Date() && (
-                      <span className="mt-1 block text-[11px] font-medium text-brand-dark">
-                        Teste {u.trialTier ? PLAN_LABEL[u.trialTier] : ""} até{" "}
-                        {new Date(u.trialEndsAt).toLocaleDateString("pt-BR")}
+                    <span className="font-medium text-heading">{planoEfetivo ? PLAN_LABEL[planoEfetivo] : "—"}</span>
+                    {emTeste && (
+                      <span className="ml-1.5 rounded-full bg-brand/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-dark">
+                        teste
                       </span>
+                    )}
+                    {emTeste && u.trialEndsAt && (
+                      <span className="mt-0.5 block text-[11px] text-foreground-muted">
+                        cortesia até {new Date(u.trialEndsAt).toLocaleDateString("pt-BR")}
+                      </span>
+                    )}
+                    {!emTeste && u.subscription === "ativa" && u.plan && u.plan !== "essencial" && (
+                      <span className="mt-0.5 block text-[11px] font-medium text-green-600">pagante</span>
                     )}
                   </td>
                   <td className="px-4 py-3">{v ? <Badge tone={v.tone}>{v.label}</Badge> : "—"}</td>
