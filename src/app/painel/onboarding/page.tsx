@@ -5,6 +5,12 @@ import { OnboardingForm } from "./onboarding-form";
 
 export const metadata = { title: "Meu perfil" };
 
+// Salvar o perfil pode subir foto e até 8 imagens de galeria, e opcionalmente
+// consultar o CFP. Sem isso, a função usa o limite padrão (10s) e estoura,
+// devolvendo "A server error occurred" para quem tem conexão lenta ou foto
+// grande. 60s cobre o upload com folga.
+export const maxDuration = 60;
+
 export default async function OnboardingPage() {
   const psy = await getMyPsychologist();
   const supabase = await createClient();

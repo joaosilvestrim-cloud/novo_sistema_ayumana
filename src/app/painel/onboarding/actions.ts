@@ -267,6 +267,9 @@ export async function saveOnboardingAction(
   // foto, a bio ou o valor NÃO deve voltar para a fila nem sair do ar. Só volta
   // a "pendente" se ainda não foi aprovado, ou se mudou o CRP (número, UF ou
   // documento), que é o que a equipe realmente confere.
+  // Marca se esta gravação gera uma verificação nova. Só nesse caso vale a
+  // pena consultar o CFP; um aprovado que só edita a bio não reconsulta.
+  let precisaVerificar = false;
   if (intent === "submit") {
     const jaAprovado = existing?.verification_status === "aprovado";
     const crpMudou =
@@ -276,6 +279,7 @@ export async function saveOnboardingAction(
 
     if (!jaAprovado || crpMudou) {
       update.verification_status = "pendente";
+      precisaVerificar = true;
     }
     // Se já é aprovado e o CRP não mudou, mantém aprovado e publicado.
   }
@@ -288,11 +292,14 @@ export async function saveOnboardingAction(
     return { error: `Não foi possível salvar: ${updErr.message}` };
   }
 
-  // Consulta o CFP assim que a pessoa envia para verificação, para o admin já
-  // abrir a fila com a resposta oficial na tela. Falha aqui não trava o envio.
-  if (intent === "submit") {
+  // Consulta o CFP só quando há verificação nova, para o admin já abrir a fila
+  // com a resposta oficial. Timeout curto (6s) para NUNCA estourar o limite da
+  // função na Vercel: um aprovado editando o perfil não pode tomar erro 500 por
+  // causa de uma consulta externa lenta. Falha aqui só cai para conferência
+  // manual, nunca trava o salvamento.
+  if (precisaVerificar) {
     try {
-      await verificarCrpNoCfp(psyId, { timeoutMs: 12_000 });
+      await verificarCrpNoCfp(psyId, { timeoutMs: 6_000 });
     } catch {
       // segue para a conferência manual
     }
