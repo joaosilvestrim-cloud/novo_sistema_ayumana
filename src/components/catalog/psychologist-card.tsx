@@ -20,7 +20,7 @@ export function PsychologistCard({
   const card = (
     <Link
       href={`/psicologo/${p.slug}`}
-      className={`group relative flex gap-4 rounded-3xl border border-border bg-background p-5 transition-shadow hover:shadow-lg ${
+      className={`group relative flex h-full gap-4 rounded-3xl border border-border bg-background p-5 transition-shadow hover:shadow-lg ${
         stacked ? "flex-col" : "flex-col sm:flex-row sm:items-center sm:gap-6 sm:p-6"
       }`}
     >
