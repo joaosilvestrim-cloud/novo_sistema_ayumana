@@ -272,16 +272,24 @@ export async function saveOnboardingAction(
   let precisaVerificar = false;
   if (intent === "submit") {
     const jaAprovado = existing?.verification_status === "aprovado";
-    const crpMudou =
+    const tinhaDocumento = !!existing?.crp_document_path;
+    const numeroOuUfMudou =
       (existing?.crp_number ?? null) !== (crpNumber || null) ||
-      (existing?.crp_uf ?? null) !== crpUf ||
-      (existing?.crp_document_path ?? null) !== crpDocumentPath;
+      (existing?.crp_uf ?? null) !== crpUf;
+    // Anexar o documento pela PRIMEIRA vez não é reverificação. As verificadas
+    // herdadas da plataforma anterior vieram sem documento; ao completar o
+    // perfil elas precisam anexar um, e isso não pode derrubar o selo delas.
+    // Só conta como mudança trocar um documento que já existia.
+    const documentoTrocado =
+      tinhaDocumento && (existing?.crp_document_path ?? null) !== crpDocumentPath;
+    const crpMudou = numeroOuUfMudou || documentoTrocado;
 
     if (!jaAprovado || crpMudou) {
       update.verification_status = "pendente";
       precisaVerificar = true;
     }
-    // Se já é aprovado e o CRP não mudou, mantém aprovado e publicado.
+    // Já aprovada e sem mudar número/UF (nem trocar doc existente): mantém
+    // aprovada e publicada, e ainda ganha o Voz ao completar.
   }
 
   const { error: updErr } = await supabase
