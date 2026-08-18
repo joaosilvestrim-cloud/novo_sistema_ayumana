@@ -31,7 +31,7 @@ type Psy = {
   pending_plan_tier: PlanTier | null; pending_billing_period: string | null;
   trial_tier: PlanTier | null; trial_ends_at: string | null; campaign_voz_granted_at: string | null;
   profile_completed: boolean | null; verification_status: string | null; is_published: boolean | null;
-  created_at: string | null; asaas_subscription_id: string | null;
+  created_at: string | null; asaas_subscription_id: string | null; profile_updated_at: string | null;
 };
 
 /** Cartão de indicador. */
@@ -138,7 +138,7 @@ export default async function AdminAssinaturasPage() {
 
   const [{ data: psysRaw }, { data: plansRaw }] = await Promise.all([
     supabase.from("psychologists").select(
-      "id, display_name, slug, plan_tier, subscription_status, subscription_period_end, billing_period, coupon_pct, coupon_ends_at, pending_plan_tier, pending_billing_period, trial_tier, trial_ends_at, campaign_voz_granted_at, profile_completed, verification_status, is_published, created_at, asaas_subscription_id"
+      "id, display_name, slug, plan_tier, subscription_status, subscription_period_end, billing_period, coupon_pct, coupon_ends_at, pending_plan_tier, pending_billing_period, trial_tier, trial_ends_at, campaign_voz_granted_at, profile_completed, verification_status, is_published, created_at, asaas_subscription_id, profile_updated_at"
     ),
     supabase.from("plans").select("id, name, price_cents").in("id", ["destaque", "ideal", "presenca"]).order("sort_order"),
   ]);
@@ -151,6 +151,17 @@ export default async function AdminAssinaturasPage() {
   const cupomAtivo = (p: Psy) => !!p.coupon_pct && (!p.coupon_ends_at || new Date(p.coupon_ends_at) > now);
   const planoEfetivo = (p: Psy): PlanTier => (trialAtivo(p) ? (p.trial_tier ?? p.plan_tier) : p.plan_tier);
   const emDias = (iso: string) => Math.ceil((new Date(iso).getTime() - now.getTime()) / 86_400_000);
+  const desde = (iso: string) => {
+    const min = Math.floor((now.getTime() - new Date(iso).getTime()) / 60_000);
+    if (min < 1) return "agora";
+    if (min < 60) return `há ${min} min`;
+    const h = Math.floor(min / 60);
+    if (h < 24) return `há ${h}h`;
+    const d = Math.floor(h / 24);
+    if (d === 1) return "ontem";
+    if (d < 7) return `há ${d} dias`;
+    return new Date(iso).toLocaleDateString("pt-BR");
+  };
 
   // Receita: MRR com período e cupom aplicados.
   const pagantes = psys.filter((p) => p.subscription_status === "ativa" && p.plan_tier !== "essencial");
@@ -191,6 +202,14 @@ export default async function AdminAssinaturasPage() {
 
   // Lista de testes a vencer (acionável para conversão).
   const aVencer = [...trials].sort((a, b) => new Date(a.trial_ends_at!).getTime() - new Date(b.trial_ends_at!).getTime()).slice(0, 12);
+
+  // Rastreamento de atividade: quem editou o próprio perfil, mais recente primeiro.
+  const atualizacoesRecentes = psys
+    .filter((p) => p.profile_updated_at)
+    .sort((a, b) => new Date(b.profile_updated_at!).getTime() - new Date(a.profile_updated_at!).getTime())
+    .slice(0, 15);
+  const cutoff7 = now.getTime() - 7 * 86_400_000;
+  const ativos7 = psys.filter((p) => p.profile_updated_at && new Date(p.profile_updated_at).getTime() >= cutoff7).length;
 
   // Grupos detalhados por estado.
   const gAtivos: Psy[] = [], gAguardando: Psy[] = [], gTeste: Psy[] = [], gCortesia: Psy[] = [];
@@ -329,6 +348,58 @@ export default async function AdminAssinaturasPage() {
             </form>
           )}
         </div>
+      </section>
+
+      {/* RASTREAMENTO DE ATIVIDADE */}
+      <section className="rounded-2xl border border-border bg-background">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-6 py-4">
+          <div>
+            <h2 className="text-lg">Quem atualizou o perfil</h2>
+            <p className="mt-0.5 text-sm text-foreground-muted">
+              Atividade real da base: quem editou o próprio perfil, mais recente primeiro.
+            </p>
+          </div>
+          <span className="rounded-full bg-brand/10 px-3 py-1 text-sm font-medium text-brand-dark">
+            {ativos7} nos últimos 7 dias
+          </span>
+        </div>
+        {atualizacoesRecentes.length === 0 ? (
+          <div className="px-6 py-8 text-center text-sm text-foreground-muted">
+            Ninguém atualizou o perfil ainda. Assim que a campanha rodar, quem mexer aparece aqui.
+          </div>
+        ) : (
+          <ul className="divide-y divide-border">
+            {atualizacoesRecentes.map((p) => {
+              const emTeste = trialAtivo(p);
+              const efetivo = planoEfetivo(p);
+              return (
+                <li key={p.id} className="flex items-center justify-between gap-4 px-6 py-3">
+                  <div className="min-w-0">
+                    {p.slug && p.is_published ? (
+                      <Link href={`/psicologo/${p.slug}`} target="_blank" className="font-medium text-heading hover:text-brand-dark">{p.display_name || "—"}</Link>
+                    ) : (
+                      <span className="font-medium text-heading">{p.display_name || "—"}</span>
+                    )}
+                    <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs">
+                      <span className="text-foreground-muted">{PLAN_LABEL[efetivo]}{emTeste ? " · teste" : ""}</span>
+                      <span className="text-foreground-muted">·</span>
+                      <span className={p.verification_status === "aprovado" ? "text-green-600" : "text-yellow-700"}>
+                        {p.verification_status === "aprovado" ? "verificado" : p.verification_status === "pendente" ? "na fila" : "sem verificação"}
+                      </span>
+                      {!p.profile_completed && (
+                        <>
+                          <span className="text-foreground-muted">·</span>
+                          <span className="text-yellow-700">perfil incompleto</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <span className="shrink-0 text-sm text-foreground-muted">{desde(p.profile_updated_at!)}</span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </section>
 
       {/* PREÇOS */}

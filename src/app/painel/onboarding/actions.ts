@@ -261,6 +261,9 @@ export async function saveOnboardingAction(
     languages: languages.length ? languages : ["pt"],
     timezones,
     profile_completed: profileCompleted,
+    // Carimbo de atividade: quando a pessoa mexeu no próprio perfil. O admin
+    // usa isso em Assinaturas para ver quem está ativo na base.
+    profile_updated_at: new Date().toISOString(),
   };
 
   // Reverificação só quando faz sentido. Um psicólogo já aprovado que edita a
