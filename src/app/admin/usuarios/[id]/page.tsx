@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { getUserDetail } from "@/lib/admin";
 import { requireAdmin } from "@/lib/auth";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { AvatarBubble } from "@/components/ui/avatar-bubble";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmButton } from "@/components/admin/confirm-button";
@@ -72,6 +73,25 @@ export default async function UserDetailPage({
   const v = verification ? VERIFICATION_LABELS[verification] : null;
   const sub = subscription ? SUBSCRIPTION_LABELS[subscription] : null;
   const canDelete = profile.id !== me.id;
+
+  // Histórico de alterações do perfil (auditoria por pessoa).
+  const historico = psyId
+    ? (
+        await createAdminClient()
+          .from("profile_change_log")
+          .select("id, changed_fields, intent, created_at")
+          .eq("psychologist_id", psyId)
+          .order("created_at", { ascending: false })
+          .limit(50)
+      ).data ?? []
+    : [];
+  const fmtDataHora = (iso: string) => {
+    try {
+      return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+    } catch {
+      return "—";
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -199,6 +219,49 @@ export default async function UserDetailPage({
           )}
         </section>
       </div>
+
+      {/* Histórico de alterações do perfil */}
+      {psy && (
+        <section className="rounded-2xl border border-border bg-background p-6">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-teal-600" />
+            <h2 className="text-lg">Histórico de alterações do perfil</h2>
+          </div>
+          <p className="mt-0.5 text-sm text-foreground-muted">
+            Cada vez que esta pessoa salvou o perfil, com a data e exatamente o que mudou.
+          </p>
+          {historico.length === 0 ? (
+            <p className="mt-4 text-sm text-foreground-muted">
+              Nenhuma alteração registrada ainda. O histórico começa a partir da próxima edição.
+            </p>
+          ) : (
+            <ol className="mt-4 space-y-3">
+              {historico.map((h) => {
+                const campos = (h.changed_fields as string[] | null) ?? [];
+                return (
+                  <li key={h.id as string} className="flex gap-3">
+                    <div className="mt-1.5 flex flex-col items-center">
+                      <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-brand" />
+                      <span className="mt-1 w-px flex-1 bg-border" />
+                    </div>
+                    <div className="flex-1 pb-1">
+                      <p className="text-sm text-heading">
+                        {fmtDataHora(h.created_at as string)}
+                        {h.intent === "submit" && <span className="ml-2 rounded-full bg-yellow-400/15 px-2 py-0.5 text-[11px] font-medium text-yellow-700">enviou para verificação</span>}
+                      </p>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {campos.length > 0 ? campos.map((c) => (
+                          <span key={c} className="rounded-full bg-brand/10 px-2 py-0.5 text-[11px] font-medium text-brand-dark">{c}</span>
+                        )) : <span className="text-xs text-foreground-muted">salvou sem mudanças</span>}
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </section>
+      )}
 
       {/* Ações */}
       <section className="rounded-2xl border border-border bg-background p-6">

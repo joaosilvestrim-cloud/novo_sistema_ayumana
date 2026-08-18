@@ -324,6 +324,18 @@ export async function saveOnboardingAction(
     return { error: `Não foi possível salvar: ${updErr.message}` };
   }
 
+  // Auditoria: uma linha por salvamento, com o que mudou. Histórico por pessoa
+  // no admin. Acessória: falha aqui nunca derruba o salvamento.
+  if (mudancas.length > 0) {
+    try {
+      await createAdminClient()
+        .from("profile_change_log")
+        .insert({ psychologist_id: psyId, changed_fields: mudancas, intent });
+    } catch {
+      // segue
+    }
+  }
+
   // Consulta o CFP só quando há verificação nova, para o admin já abrir a fila
   // com a resposta oficial. Timeout curto (6s) para NUNCA estourar o limite da
   // função na Vercel: um aprovado editando o perfil não pode tomar erro 500 por
