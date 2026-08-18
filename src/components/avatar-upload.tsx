@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Upload } from "lucide-react";
 import { AvatarBubble } from "@/components/ui/avatar-bubble";
+import { compressImage, setInputFiles } from "@/lib/image-compress";
 
 /** Upload da foto de perfil com pré-visualização no balão da marca. */
 export function AvatarUpload({
@@ -30,9 +31,13 @@ export function AvatarUpload({
             name={name}
             accept="image/*"
             className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) setPreview(URL.createObjectURL(f));
+            onChange={async (e) => {
+              const input = e.target;
+              const f = input.files?.[0];
+              if (!f) return;
+              const out = await compressImage(f, { maxDim: 1400, quality: 0.85 });
+              if (out !== f) setInputFiles(input, [out]);
+              setPreview(URL.createObjectURL(out));
             }}
           />
         </label>

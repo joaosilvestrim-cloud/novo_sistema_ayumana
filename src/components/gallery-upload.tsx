@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { X, ImagePlus } from "lucide-react";
+import { compressImage } from "@/lib/image-compress";
 
 const MAX = 8;
 
@@ -26,12 +27,15 @@ export function GalleryUpload({
     if (inputRef.current) inputRef.current.files = dt.files;
   }
 
-  function onPick(e: React.ChangeEvent<HTMLInputElement>) {
+  async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
     const chosen = Array.from(e.target.files || []);
     const room = Math.max(0, MAX - total);
+    const comprimidas = await Promise.all(
+      chosen.slice(0, room).map((f) => compressImage(f, { maxDim: 1600, quality: 0.82 }))
+    );
     const next = [
       ...pending,
-      ...chosen.slice(0, room).map((f) => ({ url: URL.createObjectURL(f), file: f })),
+      ...comprimidas.map((f) => ({ url: URL.createObjectURL(f), file: f })),
     ];
     setPending(next);
     sync(next);

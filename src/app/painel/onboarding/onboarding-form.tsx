@@ -11,6 +11,7 @@ import { PhoneInput } from "@/components/phone-input";
 import { AvatarUpload } from "@/components/avatar-upload";
 import { GalleryUpload } from "@/components/gallery-upload";
 import { RichEditor } from "@/components/ui/rich-editor";
+import { compressImage, setInputFiles } from "@/lib/image-compress";
 import { TIMEZONES } from "@/lib/schedule";
 import type { Schedule } from "@/lib/schedule";
 import {
@@ -201,7 +202,22 @@ export function OnboardingForm({
               : "PDF ou imagem (carteira/e-Psi), até 10 MB."
           }
         >
-          <Input id="crp_document" name="crp_document" type="file" accept=".pdf,image/*" className="file:mr-3 file:rounded-md file:border-0 file:bg-surface-muted file:px-3 file:py-1.5 file:text-sm file:text-heading" />
+          <Input
+            id="crp_document"
+            name="crp_document"
+            type="file"
+            accept=".pdf,image/*"
+            className="file:mr-3 file:rounded-md file:border-0 file:bg-surface-muted file:px-3 file:py-1.5 file:text-sm file:text-heading"
+            onChange={async (e) => {
+              const input = e.target as HTMLInputElement;
+              const f = input.files?.[0];
+              // PDF passa direto; foto da carteirinha é comprimida mantendo a
+              // legibilidade (dimensão maior, qualidade alta).
+              if (!f || !f.type.startsWith("image/")) return;
+              const out = await compressImage(f, { maxDim: 2200, quality: 0.85 });
+              if (out !== f) setInputFiles(input, [out]);
+            }}
+          />
         </Field>
       </Section>
 
