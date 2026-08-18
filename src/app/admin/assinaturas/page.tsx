@@ -25,7 +25,9 @@ const PLAN_COLOR: Record<PlanTier, string> = {
 };
 
 type Psy = {
-  id: string; display_name: string | null; slug: string | null;
+  id: string; profile_id: string; display_name: string | null; slug: string | null;
+  city: string | null; state: string | null; crp_number: string | null; crp_uf: string | null;
+  phone_whatsapp: string | null;
   plan_tier: PlanTier; subscription_status: SubscriptionStatus; subscription_period_end: string | null;
   billing_period: string | null; coupon_pct: number | null; coupon_ends_at: string | null;
   pending_plan_tier: PlanTier | null; pending_billing_period: string | null;
@@ -136,14 +138,18 @@ export default async function AdminAssinaturasPage() {
   const supabase = createAdminClient();
   const now = new Date();
 
-  const [{ data: psysRaw }, { data: plansRaw }] = await Promise.all([
+  const [{ data: psysRaw }, { data: plansRaw }, { data: profilesRaw }] = await Promise.all([
     supabase.from("psychologists").select(
-      "id, display_name, slug, plan_tier, subscription_status, subscription_period_end, billing_period, coupon_pct, coupon_ends_at, pending_plan_tier, pending_billing_period, trial_tier, trial_ends_at, campaign_voz_granted_at, profile_completed, verification_status, is_published, created_at, asaas_subscription_id, profile_updated_at"
+      "id, profile_id, display_name, slug, city, state, crp_number, crp_uf, phone_whatsapp, plan_tier, subscription_status, subscription_period_end, billing_period, coupon_pct, coupon_ends_at, pending_plan_tier, pending_billing_period, trial_tier, trial_ends_at, campaign_voz_granted_at, profile_completed, verification_status, is_published, created_at, asaas_subscription_id, profile_updated_at"
     ),
     supabase.from("plans").select("id, name, price_cents").in("id", ["destaque", "ideal", "presenca"]).order("sort_order"),
+    supabase.from("profiles").select("id, email"),
   ]);
 
   const psys = (psysRaw as Psy[]) ?? [];
+  const emailPorProfile = new Map<string, string>(
+    ((profilesRaw ?? []) as { id: string; email: string | null }[]).filter((p) => p.email).map((p) => [p.id, p.email as string])
+  );
   const precoPlano: Record<string, number> = {};
   for (const p of (plansRaw ?? []) as { id: string; price_cents: number }[]) precoPlano[p.id] = p.price_cents;
 
@@ -203,13 +209,15 @@ export default async function AdminAssinaturasPage() {
   // Lista de testes a vencer (acionável para conversão).
   const aVencer = [...trials].sort((a, b) => new Date(a.trial_ends_at!).getTime() - new Date(b.trial_ends_at!).getTime()).slice(0, 12);
 
-  // Rastreamento de atividade: quem editou o próprio perfil, mais recente primeiro.
-  const atualizacoesRecentes = psys
-    .filter((p) => p.profile_updated_at)
-    .sort((a, b) => new Date(b.profile_updated_at!).getTime() - new Date(a.profile_updated_at!).getTime())
-    .slice(0, 15);
+  // Rastreamento de atividade: quem editou o próprio perfil nos últimos 30 dias,
+  // mais recente primeiro.
+  const cutoff30 = now.getTime() - 30 * 86_400_000;
   const cutoff7 = now.getTime() - 7 * 86_400_000;
-  const ativos7 = psys.filter((p) => p.profile_updated_at && new Date(p.profile_updated_at).getTime() >= cutoff7).length;
+  const atualizacoesRecentes = psys
+    .filter((p) => p.profile_updated_at && new Date(p.profile_updated_at).getTime() >= cutoff30)
+    .sort((a, b) => new Date(b.profile_updated_at!).getTime() - new Date(a.profile_updated_at!).getTime());
+  const ativos7 = atualizacoesRecentes.filter((p) => new Date(p.profile_updated_at!).getTime() >= cutoff7).length;
+  const waLink = (tel: string | null) => (tel ? `https://wa.me/${tel.replace(/\D/g, "")}` : null);
 
   // Grupos detalhados por estado.
   const gAtivos: Psy[] = [], gAguardando: Psy[] = [], gTeste: Psy[] = [], gCortesia: Psy[] = [];
@@ -354,50 +362,84 @@ export default async function AdminAssinaturasPage() {
       <section className="rounded-2xl border border-border bg-background">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-6 py-4">
           <div>
-            <h2 className="text-lg">Quem atualizou o perfil</h2>
+            <h2 className="text-lg">Quem atualizou o perfil · últimos 30 dias</h2>
             <p className="mt-0.5 text-sm text-foreground-muted">
-              Atividade real da base: quem editou o próprio perfil, mais recente primeiro.
+              Atividade real da base. Quem editou o próprio perfil, com os dados completos para você agir.
             </p>
           </div>
-          <span className="rounded-full bg-brand/10 px-3 py-1 text-sm font-medium text-brand-dark">
-            {ativos7} nos últimos 7 dias
-          </span>
+          <div className="flex gap-2">
+            <span className="rounded-full bg-brand/10 px-3 py-1 text-sm font-medium text-brand-dark">{ativos7} em 7 dias</span>
+            <span className="rounded-full bg-surface-muted px-3 py-1 text-sm font-medium text-foreground">{atualizacoesRecentes.length} em 30 dias</span>
+          </div>
         </div>
         {atualizacoesRecentes.length === 0 ? (
           <div className="px-6 py-8 text-center text-sm text-foreground-muted">
-            Ninguém atualizou o perfil ainda. Assim que a campanha rodar, quem mexer aparece aqui.
+            Ninguém atualizou o perfil nos últimos 30 dias. Quem mexer a partir de agora aparece aqui.
           </div>
         ) : (
           <ul className="divide-y divide-border">
-            {atualizacoesRecentes.map((p) => {
+            {atualizacoesRecentes.slice(0, 80).map((p) => {
               const emTeste = trialAtivo(p);
               const efetivo = planoEfetivo(p);
+              const email = emailPorProfile.get(p.profile_id);
+              const wa = waLink(p.phone_whatsapp);
+              const local = [p.city, p.state].filter(Boolean).join(" / ");
+              const crp = p.crp_number ? `CRP ${p.crp_number}${p.crp_uf ? `/${p.crp_uf}` : ""}` : "sem CRP";
               return (
-                <li key={p.id} className="flex items-center justify-between gap-4 px-6 py-3">
-                  <div className="min-w-0">
-                    {p.slug && p.is_published ? (
-                      <Link href={`/psicologo/${p.slug}`} target="_blank" className="font-medium text-heading hover:text-brand-dark">{p.display_name || "—"}</Link>
-                    ) : (
-                      <span className="font-medium text-heading">{p.display_name || "—"}</span>
-                    )}
-                    <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs">
-                      <span className="text-foreground-muted">{PLAN_LABEL[efetivo]}{emTeste ? " · teste" : ""}</span>
-                      <span className="text-foreground-muted">·</span>
-                      <span className={p.verification_status === "aprovado" ? "text-green-600" : "text-yellow-700"}>
-                        {p.verification_status === "aprovado" ? "verificado" : p.verification_status === "pendente" ? "na fila" : "sem verificação"}
-                      </span>
-                      {!p.profile_completed && (
-                        <>
-                          <span className="text-foreground-muted">·</span>
-                          <span className="text-yellow-700">perfil incompleto</span>
-                        </>
+                <li key={p.id} className="px-6 py-4 hover:bg-surface-muted/40">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      {/* Nome + status */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Link href={`/admin/usuarios/${p.profile_id}`} className="font-medium text-heading hover:text-brand-dark hover:underline">
+                          {p.display_name || "—"}
+                        </Link>
+                        <Badge tone={emTeste ? "brand" : efetivo === "essencial" ? "neutral" : "success"}>
+                          {PLAN_LABEL[efetivo]}{emTeste ? " · teste" : ""}
+                        </Badge>
+                        <Badge tone={p.verification_status === "aprovado" ? "success" : p.verification_status === "pendente" ? "warning" : "neutral"}>
+                          {p.verification_status === "aprovado" ? "verificado" : p.verification_status === "pendente" ? "na fila" : "sem verificação"}
+                        </Badge>
+                        <Badge tone={p.is_published ? "success" : "neutral"}>{p.is_published ? "publicado" : "não publicado"}</Badge>
+                        {!p.profile_completed && <Badge tone="warning">incompleto</Badge>}
+                        {p.campaign_voz_granted_at && <Badge tone="brand">cortesia Voz</Badge>}
+                      </div>
+                      {/* Contato e dados */}
+                      <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-foreground-muted">
+                        {email && <span>{email}</span>}
+                        {p.phone_whatsapp && (
+                          wa ? <a href={wa} target="_blank" className="text-brand-dark hover:underline">{p.phone_whatsapp}</a> : <span>{p.phone_whatsapp}</span>
+                        )}
+                        {local && <span>{local}</span>}
+                        <span>{crp}</span>
+                      </div>
+                      {/* Datas */}
+                      <div className="mt-1 text-xs text-foreground-muted">
+                        Atualizou <strong className="text-foreground">{desde(p.profile_updated_at!)}</strong>
+                        {p.created_at && <> · cadastrou em {new Date(p.created_at).toLocaleDateString("pt-BR")}</>}
+                        {emTeste && p.trial_ends_at && <> · teste até {new Date(p.trial_ends_at).toLocaleDateString("pt-BR")}</>}
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 gap-2">
+                      {p.slug && p.is_published && (
+                        <Link href={`/psicologo/${p.slug}`} target="_blank" className="inline-flex h-8 items-center rounded-lg border border-border px-3 text-xs font-medium hover:bg-surface-muted">
+                          Ver perfil
+                        </Link>
                       )}
+                      <Link href={`/admin/usuarios/${p.profile_id}`} className="inline-flex h-8 items-center rounded-lg border border-border px-3 text-xs font-medium hover:bg-surface-muted">
+                        Gerenciar
+                      </Link>
                     </div>
                   </div>
-                  <span className="shrink-0 text-sm text-foreground-muted">{desde(p.profile_updated_at!)}</span>
                 </li>
               );
             })}
+            {atualizacoesRecentes.length > 80 && (
+              <li className="px-6 py-3 text-center text-xs text-foreground-muted">
+                e mais {atualizacoesRecentes.length - 80} nos últimos 30 dias — veja todos em{" "}
+                <Link href="/admin/usuarios" className="font-medium underline">Usuários</Link>
+              </li>
+            )}
           </ul>
         )}
       </section>
