@@ -13,6 +13,10 @@ const initial: ResetState = { done: false };
 function EsqueciSenhaForm() {
   const params = useSearchParams();
   const expirado = params.get("erro") === "expirado";
+  // Vindo da campanha, o link já traz o e-mail. Recebe a pessoa de forma
+  // acolhedora, não como "esqueci a senha", porque ela foi convidada.
+  const emailInicial = params.get("email") ?? "";
+  const daCampanha = !!emailInicial;
   const [state, action] = useActionState(requestResetAction, initial);
 
   if (state.done) {
@@ -33,9 +37,11 @@ function EsqueciSenhaForm() {
 
   return (
     <div>
-      <h1 className="text-2xl">Esqueci minha senha</h1>
+      <h1 className="text-2xl">{daCampanha ? "Acesse a sua conta" : "Esqueci minha senha"}</h1>
       <p className="mt-1 text-sm text-foreground-muted">
-        Informe seu e-mail e enviaremos um link para criar uma nova senha.
+        {daCampanha
+          ? "Confirme o seu e-mail e enviaremos um link para você entrar e completar o perfil. Não precisa lembrar a senha antiga."
+          : "Informe seu e-mail e enviaremos um link para criar uma nova senha."}
       </p>
 
       {expirado && (
@@ -47,9 +53,9 @@ function EsqueciSenhaForm() {
 
       <form action={action} className="mt-6 space-y-4">
         <Field label="E-mail" htmlFor="email">
-          <Input id="email" name="email" type="email" autoComplete="email" required />
+          <Input id="email" name="email" type="email" autoComplete="email" required defaultValue={emailInicial} />
         </Field>
-        <SubmitButton className="w-full">Enviar link</SubmitButton>
+        <SubmitButton className="w-full">{daCampanha ? "Receber link de acesso" : "Enviar link"}</SubmitButton>
       </form>
       <p className="mt-6 text-center text-sm text-foreground-muted">
         <Link href="/login" className="font-medium text-brand-dark hover:underline">

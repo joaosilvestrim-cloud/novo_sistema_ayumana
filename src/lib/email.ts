@@ -26,6 +26,7 @@ export type NotificationKind =
   | "trial_1"
   | "senha"
   | "pagamento"
+  | "voz_cortesia"
   | "suporte"
   | "broadcast"
   | "outro";
@@ -267,6 +268,45 @@ export async function sendPlanActivated(to: string, name: string | null, planoNo
       ],
       cta: { label: "Ver meu painel", url: `${SITE}/painel/assinatura` },
       footerNote: "Você recebeu este e-mail porque assinou um plano na Ayumana.",
+    }),
+  });
+}
+
+/**
+ * E4 da campanha: boas-vindas ao Voz de cortesia, disparado quando a pessoa
+ * completa o perfil com CRP conferido e ganha os 90 dias.
+ */
+export async function sendVozCortesia(to: string, name: string | null) {
+  const nome = name?.split(" ")[0] || "";
+  return sendEmail({
+    to,
+    subject: "Seu Voz está ativo. 3 coisas para aproveitar desde hoje",
+    kind: "voz_cortesia",
+    html: emailShell({
+      preheader: "Perfil completo, CRP conferido, seus 90 dias de Voz começaram.",
+      heading: `Seu Voz está ativo${nome ? `, ${nome}` : ""}!`,
+      intro:
+        "Perfil completo, CRP conferido, seus 90 dias do plano Voz começaram agora. Bem-vinda(o) de verdade à Ayumana.",
+      blocks: [
+        { type: "paragraph", text: "Três coisas que valem seu tempo desde o primeiro dia:" },
+        {
+          type: "steps",
+          items: [
+            "Responda uma pergunta no fórum. Pacientes reais deixaram dúvidas, e cada resposta fica pública com seu nome, CRP e link do perfil, virando porta de entrada pelo Google.",
+            "Grave seu vídeo de apresentação. Dois minutos de celular bastam. Perfil com vídeo gera muito mais contato, porque a pessoa escolhe quem ela já conheceu.",
+            "Confira seus fusos e países. Se atende brasileiros no exterior, é assim que pacientes em Lisboa ou Boston te encontram no horário certo.",
+          ],
+        },
+        {
+          type: "note",
+          tone: "info",
+          title: "Sem pegadinha no fim dos 90 dias",
+          text: "Não pedimos cartão e não tem renovação automática. Quando o período acabar, você decide se continua no Voz por R$ 39,90/mês ou volta ao plano gratuito. Simples assim.",
+        },
+      ],
+      cta: { label: "Responder no fórum", url: `${SITE}/perguntas` },
+      secondary: { label: "Ver meu painel", url: `${SITE}/painel` },
+      footerNote: "Você recebeu este e-mail porque completou seu perfil na Ayumana e ativou o Voz de cortesia.",
     }),
   });
 }

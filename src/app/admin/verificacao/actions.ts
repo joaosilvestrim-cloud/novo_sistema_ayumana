@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendCrpApproved, sendCrpRejected } from "@/lib/email";
+import { grantCampaignVoz } from "@/lib/campaign-voz";
 import { verificarCrpNoCfp } from "@/lib/crp/verify";
 
 /** Reconsulta o Cadastro Nacional do CFP para um psicólogo. */
@@ -107,6 +108,10 @@ export async function approveAction(formData: FormData) {
 
   const c = await contact(supabase, id);
   if (c?.email) await sendCrpApproved(c.email, c.name, c.slug);
+
+  // Campanha: aprovar com perfil completo concede os 90 dias de Voz de cortesia
+  // (envia o próprio e-mail de boas-vindas ao Voz).
+  await grantCampaignVoz(id);
 
   revalidatePath("/admin/verificacao");
 }

@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { slugify } from "@/lib/slug";
 import { verificarCrpNoCfp } from "@/lib/crp/verify";
+import { grantCampaignVoz } from "@/lib/campaign-voz";
 import { syncKommo } from "@/lib/kommo/sync";
 import type { Audience } from "@/lib/types";
 
@@ -318,6 +319,12 @@ export async function saveOnboardingAction(
       .from("psychologist_countries")
       .insert(countryCodes.map((country_code) => ({ psychologist_id: psyId, country_code })));
   }
+
+  // Campanha de reativação: quem já está aprovado e completa o perfil dentro
+  // da janela ganha 90 dias de Voz na hora. Para quem ainda está pendente, a
+  // concessão acontece no momento da aprovação (ver ações do admin). É
+  // idempotente, então chamar aqui e lá não concede duas vezes.
+  await grantCampaignVoz(psyId);
 
   // Espelha o novo cadastro no Kommo (só cria o lead na primeira vez).
   await syncKommo(psyId, "cadastro", { onlyIfNew: true });

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail, emailShell } from "@/lib/email";
+import { grantCampaignVoz } from "@/lib/campaign-voz";
 import { syncKommo } from "@/lib/kommo/sync";
 
 export type CreateUserState = { error: string | null; ok?: boolean; email?: string };
@@ -265,6 +266,8 @@ export async function bulkUsersAction(formData: FormData) {
       verified_by: me.id,
       is_published: true,
     }).in("id", psyIds);
+    // Campanha: aprovar quem já tem o perfil completo concede o Voz de cortesia.
+    await Promise.all(psyIds.map((id) => grantCampaignVoz(id)));
   } else if (op === "plan" && PLAN_TIERS.includes(plan as (typeof PLAN_TIERS)[number]) && psyIds.length) {
     await admin.from("psychologists").update({ plan_tier: plan }).in("id", psyIds);
   } else if (op === "trial" && psyIds.length) {
@@ -322,6 +325,8 @@ export async function quickApproveAction(formData: FormData) {
       is_published: true,
     })
     .eq("id", psyId);
+  // Campanha: se o perfil já está completo, concede o Voz de cortesia agora.
+  await grantCampaignVoz(psyId);
   revalidatePath("/admin/usuarios");
   revalidatePath("/admin/verificacao");
   revalidatePath("/psicologos");
