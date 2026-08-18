@@ -14,6 +14,8 @@ function LoginForm() {
   const next = params.get("next") ?? "/painel";
   const confirmar = params.get("confirme");
   const erro = params.get("erro");
+  // Vindo da campanha por e-mail, o link já traz o endereço para preencher.
+  const emailInicial = params.get("email") ?? "";
   const [state, action] = useActionState(signInAction, initial);
 
   return (
@@ -44,7 +46,7 @@ function LoginForm() {
       <form action={action} className="mt-6 space-y-4">
         <input type="hidden" name="next" value={next} />
         <Field label="E-mail" htmlFor="email">
-          <Input id="email" name="email" type="email" autoComplete="email" required />
+          <Input id="email" name="email" type="email" autoComplete="email" required defaultValue={emailInicial} />
         </Field>
         <Field label="Senha" htmlFor="password">
           <Input
