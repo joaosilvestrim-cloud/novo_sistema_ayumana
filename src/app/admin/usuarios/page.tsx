@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Search, ShieldCheck, EyeOff, UserPlus, AlertCircle, Users, Clock } from "lucide-react";
+import { Search, ShieldCheck, EyeOff, UserPlus, AlertCircle, Users, Clock, Download } from "lucide-react";
 import { getUsersOverview, type AdminUser } from "@/lib/admin";
 import { requireAdmin } from "@/lib/auth";
 import { UsersBulkTable } from "@/components/admin/users-bulk-table";
@@ -75,12 +75,21 @@ export default async function UsuariosPage({
             {all.length} contas · gerencie papéis, publicação e verificação.
           </p>
         </div>
-        <Link
-          href="/admin/usuarios/novo"
-          className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary-hover"
-        >
-          <UserPlus className="h-4 w-4" /> Novo usuário
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <a
+            href="/admin/usuarios/export"
+            className="inline-flex h-10 items-center gap-2 rounded-lg border border-border px-4 text-sm font-medium hover:bg-surface-muted"
+            title="Baixar CSV com nome, e-mail, telefone e status para a campanha"
+          >
+            <Download className="h-4 w-4" /> Exportar CSV
+          </a>
+          <Link
+            href="/admin/usuarios/novo"
+            className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary-hover"
+          >
+            <UserPlus className="h-4 w-4" /> Novo usuário
+          </Link>
+        </div>
       </div>
 
       {/* KPIs, clique filtra a lista */}
