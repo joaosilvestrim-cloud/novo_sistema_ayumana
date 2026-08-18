@@ -63,7 +63,7 @@ export async function saveOnboardingAction(
   // Garante que a linha do psicólogo existe.
   const { data: existing } = await supabase
     .from("psychologists")
-    .select("id, crp_document_path, crp_number, crp_uf, verification_status")
+    .select("id, crp_document_path, crp_number, crp_uf, verification_status, display_name, headline, bio, gender, city, state, phone_whatsapp, instagram, session_price_cents, session_price_in_person_cents, accepting_patients, formation")
     .eq("profile_id", user.id)
     .maybeSingle();
 
@@ -265,6 +265,27 @@ export async function saveOnboardingAction(
     // usa isso em Assinaturas para ver quem está ativo na base.
     profile_updated_at: new Date().toISOString(),
   };
+
+  // Diff: exatamente quais campos mudaram neste salvamento, para o admin ver
+  // o que cada pessoa mexeu (não só quando). Foto e galeria contam quando há
+  // upload novo; os demais comparam valor antigo x novo.
+  const campoMudou = (a: unknown, b: unknown) => (a ?? null) !== (b ?? null);
+  const mudancas: string[] = [];
+  if (campoMudou(existing?.display_name, displayName || null)) mudancas.push("nome");
+  if (campoMudou(existing?.headline, headline || null)) mudancas.push("título");
+  if (campoMudou(existing?.bio, bioEmpty ? null : sanitizeHtml(bio))) mudancas.push("apresentação");
+  if (campoMudou(existing?.crp_number, crpNumber || null) || campoMudou(existing?.crp_uf, crpUf)) mudancas.push("CRP");
+  if (campoMudou(existing?.crp_document_path, crpDocumentPath)) mudancas.push("documento do CRP");
+  if (campoMudou(existing?.city, city) || campoMudou(existing?.state, state)) mudancas.push("localização");
+  if (campoMudou(existing?.phone_whatsapp, phone)) mudancas.push("WhatsApp");
+  if (campoMudou(existing?.instagram, instagram)) mudancas.push("Instagram");
+  if (campoMudou(existing?.gender, gender)) mudancas.push("gênero");
+  if (campoMudou(existing?.session_price_cents, sessionPrice) || campoMudou(existing?.session_price_in_person_cents, sessionPriceInPerson)) mudancas.push("valores");
+  if (campoMudou(existing?.accepting_patients, acceptingPatients)) mudancas.push("disponibilidade");
+  if (campoMudou(existing?.formation, formation)) mudancas.push("formação");
+  if (avatarUrl) mudancas.push("foto");
+  if (newGalleryUrls.length) mudancas.push("galeria");
+  update.last_changed_fields = mudancas;
 
   // Reverificação só quando faz sentido. Um psicólogo já aprovado que edita a
   // foto, a bio ou o valor NÃO deve voltar para a fila nem sair do ar. Só volta

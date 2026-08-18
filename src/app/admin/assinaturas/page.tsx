@@ -34,6 +34,7 @@ type Psy = {
   trial_tier: PlanTier | null; trial_ends_at: string | null; campaign_voz_granted_at: string | null;
   profile_completed: boolean | null; verification_status: string | null; is_published: boolean | null;
   created_at: string | null; asaas_subscription_id: string | null; profile_updated_at: string | null;
+  last_changed_fields: string[] | null;
 };
 
 /** Cartão de indicador. */
@@ -140,7 +141,7 @@ export default async function AdminAssinaturasPage() {
 
   const [{ data: psysRaw }, { data: plansRaw }, { data: profilesRaw }] = await Promise.all([
     supabase.from("psychologists").select(
-      "id, profile_id, display_name, slug, city, state, crp_number, crp_uf, phone_whatsapp, plan_tier, subscription_status, subscription_period_end, billing_period, coupon_pct, coupon_ends_at, pending_plan_tier, pending_billing_period, trial_tier, trial_ends_at, campaign_voz_granted_at, profile_completed, verification_status, is_published, created_at, asaas_subscription_id, profile_updated_at"
+      "id, profile_id, display_name, slug, city, state, crp_number, crp_uf, phone_whatsapp, plan_tier, subscription_status, subscription_period_end, billing_period, coupon_pct, coupon_ends_at, pending_plan_tier, pending_billing_period, trial_tier, trial_ends_at, campaign_voz_granted_at, profile_completed, verification_status, is_published, created_at, asaas_subscription_id, profile_updated_at, last_changed_fields"
     ),
     supabase.from("plans").select("id, name, price_cents").in("id", ["destaque", "ideal", "presenca"]).order("sort_order"),
     supabase.from("profiles").select("id, email"),
@@ -413,6 +414,15 @@ export default async function AdminAssinaturasPage() {
                         {local && <span>{local}</span>}
                         <span>{crp}</span>
                       </div>
+                      {/* O que mudou neste salvamento */}
+                      {p.last_changed_fields && p.last_changed_fields.length > 0 && (
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                          <span className="text-xs text-foreground-muted">Mudou:</span>
+                          {p.last_changed_fields.map((f) => (
+                            <span key={f} className="rounded-full bg-brand/10 px-2 py-0.5 text-[11px] font-medium text-brand-dark">{f}</span>
+                          ))}
+                        </div>
+                      )}
                       {/* Datas */}
                       <div className="mt-1 text-xs text-foreground-muted">
                         Atualizou <strong className="text-foreground">{desde(p.profile_updated_at!)}</strong>

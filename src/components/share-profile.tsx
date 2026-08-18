@@ -93,7 +93,8 @@ export function ShareProfile({
         onClick={onNativeShare}
         className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg border border-border px-4 text-sm font-medium text-heading hover:bg-surface-muted"
       >
-        <Share2 className="h-4 w-4" /> Compartilhar
+        {copied ? <Check className="h-4 w-4 text-green-600" /> : <Share2 className="h-4 w-4" />}
+        {copied ? "Link copiado!" : "Compartilhar"}
       </button>
       <button
         onClick={onCopy}
