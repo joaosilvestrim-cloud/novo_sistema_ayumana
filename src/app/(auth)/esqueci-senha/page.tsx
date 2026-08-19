@@ -13,10 +13,11 @@ const initial: ResetState = { done: false };
 function EsqueciSenhaForm() {
   const params = useSearchParams();
   const expirado = params.get("erro") === "expirado";
-  // Vindo da campanha, o link já traz o e-mail. Recebe a pessoa de forma
-  // acolhedora, não como "esqueci a senha", porque ela foi convidada.
+  // Vindo da campanha, o link traz o e-mail (e-mail) ou só a marca de origem
+  // (WhatsApp, onde não dá para pré-preencher). Nos dois casos, recebe a pessoa
+  // de forma acolhedora, não como "esqueci a senha", porque ela foi convidada.
   const emailInicial = params.get("email") ?? "";
-  const daCampanha = !!emailInicial;
+  const daCampanha = !!emailInicial || params.get("origem") === "campanha";
   const [state, action] = useActionState(requestResetAction, initial);
 
   if (state.done) {
