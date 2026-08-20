@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Outfit, Archivo, Fraunces } from "next/font/google";
 import { Analytics } from "@/components/site/analytics";
+import { SiteTracker } from "@/components/site/site-tracker";
 import { AssistantWidget } from "@/components/assistant/assistant-widget";
 import "./globals.css";
 
@@ -71,6 +72,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col bg-background text-foreground">
         {children}
         <AssistantWidget />
+        <SiteTracker />
         <Analytics />
       </body>
     </html>
