@@ -49,7 +49,9 @@ export function AssistantWidget() {
         body: JSON.stringify({ messages: novo }),
       });
       const data = await res.json();
-      setMsgs((m) => [...m, { role: "assistant", content: data.reply || "Desculpa, não consegui responder." }]);
+      // O detalhe técnico só aparece enquanto estamos ajustando a integração.
+      const reply = (data.reply || "Desculpa, não consegui responder.") + (data.error ? `\n\n⚠️ ${data.error}` : "");
+      setMsgs((m) => [...m, { role: "assistant", content: reply }]);
     } catch {
       setMsgs((m) => [...m, { role: "assistant", content: "Tive um problema de conexão. Tenta de novo?" }]);
     } finally {
@@ -73,17 +75,16 @@ export function AssistantWidget() {
           <button
             onClick={() => setOpen(true)}
             aria-label="Abrir assistente"
-            className="group relative h-16 w-16 rounded-full bg-white shadow-xl ring-1 ring-black/5 transition-transform hover:scale-105"
+            className="group relative h-20 w-20 transition-transform hover:scale-105"
           >
-            <span className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_50%_35%,#EAF6DF,transparent_70%)]" />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/brand/mascote.png"
               alt="Aya"
-              className="relative h-full w-full object-contain p-1 [animation:aya-float_4s_ease-in-out_infinite]"
+              className="h-full w-full object-contain [filter:drop-shadow(0_4px_8px_rgba(0,0,0,0.22))] [animation:aya-float_4s_ease-in-out_infinite]"
               onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/brand/ayumana-symbol.png"; }}
             />
-            <span className="absolute -right-0.5 -top-0.5 h-4 w-4 rounded-full border-2 border-white bg-[#73A533]" />
+            <span className="absolute right-2.5 top-3.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-[#73A533]" />
           </button>
         </div>
       )}
@@ -93,12 +94,12 @@ export function AssistantWidget() {
         <div className="fixed bottom-5 right-5 z-40 flex h-[min(560px,80vh)] w-[min(380px,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-3xl border border-border bg-background shadow-2xl animate-[aya-in_.25s_ease]">
           {/* Cabeçalho */}
           <div className="flex items-center gap-3 bg-[#05474A] px-4 py-3 text-white">
-            <div className="relative h-10 w-10 shrink-0 rounded-full bg-white/95">
+            <div className="relative h-11 w-11 shrink-0">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/brand/mascote.png"
                 alt="Aya"
-                className="h-full w-full object-contain p-0.5"
+                className="h-full w-full object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.3))]"
                 onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/brand/ayumana-symbol.png"; }}
               />
             </div>
