@@ -15,14 +15,16 @@ export default async function AdminLayout({
 
   // Badges de pendências para a navegação.
   const supabase = createAdminClient();
-  const [verif, perg, resp] = await Promise.all([
+  const [verif, perg, resp, fila] = await Promise.all([
     supabase.from("psychologists").select("*", { count: "exact", head: true }).eq("verification_status", "pendente"),
     supabase.from("forum_questions").select("*", { count: "exact", head: true }).eq("status", "pendente"),
     supabase.from("forum_answers").select("*", { count: "exact", head: true }).eq("status", "pendente"),
+    supabase.from("presenca_waitlist").select("*", { count: "exact", head: true }).eq("status", "pendente"),
   ]);
   const badges = {
     verificacao: verif.count ?? 0,
     moderacao: (perg.count ?? 0) + (resp.count ?? 0),
+    presenca: fila.count ?? 0,
   };
 
   return (

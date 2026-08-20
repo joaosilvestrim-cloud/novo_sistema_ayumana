@@ -13,6 +13,7 @@ import {
   Plug,
   Bell,
   Ticket,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -43,6 +44,7 @@ const GROUPS: { title?: string; items: Item[] }[] = [
     items: [
       { href: "/admin/assinaturas", label: "Assinaturas", icon: CreditCard },
       { href: "/admin/cupons", label: "Cupons", icon: Ticket },
+      { href: "/admin/presenca", label: "Fila Presença", icon: Sparkles, badgeKey: "presenca" },
     ],
   },
   {

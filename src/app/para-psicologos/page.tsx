@@ -2,6 +2,7 @@ import { Check } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PageShell } from "@/components/site/page-shell";
 import { HelpCenter } from "@/components/painel/help-center";
+import { PresencaWaitlist } from "@/components/presenca-waitlist";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { Plan } from "@/lib/types";
@@ -24,6 +25,7 @@ export default async function ParaPsicologosPage() {
   const supabase = await createClient();
   const { data } = await supabase.from("plans").select("*").order("sort_order");
   const plans = data && data.length ? (data as Plan[]) : FALLBACK;
+  const { data: { user } } = await supabase.auth.getUser();
   const whatsapp = process.env.SUPPORT_WHATSAPP || "5511981559500";
 
   return (
@@ -73,7 +75,7 @@ export default async function ParaPsicologosPage() {
                   ))}
                 </ul>
                 <Button
-                  href="/cadastro"
+                  href={plan.is_selfservice ? "/cadastro" : "#fila-presenca"}
                   variant={featured ? "primary" : "outline"}
                   className="mt-6 w-full"
                 >
@@ -87,6 +89,10 @@ export default async function ParaPsicologosPage() {
           Cobrança mensal, sem fidelidade, cancele quando quiser. Preços iniciais,
           sujeitos a ajuste.
         </p>
+
+        <div className="mx-auto mt-10 max-w-2xl">
+          <PresencaWaitlist logado={!!user} />
+        </div>
       </section>
 
       <div className="border-t border-border bg-surface">
