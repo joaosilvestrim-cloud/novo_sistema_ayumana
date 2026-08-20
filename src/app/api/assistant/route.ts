@@ -23,7 +23,7 @@ const TOOLS = [
     function: {
       name: "escalar_para_equipe",
       description:
-        "Encaminha a conversa para a equipe humana da Ayumana por e-mail. Use quando a pessoa pedir para falar com um humano, relatar um erro/bug, estiver frustrada, ou quando você não conseguir resolver a dúvida com o contexto disponível.",
+        "Encaminha o pedido da pessoa para a equipe humana da Ayumana por e-mail. Só chame esta ferramenta DEPOIS de já saber, de forma concreta, o que a pessoa precisa. Se ela só disse 'quero falar com a equipe' sem explicar, pergunte antes o que ela deseja resolver, e só então chame a ferramenta com um resumo claro.",
       parameters: {
         type: "object",
         properties: {

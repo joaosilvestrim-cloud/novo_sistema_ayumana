@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState, Suspense } from "react";
+import { useActionState, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
 import { signInAction, type AuthState } from "../actions";
 import { Field, Input } from "@/components/ui/field";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -16,6 +17,7 @@ function LoginForm() {
   const erro = params.get("erro");
   // Vindo da campanha por e-mail, o link já traz o endereço para preencher.
   const emailInicial = params.get("email") ?? "";
+  const [showPw, setShowPw] = useState(false);
   const [state, action] = useActionState(signInAction, initial);
 
   return (
@@ -49,13 +51,24 @@ function LoginForm() {
           <Input id="email" name="email" type="email" autoComplete="email" required defaultValue={emailInicial} />
         </Field>
         <Field label="Senha" htmlFor="password">
-          <Input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-          />
+          <div className="relative">
+            <Input
+              id="password"
+              name="password"
+              type={showPw ? "text" : "password"}
+              autoComplete="current-password"
+              required
+              className="pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPw((v) => !v)}
+              aria-label={showPw ? "Ocultar senha" : "Mostrar senha"}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-foreground-muted hover:text-heading"
+            >
+              {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
         </Field>
 
         {state.error && (

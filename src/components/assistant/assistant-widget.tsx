@@ -49,9 +49,7 @@ export function AssistantWidget() {
         body: JSON.stringify({ messages: novo }),
       });
       const data = await res.json();
-      // O detalhe técnico só aparece enquanto estamos ajustando a integração.
-      const reply = (data.reply || "Desculpa, não consegui responder.") + (data.error ? `\n\n⚠️ ${data.error}` : "");
-      setMsgs((m) => [...m, { role: "assistant", content: reply }]);
+      setMsgs((m) => [...m, { role: "assistant", content: data.reply || "Desculpa, não consegui responder." }]);
     } catch {
       setMsgs((m) => [...m, { role: "assistant", content: "Tive um problema de conexão. Tenta de novo?" }]);
     } finally {
