@@ -178,8 +178,23 @@ export async function POST(req: NextRequest) {
     const reply = choice?.content?.trim() || "Desculpa, não entendi. Pode reformular?";
     return NextResponse.json({ reply, escalated }, { status: 200 });
   } catch (e) {
+    let detalhe = (e as Error).message.slice(0, 160);
+    // Diagnóstico: se o problema é o modelo, lista os modelos que a conta tem.
+    if (/does not exist|do not have access|404|model/i.test(detalhe)) {
+      try {
+        const r = await fetch("https://api.groq.com/openai/v1/models", {
+          headers: { Authorization: `Bearer ${apiKey}` },
+          signal: AbortSignal.timeout(8_000),
+        });
+        const j = await r.json();
+        const ids = ((j?.data ?? []) as { id: string }[]).map((m) => m.id).join(", ");
+        detalhe += ` | Modelos da sua conta: ${ids || "nenhum retornado"}`;
+      } catch {
+        detalhe += " | (não consegui listar os modelos)";
+      }
+    }
     return NextResponse.json(
-      { reply: "Tive um problema para responder agora. Tenta de novo em instantes, ou fale com a equipe pelo WhatsApp no rodapé.", error: (e as Error).message.slice(0, 120) },
+      { reply: "Tive um problema para responder agora. Tenta de novo em instantes, ou fale com a equipe pelo WhatsApp no rodapé.", error: detalhe },
       { status: 200 }
     );
   }
