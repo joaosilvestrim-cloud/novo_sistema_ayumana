@@ -9,12 +9,10 @@ import type { PlanTier } from "@/lib/types";
 export const maxDuration = 30;
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-// Modelo padrão dos mais estáveis do Groq. Dá para trocar por um maior (mais
-// esperto) na env GROQ_MODEL, desde que ele apareça no seu console do Groq.
-const MODEL = process.env.GROQ_MODEL || "llama-3.1-8b-instant";
-// Se o modelo escolhido não existir na conta (404), cai para este, que é o mais
-// universal. Assim a Aya nunca fica muda por causa do nome do modelo.
-const MODEL_FALLBACK = "llama-3.1-8b-instant";
+// Modelos confirmados nesta conta do Groq. O 120b é o mais capaz; o 20b é a
+// reserva, mais rápido. Dá para trocar pela env GROQ_MODEL se quiser.
+const MODEL = process.env.GROQ_MODEL || "openai/gpt-oss-120b";
+const MODEL_FALLBACK = "openai/gpt-oss-20b";
 
 type ChatMsg = { role: "user" | "assistant" | "system" | "tool"; content: string; tool_call_id?: string; name?: string };
 
