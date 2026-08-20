@@ -139,6 +139,19 @@ export async function POST(req: NextRequest) {
   const system = buildSystemPrompt({ logado, planos, usuario });
   const messages: ChatMsg[] = [{ role: "system", content: system }, ...historico];
 
+  const pergunta = historico[historico.length - 1]?.content ?? "";
+  const logInteracao = async (reply: string, escalated: boolean) => {
+    try {
+      await admin.from("assistant_log").insert({
+        question: pergunta.slice(0, 1000),
+        reply: reply.slice(0, 2000),
+        escalated,
+        logged_in: logado,
+        psychologist_id: psyId,
+      });
+    } catch { /* log é acessório */ }
+  };
+
   try {
     const first = await chat(apiKey, messages, logado);
     const choice = first.choices?.[0]?.message;
@@ -170,10 +183,12 @@ export async function POST(req: NextRequest) {
       // Segunda chamada para o modelo redigir a resposta final ao usuário.
       const second = await chat(apiKey, [...messages, choice, ...toolMsgs], false);
       const reply = second.choices?.[0]?.message?.content?.trim() || "Encaminhei para a nossa equipe. Em breve alguém fala com você.";
+      await logInteracao(reply, escalated);
       return NextResponse.json({ reply, escalated }, { status: 200 });
     }
 
     const reply = choice?.content?.trim() || "Desculpa, não entendi. Pode reformular?";
+    await logInteracao(reply, false);
     return NextResponse.json({ reply, escalated }, { status: 200 });
   } catch (e) {
     let detalhe = (e as Error).message.slice(0, 160);
