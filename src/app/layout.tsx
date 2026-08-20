@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Outfit, Archivo, Fraunces } from "next/font/google";
 import { Analytics } from "@/components/site/analytics";
+import { AssistantWidget } from "@/components/assistant/assistant-widget";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -69,6 +70,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
         {children}
+        <AssistantWidget />
         <Analytics />
       </body>
     </html>

@@ -285,3 +285,16 @@
 @media (prefers-reduced-motion: reduce) {
   .psi-ring { animation: none; opacity: 0.6; filter: blur(1px); }
 }
+
+/* Assistente Aya: flutuar da mascote e entrada suave do chat. */
+@keyframes aya-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+@keyframes aya-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  [class*="aya-float"] { animation: none !important; }
+}

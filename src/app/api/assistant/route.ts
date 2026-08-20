@@ -1,0 +1,168 @@
+import { NextResponse, type NextRequest } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { sendSupportRequest } from "@/lib/email";
+import { buildSystemPrompt, type UserContexto } from "@/lib/assistant/knowledge";
+import { PLAN_LABEL } from "@/lib/plan-labels";
+import type { PlanTier } from "@/lib/types";
+
+export const maxDuration = 30;
+
+const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+const MODEL = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
+
+type ChatMsg = { role: "user" | "assistant" | "system" | "tool"; content: string; tool_call_id?: string; name?: string };
+
+// Ferramenta que o modelo pode chamar para pedir ajuda humana (envia e-mail à equipe).
+const TOOLS = [
+  {
+    type: "function",
+    function: {
+      name: "escalar_para_equipe",
+      description:
+        "Encaminha a conversa para a equipe humana da Ayumana por e-mail. Use quando a pessoa pedir para falar com um humano, relatar um erro/bug, estiver frustrada, ou quando você não conseguir resolver a dúvida com o contexto disponível.",
+      parameters: {
+        type: "object",
+        properties: {
+          resumo: {
+            type: "string",
+            description: "Resumo curto do que a pessoa precisa, em português, para a equipe entender rápido.",
+          },
+        },
+        required: ["resumo"],
+      },
+    },
+  },
+];
+
+async function callGroq(apiKey: string, messages: ChatMsg[], withTools: boolean) {
+  const res = await fetch(GROQ_URL, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: MODEL,
+      messages,
+      temperature: 0.3,
+      max_tokens: 700,
+      ...(withTools ? { tools: TOOLS, tool_choice: "auto" } : {}),
+    }),
+    signal: AbortSignal.timeout(25_000),
+  });
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error(`Groq ${res.status}: ${t.slice(0, 200)}`);
+  }
+  return res.json();
+}
+
+export async function POST(req: NextRequest) {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    return NextResponse.json(
+      { reply: "A assistente está fora do ar no momento. Se precisar, fale com a equipe pelo WhatsApp no rodapé do site." },
+      { status: 200 }
+    );
+  }
+
+  const body = await req.json().catch(() => null);
+  const incoming = Array.isArray(body?.messages) ? (body.messages as ChatMsg[]) : [];
+  // Só as últimas trocas, e limita o tamanho de cada mensagem (defesa contra abuso).
+  const historico = incoming
+    .filter((m) => m.role === "user" || m.role === "assistant")
+    .slice(-10)
+    .map((m) => ({ role: m.role, content: String(m.content ?? "").slice(0, 2000) }));
+  if (!historico.length || historico[historico.length - 1].role !== "user") {
+    return NextResponse.json({ reply: "Pode me mandar sua dúvida?" }, { status: 200 });
+  }
+
+  // Auth + contexto ao vivo.
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const logado = !!user;
+
+  const admin = createAdminClient();
+  const { data: planosRaw } = await admin
+    .from("plans")
+    .select("id, name, price_label")
+    .order("sort_order");
+  const planos = (planosRaw ?? []) as { id: string; name: string; price_label: string | null }[];
+
+  let usuario: UserContexto | null = null;
+  let contatoEmail: string | null = null;
+  let contatoNome: string | null = null;
+  let psyId: string | null = null;
+  let contatoTelefone: string | null = null;
+  let planoLabel = "";
+  if (user) {
+    const { data: prof } = await admin.from("profiles").select("full_name, email").eq("id", user.id).maybeSingle();
+    const { data: psy } = await admin
+      .from("psychologists")
+      .select("id, plan_tier, trial_tier, trial_ends_at, verification_status, profile_completed, is_published, phone_whatsapp")
+      .eq("profile_id", user.id)
+      .maybeSingle();
+    contatoEmail = (prof?.email as string) ?? user.email ?? null;
+    contatoNome = (prof?.full_name as string) ?? null;
+    if (psy) {
+      psyId = psy.id as string;
+      contatoTelefone = (psy.phone_whatsapp as string) ?? null;
+      const emTeste = !!psy.trial_ends_at && new Date(psy.trial_ends_at as string) > new Date();
+      const efetivo = (emTeste ? (psy.trial_tier as PlanTier) : (psy.plan_tier as PlanTier)) ?? "essencial";
+      planoLabel = PLAN_LABEL[efetivo] ?? "Raiz";
+      usuario = {
+        nome: contatoNome,
+        plano: planoLabel,
+        emTeste,
+        trialFim: psy.trial_ends_at ? new Date(psy.trial_ends_at as string).toLocaleDateString("pt-BR") : null,
+        verificacao: (psy.verification_status as string) ?? null,
+        perfilCompleto: !!psy.profile_completed,
+        publicado: !!psy.is_published,
+      };
+    }
+  }
+
+  const system = buildSystemPrompt({ logado, planos, usuario });
+  const messages: ChatMsg[] = [{ role: "system", content: system }, ...historico];
+
+  try {
+    const first = await callGroq(apiKey, messages, logado);
+    const choice = first.choices?.[0]?.message;
+    const toolCalls = choice?.tool_calls as { id: string; function: { name: string; arguments: string } }[] | undefined;
+
+    let escalated = false;
+    if (toolCalls?.length) {
+      // Executa a(s) ferramenta(s). Hoje só temos "escalar_para_equipe".
+      const toolMsgs: ChatMsg[] = [];
+      for (const tc of toolCalls) {
+        if (tc.function.name === "escalar_para_equipe") {
+          let resumo = "";
+          try { resumo = JSON.parse(tc.function.arguments || "{}").resumo ?? ""; } catch { /* */ }
+          const ultima = historico[historico.length - 1]?.content ?? "";
+          await sendSupportRequest({
+            name: contatoNome,
+            email: contatoEmail,
+            phone: contatoTelefone,
+            plan: planoLabel || (logado ? "Raiz" : null),
+            message: `Pedido via assistente Aya.\n\nResumo: ${resumo}\n\nÚltima mensagem: ${ultima}`,
+            profileId: user?.id ?? null,
+          });
+          escalated = true;
+          toolMsgs.push({ role: "tool", tool_call_id: tc.id, name: tc.function.name, content: "OK, e-mail enviado para a equipe." });
+        } else {
+          toolMsgs.push({ role: "tool", tool_call_id: tc.id, name: tc.function.name, content: "Ferramenta não disponível." });
+        }
+      }
+      // Segunda chamada para o modelo redigir a resposta final ao usuário.
+      const second = await callGroq(apiKey, [...messages, choice, ...toolMsgs], false);
+      const reply = second.choices?.[0]?.message?.content?.trim() || "Encaminhei para a nossa equipe. Em breve alguém fala com você.";
+      return NextResponse.json({ reply, escalated }, { status: 200 });
+    }
+
+    const reply = choice?.content?.trim() || "Desculpa, não entendi. Pode reformular?";
+    return NextResponse.json({ reply, escalated }, { status: 200 });
+  } catch (e) {
+    return NextResponse.json(
+      { reply: "Tive um problema para responder agora. Tenta de novo em instantes, ou fale com a equipe pelo WhatsApp no rodapé.", error: (e as Error).message.slice(0, 120) },
+      { status: 200 }
+    );
+  }
+}
