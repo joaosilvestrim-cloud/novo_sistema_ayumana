@@ -9,7 +9,12 @@ import type { PlanTier } from "@/lib/types";
 export const maxDuration = 30;
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const MODEL = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
+// Modelo padrão dos mais estáveis do Groq. Dá para trocar por um maior (mais
+// esperto) na env GROQ_MODEL, desde que ele apareça no seu console do Groq.
+const MODEL = process.env.GROQ_MODEL || "llama-3.1-8b-instant";
+// Se o modelo escolhido não existir na conta (404), cai para este, que é o mais
+// universal. Assim a Aya nunca fica muda por causa do nome do modelo.
+const MODEL_FALLBACK = "llama-3.1-8b-instant";
 
 type ChatMsg = { role: "user" | "assistant" | "system" | "tool"; content: string; tool_call_id?: string; name?: string };
 
@@ -35,12 +40,12 @@ const TOOLS = [
   },
 ];
 
-async function callGroq(apiKey: string, messages: ChatMsg[], withTools: boolean) {
+async function callGroq(apiKey: string, messages: ChatMsg[], withTools: boolean, model: string) {
   const res = await fetch(GROQ_URL, {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: MODEL,
+      model,
       messages,
       temperature: 0.3,
       max_tokens: 700,
@@ -53,6 +58,19 @@ async function callGroq(apiKey: string, messages: ChatMsg[], withTools: boolean)
     throw new Error(`Groq ${res.status}: ${t.slice(0, 200)}`);
   }
   return res.json();
+}
+
+/** Tenta o modelo configurado; se ele não existir (404), cai para o universal. */
+async function chat(apiKey: string, messages: ChatMsg[], withTools: boolean) {
+  try {
+    return await callGroq(apiKey, messages, withTools, MODEL);
+  } catch (e) {
+    const msg = (e as Error).message;
+    if (MODEL !== MODEL_FALLBACK && /404|does not exist|do not have access|decommission/i.test(msg)) {
+      return await callGroq(apiKey, messages, withTools, MODEL_FALLBACK);
+    }
+    throw e;
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -124,7 +142,7 @@ export async function POST(req: NextRequest) {
   const messages: ChatMsg[] = [{ role: "system", content: system }, ...historico];
 
   try {
-    const first = await callGroq(apiKey, messages, logado);
+    const first = await chat(apiKey, messages, logado);
     const choice = first.choices?.[0]?.message;
     const toolCalls = choice?.tool_calls as { id: string; function: { name: string; arguments: string } }[] | undefined;
 
@@ -152,7 +170,7 @@ export async function POST(req: NextRequest) {
         }
       }
       // Segunda chamada para o modelo redigir a resposta final ao usuário.
-      const second = await callGroq(apiKey, [...messages, choice, ...toolMsgs], false);
+      const second = await chat(apiKey, [...messages, choice, ...toolMsgs], false);
       const reply = second.choices?.[0]?.message?.content?.trim() || "Encaminhei para a nossa equipe. Em breve alguém fala com você.";
       return NextResponse.json({ reply, escalated }, { status: 200 });
     }
