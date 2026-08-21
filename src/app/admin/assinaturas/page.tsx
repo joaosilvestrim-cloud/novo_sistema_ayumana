@@ -197,6 +197,15 @@ export default async function AdminAssinaturasPage() {
   const vozCents = precoPlano["ideal"] ?? 0;
   const potencialCents = trials.length * vozCents;
 
+  // Acessos pela campanha, por canal (email/whatsapp/direto), últimos 30 dias.
+  // A campanha é multicanal: e-mail e WhatsApp levam ambos para /esqueci-senha.
+  const since30 = new Date(now.getTime() - 30 * 86_400_000).toISOString();
+  const { data: canaisRaw } = await supabase.rpc("analytics_top", { _type: "campaign", _field: "label", _since: since30, _limit: 5 });
+  const canais = (canaisRaw as { rotulo: string; n: number }[] | null) ?? [];
+  const canal = (nome: string) => canais.find((c) => c.rotulo === nome)?.n ?? 0;
+  const acessoEmail = canal("email"), acessoWhats = canal("whatsapp"), acessoDireto = canal("direto");
+  const acessoTotal = acessoEmail + acessoWhats + acessoDireto;
+
   // Funil de ativação.
   const total = psys.length;
   const completos = psys.filter((p) => p.profile_completed).length;
@@ -307,6 +316,33 @@ export default async function AdminAssinaturasPage() {
             <p className="text-2xl font-semibold text-green-600">{taxaConversao === null ? "—" : `${taxaConversao}%`}</p>
             <p className="text-sm text-foreground-muted">Conversão após o teste</p>
           </div>
+        </div>
+
+        {/* Acessos pela campanha, por canal */}
+        <div className="mt-4 rounded-xl border border-border bg-background p-4">
+          <p className="text-sm font-medium text-heading">Acessos pela campanha (últimos 30 dias)</p>
+          <p className="mt-0.5 text-xs text-foreground-muted">
+            A campanha é multicanal: e-mail e WhatsApp levam ambos para a tela de acesso. {acessoTotal} acesso(s) no total.
+          </p>
+          {acessoTotal === 0 ? (
+            <p className="mt-2 text-sm text-foreground-muted">Ainda sem acessos registrados. Aparecem conforme o povo clica nos links.</p>
+          ) : (
+            <div className="mt-3 space-y-2">
+              {[
+                { nome: "E-mail (SendPulse)", n: acessoEmail, cor: "#53C4CC" },
+                { nome: "WhatsApp (link marcado)", n: acessoWhats, cor: "#73A533" },
+                { nome: "Direto / sem marcação", n: acessoDireto, cor: "#9AA8A4" },
+              ].map((c) => (
+                <div key={c.nome} className="flex items-center gap-3">
+                  <div className="w-44 shrink-0 text-sm text-foreground">{c.nome}</div>
+                  <div className="h-5 flex-1 overflow-hidden rounded-full bg-surface-muted">
+                    <div className="h-full rounded-full" style={{ width: `${Math.round((c.n / acessoTotal) * 100)}%`, background: c.cor }} />
+                  </div>
+                  <div className="w-10 shrink-0 text-right text-sm font-semibold text-heading">{c.n}</div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {aVencer.length > 0 && (

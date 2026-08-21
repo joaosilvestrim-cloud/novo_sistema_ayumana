@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, Suspense } from "react";
+import { useActionState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle2, AlertCircle } from "lucide-react";
@@ -18,6 +18,33 @@ function EsqueciSenhaForm() {
   // de forma acolhedora, não como "esqueci a senha", porque ela foi convidada.
   const emailInicial = params.get("email") ?? "";
   const daCampanha = !!emailInicial || params.get("origem") === "campanha";
+
+  // Registra o acesso à campanha por canal (email/whatsapp/direto), uma vez por
+  // sessão. Alimenta o painel de reativação no admin. Toda a campanha (e-mail e
+  // WhatsApp) direciona para cá, então é o ponto certo de medir.
+  useEffect(() => {
+    try {
+      const key = "ayu_camp_" + new Date().toISOString().slice(0, 10);
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, "1");
+    } catch {
+      /* segue */
+    }
+    const utm = (params.get("utm_source") || "").toLowerCase();
+    const origem = (params.get("origem") || "").toLowerCase();
+    const canal = utm.includes("sendpulse")
+      ? "email"
+      : origem === "whatsapp" || origem === "campanha"
+        ? "whatsapp"
+        : "direto";
+    fetch("/api/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "campaign", label: canal, path: "/esqueci-senha" }),
+      keepalive: true,
+    }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [state, action] = useActionState(requestResetAction, initial);
 
   if (state.done) {

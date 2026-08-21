@@ -16,6 +16,7 @@ import {
   Sparkles,
   Bot,
   BarChart3,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -37,6 +38,7 @@ const GROUPS: { title?: string; items: Item[] }[] = [
     title: "Comunidade",
     items: [
       { href: "/admin/usuarios", label: "Usuários", icon: Users },
+      { href: "/admin/completude", label: "Perfis incompletos", icon: ClipboardList },
       { href: "/admin/verificacao", label: "Verificação de CRP", icon: ShieldCheck, badgeKey: "verificacao" },
       { href: "/admin/moderacao", label: "Moderação", icon: MessagesSquare, badgeKey: "moderacao" },
     ],

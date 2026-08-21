@@ -7,7 +7,8 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => null);
     const type = body?.type;
-    if (type !== "pageview" && type !== "click") {
+    // 'campaign' marca acesso vindo da campanha de reativação (email/whatsapp).
+    if (type !== "pageview" && type !== "click" && type !== "campaign") {
       return new NextResponse(null, { status: 204 });
     }
     const admin = createAdminClient();
