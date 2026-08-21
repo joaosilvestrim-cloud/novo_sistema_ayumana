@@ -39,7 +39,8 @@ Quem completar o perfil (com o CRP conferido) ganha 90 dias do plano Voz de cort
 
 export const KB_PSICOLOGO = `## Como usar (psicólogo logado)
 - Completar o perfil: no painel, em "Meu perfil", preencher nome, título, apresentação (bio), número e UF do CRP, anexar o documento do CRP, foto, temas que atende e valores (se quiser exibir). Perfil incompleto aparece pouco na busca.
-- Verificação de CRP: a equipe confere manualmente. Enquanto não aprova, o perfil de quem ainda não era verificado não aparece publicado. Quem já era verificado e só completa o perfil continua no ar.
+- Verificação de CRP: a equipe confere manualmente. Enquanto não aprova, o perfil de quem ainda não era verificado não aparece publicado.
+- IMPORTANTE (herdados): quem já veio VERIFICADO da plataforma anterior mantém o selo e NÃO passa pela verificação de novo, nem espera aprovação. Anexar o documento do CRP e completar os campos deixa o perfil completo e não tira o selo. Se a pessoa já é verificada e está confusa achando que precisa refazer a verificação, tranquilize: não precisa, o selo está garantido.
 - Atender no exterior: se atende online, marcar "atendo brasileiros no exterior" e informar os fusos. É o público com menos concorrência.
 - Foto e documentos: o sistema aceita foto de celular; ela é otimizada automaticamente ao enviar.
 - Fórum (perguntas): benefício do plano Voz. Responder perguntas de pacientes deixa sua resposta pública com seu nome, CRP e link do perfil, virando porta de entrada pelo Google.

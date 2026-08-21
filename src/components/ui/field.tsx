@@ -51,16 +51,23 @@ export function Field({
   htmlFor,
   children,
   className,
+  obrigatorio,
 }: {
   label?: string;
   hint?: string;
   htmlFor?: string;
   children: React.ReactNode;
   className?: string;
+  obrigatorio?: boolean;
 }) {
   return (
     <div className={cn("space-y-0", className)}>
-      {label && <Label htmlFor={htmlFor}>{label}</Label>}
+      {label && (
+        <Label htmlFor={htmlFor}>
+          {label}
+          {obrigatorio && <span className="ml-0.5 font-semibold text-danger" title="Campo obrigatório">*</span>}
+        </Label>
+      )}
       {children}
       {hint && <p className="mt-1 text-xs text-foreground-muted">{hint}</p>}
     </div>

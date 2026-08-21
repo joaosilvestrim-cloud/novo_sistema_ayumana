@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { Loader2, CheckCircle2 } from "lucide-react";
+import { Loader2, CheckCircle2, ShieldCheck } from "lucide-react";
 import { Field, Input, Textarea, Select, Label } from "@/components/ui/field";
 import { ScheduleEditor } from "@/components/schedule-editor";
 import { StyleEditor } from "@/components/style-editor";
@@ -151,8 +151,21 @@ export function OnboardingForm({
         </div>
       )}
 
+      {psy?.verification_status === "aprovado" && (
+        <div className="flex items-start gap-2 rounded-xl border border-green-600/30 bg-green-50 px-4 py-3 text-sm text-green-800">
+          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            <strong>Você já está verificado.</strong> Seu selo veio da plataforma anterior e está garantido, você não volta para a fila de verificação nem espera aprovação. Preencher os campos e anexar o documento do CRP deixa o perfil completo e no topo da busca, e <strong>não tira o seu selo</strong>. Pode completar tranquilo.
+          </span>
+        </div>
+      )}
+
+      <p className="text-sm text-foreground-muted">
+        Campos com <span className="font-semibold text-danger">*</span> são obrigatórios para publicar o perfil.
+      </p>
+
       <Section title="Dados básicos">
-        <Field label="Nome de exibição" htmlFor="display_name" hint="Como você aparece no perfil público.">
+        <Field label="Nome de exibição" htmlFor="display_name" obrigatorio hint="Como você aparece no perfil público.">
           <Input id="display_name" name="display_name" defaultValue={psy?.display_name ?? ""} required />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -186,16 +199,17 @@ export function OnboardingForm({
 
       <Section title="Registro profissional (CRP)" description="Obrigatório para verificação. Seu documento é privado e visto apenas pela equipe Ayumana.">
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Número do CRP" htmlFor="crp_number" hint="Formato região/número. Ex.: 06/153352">
+          <Field label="Número do CRP" htmlFor="crp_number" obrigatorio hint="Formato região/número. Ex.: 06/153352">
             <CrpInput name="crp_number" defaultValue={psy?.crp_number ?? ""} />
           </Field>
-          <Field label="UF do CRP" htmlFor="crp_uf" hint="Ex.: SP">
+          <Field label="UF do CRP" htmlFor="crp_uf" obrigatorio hint="Ex.: SP">
             <Input id="crp_uf" name="crp_uf" maxLength={2} defaultValue={psy?.crp_uf ?? ""} />
           </Field>
         </div>
         <Field
           label="Documento do CRP"
           htmlFor="crp_document"
+          obrigatorio
           hint={
             psy?.crp_document_path
               ? "Um documento já foi enviado. Envie outro para substituir."
@@ -231,11 +245,11 @@ export function OnboardingForm({
             seed={psy?.id}
           />
         </div>
-        <Field label="Título do perfil" htmlFor="headline" hint="Uma frase. Ex.: Psicóloga clínica para brasileiros na Europa.">
+        <Field label="Título do perfil" htmlFor="headline" obrigatorio hint="Uma frase. Ex.: Psicóloga clínica para brasileiros na Europa.">
           <Input id="headline" name="headline" defaultValue={psy?.headline ?? ""} />
         </Field>
         <div>
-          <Label>Sobre você</Label>
+          <Label>Sobre você<span className="ml-0.5 font-semibold text-danger" title="Campo obrigatório">*</span></Label>
           <p className="mb-1.5 text-sm text-foreground-muted">
             Fale da sua abordagem e de quem você atende. Use os botões para formatar o texto.
           </p>

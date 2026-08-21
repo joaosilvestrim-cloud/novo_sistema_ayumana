@@ -281,12 +281,12 @@ export default async function AdminAssinaturasPage() {
         </section>
 
         <section className="rounded-2xl border border-border bg-background p-6">
-          <h2 className="text-lg">Funil de ativação</h2>
-          <p className="mt-0.5 text-sm text-foreground-muted">Do cadastro ao pagamento. A taxa é sobre o total da base.</p>
+          <h2 className="text-lg">Marcos da base</h2>
+          <p className="mt-0.5 text-sm text-foreground-muted">Percentual sobre o total da base. A verificação vem em paralelo: muitos já chegaram verificados da plataforma anterior.</p>
           <div className="mt-4 space-y-2.5">
             <Funil label="Cadastrados" count={total} base={total} color="#9AA8A4" />
-            <Funil label="Perfil completo" count={completos} base={total} color="#53C4CC" />
             <Funil label="Verificados" count={verificados} base={total} color="#5AA0A6" />
+            <Funil label="Perfil completo" count={completos} base={total} color="#53C4CC" />
             <Funil label="Publicados" count={publicados} base={total} color="#73A533" />
             <Funil label="Pagantes" count={pagantes.length} base={total} color="#05474A" />
           </div>
