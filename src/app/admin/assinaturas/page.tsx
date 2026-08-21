@@ -212,9 +212,13 @@ export default async function AdminAssinaturasPage() {
   const verificados = psys.filter((p) => p.verification_status === "aprovado").length;
   const publicados = psys.filter((p) => p.is_published).length;
 
-  // Distribuição por plano efetivo.
+  // Distribuição por plano. Pagante ativo conta pelo plano que PAGA (mesmo que
+  // tenha um teste de Voz por cima); quem está só em teste conta pelo teste.
   const dist: Record<PlanTier, number> = { essencial: 0, destaque: 0, ideal: 0, presenca: 0 };
-  for (const p of psys) dist[planoEfetivo(p)]++;
+  for (const p of psys) {
+    const pagante = p.subscription_status === "ativa" && p.plan_tier !== "essencial";
+    dist[pagante ? p.plan_tier : planoEfetivo(p)]++;
+  }
 
   // Lista de testes a vencer (acionável para conversão).
   const aVencer = [...trials].sort((a, b) => new Date(a.trial_ends_at!).getTime() - new Date(b.trial_ends_at!).getTime()).slice(0, 12);
@@ -272,7 +276,7 @@ export default async function AdminAssinaturasPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="rounded-2xl border border-border bg-background p-6">
           <h2 className="text-lg">Distribuição por plano</h2>
-          <p className="mt-0.5 text-sm text-foreground-muted">Plano efetivo, contando o teste como Voz.</p>
+          <p className="mt-0.5 text-sm text-foreground-muted">Pagantes pelo plano que pagam; quem está só em teste, pelo plano do teste.</p>
           <div className="mt-4 space-y-3">
             {PLANOS.map((t) => (
               <Bar key={t} label={PLAN_LABEL[t]} count={dist[t]} total={total} color={PLAN_COLOR[t]} />
