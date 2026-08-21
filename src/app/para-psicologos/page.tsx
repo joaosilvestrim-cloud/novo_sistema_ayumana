@@ -26,7 +26,7 @@ export default async function ParaPsicologosPage() {
   const { data } = await supabase.from("plans").select("*").order("sort_order");
   const plans = data && data.length ? (data as Plan[]) : FALLBACK;
   const { data: { user } } = await supabase.auth.getUser();
-  const whatsapp = process.env.SUPPORT_WHATSAPP || "5511981559500";
+  const whatsapp = process.env.SUPPORT_WHATSAPP || "5511930662105";
 
   return (
     <PageShell>

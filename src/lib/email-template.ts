@@ -14,7 +14,7 @@ import "server-only";
  */
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://ayumana.com.br";
-const WHATSAPP = process.env.SUPPORT_WHATSAPP || "5511981559500";
+const WHATSAPP = process.env.SUPPORT_WHATSAPP || "5511930662105";
 
 const C = {
   petroleo: "#05474A",

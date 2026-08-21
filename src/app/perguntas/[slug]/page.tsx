@@ -10,6 +10,24 @@ import { getMyPsychologist } from "@/lib/auth";
 import { COUNTRIES } from "@/lib/types";
 import { AnswerForm } from "./answer-form";
 
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://ayumana.com.br";
+
+/** Texto puro a partir do Markdown, para o schema entender o conteúdo. */
+function plainText(md: string | null | undefined): string {
+  if (!md) return "";
+  return md
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`([^`]*)`/g, "$1")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/^\s{0,3}[-*+]\s+/gm, "")
+    .replace(/^\s{0,3}>\s?/gm, "")
+    .replace(/[*_~]{1,3}([^*_~]+)[*_~]{1,3}/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -18,10 +36,17 @@ export async function generateMetadata({
   const { slug } = await params;
   const data = await getQuestionBySlug(slug);
   if (!data) return { title: "Pergunta não encontrada" };
+  const desc = plainText(data.question.body).slice(0, 155) || data.question.title;
   return {
     title: data.question.title,
-    description: data.question.body?.slice(0, 155) ?? data.question.title,
+    description: desc,
     alternates: { canonical: `/perguntas/${slug}` },
+    openGraph: {
+      title: data.question.title,
+      description: desc,
+      type: "article",
+      url: `/perguntas/${slug}`,
+    },
   };
 }
 
@@ -43,29 +68,61 @@ export default async function QuestionPage({
 
   const country = COUNTRIES.find((c) => c.code === question.country_code);
 
-  const jsonLd = {
+  const pageUrl = `${SITE}/perguntas/${slug}`;
+
+  // Cada resposta com autor real (especialista com CRP verificado), data e link.
+  // É o que sinaliza ao Google que é conteúdo de expert, não texto qualquer.
+  const answerLd = (a: (typeof answers)[number]) => ({
+    "@type": "Answer",
+    text: plainText(a.body).slice(0, 1500),
+    url: `${pageUrl}#resposta-${a.id}`,
+    dateCreated: a.created_at,
+    upvoteCount: 0,
+    author: {
+      "@type": "Person",
+      name:
+        a.anonymous || !a.psychologist?.display_name
+          ? "Psicólogo(a) verificado(a)"
+          : a.psychologist.display_name,
+      ...(!a.anonymous && a.psychologist?.slug
+        ? { url: `${SITE}/psicologo/${a.psychologist.slug}` }
+        : {}),
+    },
+  });
+
+  const qaLd = {
     "@context": "https://schema.org",
     "@type": "QAPage",
     mainEntity: {
       "@type": "Question",
       name: question.title,
-      text: question.body ?? question.title,
+      text: plainText(question.body) || question.title,
       answerCount: answers.length,
-      acceptedAnswer: answers[0]
-        ? { "@type": "Answer", text: answers[0].body }
-        : undefined,
-      suggestedAnswer: answers.slice(1).map((a) => ({
-        "@type": "Answer",
-        text: a.body,
-      })),
+      dateCreated: question.published_at ?? question.created_at,
+      author: { "@type": "Person", name: question.author_alias || "Anônimo" },
+      ...(answers[0] ? { acceptedAnswer: answerLd(answers[0]) } : {}),
+      ...(answers.length > 1 ? { suggestedAnswer: answers.slice(1).map(answerLd) } : {}),
     },
+  };
+
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Perguntas", item: `${SITE}/perguntas` },
+      { "@type": "ListItem", position: 2, name: question.title, item: pageUrl },
+    ],
   };
 
   return (
     <PageShell>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(qaLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
       />
       <div className="mx-auto max-w-2xl px-4 py-14">
         <Link href="/perguntas" className="text-sm text-foreground-muted hover:text-brand-dark">
@@ -100,7 +157,7 @@ export default async function QuestionPage({
             </p>
           )}
           {answers.map((a) => (
-            <div key={a.id} className="rounded-2xl border border-border bg-background p-5">
+            <div key={a.id} id={`resposta-${a.id}`} className="scroll-mt-24 rounded-2xl border border-border bg-background p-5">
               <div className="mb-2 flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4 text-green-600" />
                 {a.anonymous || !a.psychologist ? (

@@ -319,7 +319,7 @@ export const SUPPORT_EMAILS = (
   .map((e) => e.trim())
   .filter(Boolean);
 
-export const SUPPORT_WHATSAPP = process.env.SUPPORT_WHATSAPP || "5511981559500";
+export const SUPPORT_WHATSAPP = process.env.SUPPORT_WHATSAPP || "5511930662105";
 
 /** Avisa o time quando um psicólogo pede ajuda pelo painel. */
 export async function sendSupportRequest(params: {

@@ -15,7 +15,7 @@ export default async function AjudaPage() {
       })
     : "essencial";
 
-  const whatsapp = process.env.SUPPORT_WHATSAPP || "5511981559500";
+  const whatsapp = process.env.SUPPORT_WHATSAPP || "5511930662105";
 
   return (
     <div className="space-y-6">
