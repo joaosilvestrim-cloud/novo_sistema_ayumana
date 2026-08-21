@@ -1,11 +1,11 @@
-import Link from "next/link";
-import { ClipboardList, Download, CheckCircle2, AlertCircle } from "lucide-react";
+import { ClipboardList, Download, CheckCircle2 } from "lucide-react";
 import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   avaliarCompletude, OBRIGATORIOS, RECOMENDADOS, VANTAGENS_PERFIL_COMPLETO,
   type CompletudeInput,
 } from "@/lib/profile-completeness";
+import { CompletudeList } from "@/components/admin/completude-list";
 
 export const metadata = { title: "Perfis incompletos" };
 
@@ -40,6 +40,16 @@ export default async function AdminCompletudePage() {
 
   const incompletos = avaliados.filter((x) => !x.a.completo);
   const media = avaliados.length ? Math.round(avaliados.reduce((s, x) => s + x.a.percent, 0) / avaliados.length) : 0;
+
+  // Lista serializável para o componente cliente com busca.
+  const linhas = incompletos.map(({ p, a }) => ({
+    profileId: p.profile_id,
+    name: p.display_name || "—",
+    email: emailPor.get(p.profile_id) || null,
+    percent: a.percent,
+    obrigatorio: a.faltaObrigatorio.map((c) => c.label),
+    recomendado: a.faltaRecomendado.map((c) => c.label),
+  }));
 
   return (
     <div className="space-y-8">
@@ -90,52 +100,8 @@ export default async function AdminCompletudePage() {
         </section>
       </div>
 
-      {/* Lista */}
-      <section className="rounded-2xl border border-border bg-background">
-        <div className="border-b border-border px-6 py-4">
-          <h2 className="text-lg">Quem precisa completar ({incompletos.length})</h2>
-          <p className="mt-0.5 text-sm text-foreground-muted">Do menos completo para o mais completo.</p>
-        </div>
-        {incompletos.length === 0 ? (
-          <div className="px-6 py-10 text-center text-sm text-foreground-muted">Todos os perfis estão com o obrigatório completo. 🎉</div>
-        ) : (
-          <ul className="divide-y divide-border">
-            {incompletos.slice(0, 100).map(({ p, a }) => (
-              <li key={p.id} className="px-6 py-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <Link href={`/admin/usuarios/${p.profile_id}`} className="font-medium text-heading hover:text-brand-dark hover:underline">{p.display_name || "—"}</Link>
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${a.percent < 50 ? "bg-yellow-400/15 text-yellow-700" : "bg-brand/10 text-brand-dark"}`}>{a.percent}%</span>
-                    </div>
-                    {emailPor.get(p.profile_id) && <p className="text-xs text-foreground-muted">{emailPor.get(p.profile_id)}</p>}
-                    {a.faltaObrigatorio.length > 0 && (
-                      <div className="mt-2 flex flex-wrap items-center gap-1">
-                        <span className="inline-flex items-center gap-1 text-xs font-medium text-yellow-700"><AlertCircle className="h-3.5 w-3.5" /> Obrigatório:</span>
-                        {a.faltaObrigatorio.map((c) => (
-                          <span key={c.key} className="rounded-full bg-yellow-400/15 px-2 py-0.5 text-[11px] font-medium text-yellow-700">{c.label}</span>
-                        ))}
-                      </div>
-                    )}
-                    {a.faltaRecomendado.length > 0 && (
-                      <div className="mt-1.5 flex flex-wrap items-center gap-1">
-                        <span className="text-xs text-foreground-muted">Recomendado:</span>
-                        {a.faltaRecomendado.map((c) => (
-                          <span key={c.key} className="rounded-full bg-surface-muted px-2 py-0.5 text-[11px] text-foreground-muted">{c.label}</span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <Link href={`/admin/usuarios/${p.profile_id}`} className="inline-flex h-8 shrink-0 items-center rounded-lg border border-border px-3 text-xs font-medium hover:bg-surface-muted">Gerenciar</Link>
-                </div>
-              </li>
-            ))}
-            {incompletos.length > 100 && (
-              <li className="px-6 py-3 text-center text-xs text-foreground-muted">e mais {incompletos.length - 100}. Use o Exportar CSV para a lista completa.</li>
-            )}
-          </ul>
-        )}
-      </section>
+      {/* Lista com busca */}
+      <CompletudeList rows={linhas} />
     </div>
   );
 }
