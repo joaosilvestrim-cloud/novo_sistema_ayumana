@@ -71,19 +71,29 @@ export type UserContexto = {
   verificacao: string | null;
   perfilCompleto: boolean;
   publicado: boolean;
+  faltaObrigatorio: string[];
+  faltaRecomendado: string[];
 };
 
 /** Contexto personalizado do psicólogo logado, para respostas sob medida. */
 export function contextoDoUsuario(u: UserContexto): string {
+  const obrig = u.faltaObrigatorio.length
+    ? `FALTAM (obrigatório, sem isso não publica): ${u.faltaObrigatorio.join(", ")}`
+    : "Nada obrigatório pendente.";
+  const rec = u.faltaRecomendado.length
+    ? `Faltam (recomendado, para aparecer mais): ${u.faltaRecomendado.join(", ")}`
+    : "Nada recomendado pendente.";
   const partes = [
     `Nome: ${u.nome || "não informado"}`,
     `Plano atual: ${u.plano}${u.emTeste ? ` (em teste gratuito${u.trialFim ? ` até ${u.trialFim}` : ""})` : ""}`,
     `Verificação de CRP: ${u.verificacao || "não enviada"}`,
     `Perfil completo: ${u.perfilCompleto ? "sim" : "não"}`,
     `Publicado na vitrine: ${u.publicado ? "sim" : "não"}`,
+    obrig,
+    rec,
   ];
   return `## Situação de quem está falando com você agora
-Use isto para dar respostas sob medida (ex.: se o perfil está incompleto, oriente a completar).
+Use SEMPRE isto para responder sob medida. Se a pessoa perguntar o que falta no perfil dela, liste exatamente os campos abaixo que estão faltando (obrigatórios primeiro). Se não faltar nada, diga que está completo e sugira o recomendado, se houver. Não invente campos: use só os listados aqui.
 ${partes.join("\n")}`;
 }
 

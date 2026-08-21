@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendSupportRequest } from "@/lib/email";
 import { buildSystemPrompt, type UserContexto } from "@/lib/assistant/knowledge";
+import { avaliarCompletude } from "@/lib/profile-completeness";
 import { PLAN_LABEL } from "@/lib/plan-labels";
 import type { PlanTier } from "@/lib/types";
 
@@ -113,7 +114,7 @@ export async function POST(req: NextRequest) {
     const { data: prof } = await admin.from("profiles").select("full_name, email").eq("id", user.id).maybeSingle();
     const { data: psy } = await admin
       .from("psychologists")
-      .select("id, plan_tier, trial_tier, trial_ends_at, verification_status, profile_completed, is_published, phone_whatsapp")
+      .select("id, plan_tier, trial_tier, trial_ends_at, verification_status, profile_completed, is_published, phone_whatsapp, crp_number, crp_uf, crp_document_path, headline, bio, avatar_url, city, session_price_cents, video_url")
       .eq("profile_id", user.id)
       .maybeSingle();
     contatoEmail = (prof?.email as string) ?? user.email ?? null;
@@ -124,6 +125,28 @@ export async function POST(req: NextRequest) {
       const emTeste = !!psy.trial_ends_at && new Date(psy.trial_ends_at as string) > new Date();
       const efetivo = (emTeste ? (psy.trial_tier as PlanTier) : (psy.plan_tier as PlanTier)) ?? "essencial";
       planoLabel = PLAN_LABEL[efetivo] ?? "Raiz";
+
+      // O que falta no perfil desta pessoa, para a Aya responder exatamente.
+      const [{ count: nApr }, { count: nEsp }] = await Promise.all([
+        admin.from("psychologist_approaches").select("*", { count: "exact", head: true }).eq("psychologist_id", psy.id),
+        admin.from("psychologist_specialties").select("*", { count: "exact", head: true }).eq("psychologist_id", psy.id),
+      ]);
+      const completude = avaliarCompletude({
+        display_name: contatoNome,
+        crp_number: (psy.crp_number as string) ?? null,
+        crp_uf: (psy.crp_uf as string) ?? null,
+        crp_document_path: (psy.crp_document_path as string) ?? null,
+        headline: (psy.headline as string) ?? null,
+        bio: (psy.bio as string) ?? null,
+        avatar_url: (psy.avatar_url as string) ?? null,
+        city: (psy.city as string) ?? null,
+        phone_whatsapp: (psy.phone_whatsapp as string) ?? null,
+        session_price_cents: (psy.session_price_cents as number) ?? null,
+        video_url: (psy.video_url as string) ?? null,
+        hasApproaches: (nApr ?? 0) > 0,
+        hasSpecialties: (nEsp ?? 0) > 0,
+      });
+
       usuario = {
         nome: contatoNome,
         plano: planoLabel,
@@ -132,6 +155,8 @@ export async function POST(req: NextRequest) {
         verificacao: (psy.verification_status as string) ?? null,
         perfilCompleto: !!psy.profile_completed,
         publicado: !!psy.is_published,
+        faltaObrigatorio: completude.faltaObrigatorio.map((c) => c.label),
+        faltaRecomendado: completude.faltaRecomendado.map((c) => c.label),
       };
     }
   }
