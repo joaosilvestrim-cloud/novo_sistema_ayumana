@@ -65,7 +65,7 @@ export function CompletudeList({ rows }: { rows: CompletudeRow[] }) {
                   {r.email && <p className="text-xs text-foreground-muted">{r.email}</p>}
                   {r.obrigatorio.length > 0 && (
                     <div className="mt-2 flex flex-wrap items-center gap-1">
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-yellow-700"><AlertCircle className="h-3.5 w-3.5" /> Obrigatório:</span>
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-yellow-700"><AlertCircle className="h-3.5 w-3.5" /> Falta preencher (obrigatório):</span>
                       {r.obrigatorio.map((c) => (
                         <span key={c} className="rounded-full bg-yellow-400/15 px-2 py-0.5 text-[11px] font-medium text-yellow-700">{c}</span>
                       ))}
@@ -73,7 +73,7 @@ export function CompletudeList({ rows }: { rows: CompletudeRow[] }) {
                   )}
                   {r.recomendado.length > 0 && (
                     <div className="mt-1.5 flex flex-wrap items-center gap-1">
-                      <span className="text-xs text-foreground-muted">Recomendado:</span>
+                      <span className="text-xs text-foreground-muted">Falta (recomendado):</span>
                       {r.recomendado.map((c) => (
                         <span key={c} className="rounded-full bg-surface-muted px-2 py-0.5 text-[11px] text-foreground-muted">{c}</span>
                       ))}
