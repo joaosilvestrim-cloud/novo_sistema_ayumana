@@ -3,9 +3,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendVozCortesia } from "@/lib/email";
 
 const TRIAL_DAYS = 90;
-// Fim da janela da cortesia. Depois desta data, completar o perfil não concede
-// mais os 90 dias. Ajuste por env conforme a data real do disparo (30 dias).
-const DEFAULT_DEADLINE = "2026-10-31";
+// Fim da janela da cortesia: quem COMPLETAR o perfil até esta data ganha os 90
+// dias. Padrão = fim do dia 21/09/2026 no horário de Brasília. Sobrescreva pela
+// env CAMPAIGN_VOZ_DEADLINE se mudar a vigência.
+const DEFAULT_DEADLINE = "2026-09-22T00:00:00-03:00";
 
 export function campaignDeadline(): Date {
   const raw = process.env.CAMPAIGN_VOZ_DEADLINE || DEFAULT_DEADLINE;
@@ -21,6 +22,7 @@ type Row = {
   verification_status: string | null;
   profile_completed: boolean | null;
   campaign_voz_granted_at: string | null;
+  profile_updated_at: string | null;
 };
 
 /**
@@ -36,12 +38,11 @@ type Row = {
 export async function grantCampaignVoz(psyId: string): Promise<boolean> {
   try {
     if (!psyId) return false;
-    if (new Date() > campaignDeadline()) return false;
 
     const admin = createAdminClient();
     const { data } = await admin
       .from("psychologists")
-      .select("id, profile_id, display_name, plan_tier, verification_status, profile_completed, campaign_voz_granted_at")
+      .select("id, profile_id, display_name, plan_tier, verification_status, profile_completed, campaign_voz_granted_at, profile_updated_at")
       .eq("id", psyId)
       .maybeSingle();
     const psy = data as Row | null;
@@ -53,6 +54,13 @@ export async function grantCampaignVoz(psyId: string): Promise<boolean> {
     if (psy.plan_tier !== "essencial") return false;
     if (!psy.profile_completed) return false;
     if (psy.verification_status !== "aprovado") return false;
+
+    // Janela da campanha: vale se AGORA está no prazo, OU se a pessoa completou
+    // o perfil dentro do prazo. Isso protege quem entrou a tempo (segmento sem
+    // CRP) mas foi aprovado pelo admin só depois da data limite.
+    const deadline = campaignDeadline();
+    const completouNoPrazo = !!psy.profile_updated_at && new Date(psy.profile_updated_at) <= deadline;
+    if (new Date() > deadline && !completouNoPrazo) return false;
 
     const fim = new Date();
     fim.setDate(fim.getDate() + TRIAL_DAYS);
