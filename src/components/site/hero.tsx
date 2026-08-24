@@ -75,6 +75,13 @@ export function Hero({ people = [] }: { people?: HeroPerson[] }) {
             </Button>
           </form>
 
+          <p className="mt-3 text-sm text-foreground-muted">
+            Não sabe por onde começar?{" "}
+            <Link href="/encontrar" className="font-medium text-brand-dark underline underline-offset-2 hover:text-brand">
+              Faça o teste em 4 perguntas
+            </Link>
+          </p>
+
           {/* Chips */}
           <div className="mt-5 flex flex-wrap gap-2">
             {QUEIXAS.map((q) => (
