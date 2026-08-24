@@ -1,10 +1,20 @@
 import Link from "next/link";
-import { MessageSquare, Sparkles, LifeBuoy, TrendingUp } from "lucide-react";
+import { revalidatePath } from "next/cache";
+import { MessageSquare, Sparkles, LifeBuoy, TrendingUp, BellRing, CheckCheck } from "lucide-react";
 import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Badge } from "@/components/ui/badge";
 
 export const metadata = { title: "Assistente Aya" };
+
+// Marca todos os pedidos de atendimento como lidos.
+async function marcarLidos() {
+  "use server";
+  await requireAdmin();
+  const admin = createAdminClient();
+  await admin.from("notifications").update({ read_at: new Date().toISOString() }).eq("kind", "suporte").is("read_at", null);
+  revalidatePath("/admin/aya");
+}
 
 type Log = {
   id: string; question: string | null; reply: string | null;
@@ -34,7 +44,7 @@ export default async function AdminAyaPage() {
     admin.from("assistant_log").select("id, question, reply, escalated, logged_in, created_at").order("created_at", { ascending: false }).limit(400),
     // Pedidos de atendimento humano: TODOS os canais (Aya e botão de ajuda do
     // painel) passam por sendSupportRequest, que grava kind='suporte'.
-    admin.from("notifications").select("id, subject, preview, body, status, profile_id, created_at").eq("kind", "suporte").order("created_at", { ascending: false }).limit(200),
+    admin.from("notifications").select("id, subject, preview, body, status, profile_id, created_at, read_at").eq("kind", "suporte").order("created_at", { ascending: false }).limit(200),
   ]);
 
   const total = totalC.count ?? 0;
@@ -43,7 +53,7 @@ export default async function AdminAyaPage() {
 
   // Cada pedido gera uma notificação por destinatário (joao + luiz). Deduplica
   // pelo horário, que é idêntico no par.
-  type Suporte = { id: string; subject: string | null; preview: string | null; body: string | null; status: string | null; profile_id: string | null; created_at: string };
+  type Suporte = { id: string; subject: string | null; preview: string | null; body: string | null; status: string | null; profile_id: string | null; created_at: string; read_at: string | null };
   const suporteRows = (suporteR.data as Suporte[]) ?? [];
   const vistos = new Set<string>();
   const pedidos: Suporte[] = [];
@@ -53,6 +63,7 @@ export default async function AdminAyaPage() {
     pedidos.push(n);
   }
   const escaladasTotal = pedidos.length;
+  const naoLidos = pedidos.filter((p) => !p.read_at).length;
 
   // Perguntas mais frequentes (agrupa por texto normalizado).
   const freq = new Map<string, { texto: string; n: number }>();
@@ -74,6 +85,26 @@ export default async function AdminAyaPage() {
         <h1 className="flex items-center gap-2 text-2xl"><Sparkles className="h-6 w-6 text-brand-dark" /> Assistente Aya</h1>
         <p className="mt-1 text-foreground-muted">O que a base pergunta, quanto a Aya conversa e quem pediu atendimento humano.</p>
       </div>
+
+      {naoLidos > 0 && (
+        <div className="flex flex-col gap-3 rounded-2xl border border-amber-300 bg-amber-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <BellRing className="h-5 w-5 shrink-0 text-amber-700" />
+            <p className="text-sm text-amber-900">
+              <strong>{naoLidos}</strong> {naoLidos === 1 ? "novo pedido de atendimento" : "novos pedidos de atendimento"} sem leitura.
+              Veja abaixo e responda a pessoa.
+            </p>
+          </div>
+          <form action={marcarLidos}>
+            <button
+              type="submit"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-amber-400 bg-white px-3 py-2 text-sm font-medium text-amber-800 hover:bg-amber-100"
+            >
+              <CheckCheck className="h-4 w-4" /> Marcar como lidos
+            </button>
+          </form>
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat icon={<MessageSquare className="h-5 w-5" />} label="Interações no total" value={total} />
@@ -100,7 +131,10 @@ export default async function AdminAyaPage() {
                   <details className="group">
                     <summary className="flex cursor-pointer list-none items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <span className="text-sm font-medium text-heading group-open:text-brand-dark">{nome}</span>
+                        <span className="text-sm font-medium text-heading group-open:text-brand-dark">
+                          {!s.read_at && <span className="mr-2 inline-block rounded-full bg-amber-500 px-2 py-0.5 align-middle text-[10px] font-bold uppercase tracking-wide text-white">novo</span>}
+                          {nome}
+                        </span>
                         {s.preview && <p className="mt-0.5 line-clamp-2 text-xs text-foreground-muted group-open:hidden">{s.preview}</p>}
                         <span className="mt-0.5 hidden text-xs text-brand-dark group-open:inline">ver menos</span>
                       </div>
