@@ -157,6 +157,40 @@ function intersect(a: string[] | null, b: string[] | null): string[] | null {
   return b.filter((x) => set.has(x));
 }
 
+/** Qualidade do perfil, 0 a 1. Premia quem investiu (foto, apresentação, temas). */
+function qualidadePerfil(p: PsychologistCard): number {
+  let s = 0;
+  let max = 0;
+  const add = (peso: number, ok: boolean) => { max += peso; if (ok) s += peso; };
+  add(3, !!p.avatar_url); // foto é o maior sinal
+  add(2, !!(p.headline && p.headline.trim()));
+  add(2, !!(p.bio && p.bio.replace(/<[^>]*>/g, "").trim()));
+  add(2, (p.specialties?.length ?? 0) > 0);
+  add(1, (p.approaches?.length ?? 0) > 0);
+  add(1, !!p.video_url);
+  add(1, !!(p.session_price_cents && p.session_price_cents > 0));
+  return max ? s / max : 0;
+}
+
+/** Pseudo-aleatório determinístico por (id + dia). 0 a 1. Gira a cada dia. */
+function hash01(str: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return ((h >>> 0) % 100000) / 100000;
+}
+
+/**
+ * Posição DENTRO da faixa de plano: metade qualidade do perfil, metade rotação
+ * do dia. Assim quem caprichou sobe, e mesmo assim todos giram e têm sua vez na
+ * página 1 ao longo da semana. A faixa de plano continua mandando (monetização).
+ */
+function scoreDentroDaFaixa(p: PsychologistCard, dia: string): number {
+  return qualidadePerfil(p) * 0.5 + hash01((p.id ?? "") + dia) * 0.5;
+}
+
 export async function listPsychologists(filters: CatalogFilters): Promise<{
   rows: PsychologistCard[];
   total: number;
@@ -208,13 +242,15 @@ export async function listPsychologists(filters: CatalogFilters): Promise<{
     rows = rows.filter((r) => r.countries.includes(filters.pais!));
   }
 
-  // Ordena por prioridade do plano EFETIVO (o teste gratuito conta) e depois
-  // por mais recente.
+  // Ordena por prioridade do plano EFETIVO (pagos sempre na frente: monetização).
+  // Dentro da mesma faixa, combina qualidade do perfil com uma rotação diária,
+  // para dar chance a todos ao longo da semana sem tirar a vez dos pagos.
+  const dia = new Date().toISOString().slice(0, 10);
   rows.sort((a, b) => {
     const pa = PLAN_PRIORITY[effectivePlan(a)] ?? 0;
     const pb = PLAN_PRIORITY[effectivePlan(b)] ?? 0;
     if (pb !== pa) return pb - pa;
-    return (b.created_at ?? "").localeCompare(a.created_at ?? "");
+    return scoreDentroDaFaixa(b, dia) - scoreDentroDaFaixa(a, dia);
   });
 
   const total = filters.pais ? rows.length : count ?? rows.length;
