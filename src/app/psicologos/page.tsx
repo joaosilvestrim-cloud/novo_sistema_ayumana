@@ -88,6 +88,21 @@ export default async function CatalogoPage({
           </p>
         </header>
 
+        <Link
+          href="/encontrar"
+          className="mb-6 flex items-center justify-between gap-4 rounded-2xl border border-brand/30 bg-brand/5 px-5 py-4 transition-colors hover:bg-brand/10"
+        >
+          <div>
+            <p className="font-medium text-heading">Não sabe por onde começar?</p>
+            <p className="text-sm text-foreground-muted">
+              Responda 4 perguntas e a gente mostra quem combina com você.
+            </p>
+          </div>
+          <span className="shrink-0 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white">
+            Fazer o teste
+          </span>
+        </Link>
+
         <CatalogFiltersForm
           specialties={(specialties as Specialty[]) ?? []}
           approaches={(approaches as Approach[]) ?? []}
