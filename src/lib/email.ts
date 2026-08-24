@@ -32,14 +32,21 @@ export type NotificationKind =
   | "outro";
 
 /** Texto puro a partir do HTML, para o resumo na listagem do admin. */
-function toPreview(html: string): string {
+/** Texto puro do e-mail, com quebras de linha preservadas. Sem corte: é o detalhe completo. */
+function toText(html: string): string {
   return html
-    .replace(/<br\s*\/?>/gi, " ")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|tr|li|h[1-6])>/gi, "\n")
     .replace(/<[^>]+>/g, " ")
     .replace(/&nbsp;/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 300);
+    .replace(/[ \t]+/g, " ")
+    .replace(/[ \t]*\n[ \t]*/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function toPreview(html: string): string {
+  return toText(html).replace(/\s+/g, " ").slice(0, 300);
 }
 
 /** Grava o envio no log. Nunca derruba o fluxo se falhar. */
@@ -63,6 +70,7 @@ async function logNotification(row: {
         to_email,
         subject: row.subject,
         preview: toPreview(row.html),
+        body: toText(row.html),
         status: row.ok ? "enviado" : "falhou",
         error: row.error ?? null,
         profile_id: row.profileId ?? null,

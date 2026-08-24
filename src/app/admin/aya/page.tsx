@@ -34,7 +34,7 @@ export default async function AdminAyaPage() {
     admin.from("assistant_log").select("id, question, reply, escalated, logged_in, created_at").order("created_at", { ascending: false }).limit(400),
     // Pedidos de atendimento humano: TODOS os canais (Aya e botão de ajuda do
     // painel) passam por sendSupportRequest, que grava kind='suporte'.
-    admin.from("notifications").select("id, subject, preview, status, profile_id, created_at").eq("kind", "suporte").order("created_at", { ascending: false }).limit(200),
+    admin.from("notifications").select("id, subject, preview, body, status, profile_id, created_at").eq("kind", "suporte").order("created_at", { ascending: false }).limit(200),
   ]);
 
   const total = totalC.count ?? 0;
@@ -43,7 +43,7 @@ export default async function AdminAyaPage() {
 
   // Cada pedido gera uma notificação por destinatário (joao + luiz). Deduplica
   // pelo horário, que é idêntico no par.
-  type Suporte = { id: string; subject: string | null; preview: string | null; status: string | null; profile_id: string | null; created_at: string };
+  type Suporte = { id: string; subject: string | null; preview: string | null; body: string | null; status: string | null; profile_id: string | null; created_at: string };
   const suporteRows = (suporteR.data as Suporte[]) ?? [];
   const vistos = new Set<string>();
   const pedidos: Suporte[] = [];
@@ -94,22 +94,30 @@ export default async function AdminAyaPage() {
           <ul className="divide-y divide-border">
             {pedidos.map((s) => {
               const nome = (s.subject || "").replace(/^Pedido de ajuda na Ayumana[:\s—-]*/i, "").trim() || "Pedido de ajuda";
+              const detalhe = s.body || s.preview || "";
               return (
                 <li key={s.id} className="px-6 py-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      {s.profile_id ? (
-                        <Link href={`/admin/usuarios/${s.profile_id}`} className="text-sm font-medium text-heading hover:text-brand-dark hover:underline">{nome}</Link>
-                      ) : (
-                        <span className="text-sm font-medium text-heading">{nome}</span>
+                  <details className="group">
+                    <summary className="flex cursor-pointer list-none items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <span className="text-sm font-medium text-heading group-open:text-brand-dark">{nome}</span>
+                        {s.preview && <p className="mt-0.5 line-clamp-2 text-xs text-foreground-muted group-open:hidden">{s.preview}</p>}
+                        <span className="mt-0.5 hidden text-xs text-brand-dark group-open:inline">ver menos</span>
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-1">
+                        <span className="text-xs text-foreground-muted">{fmt(s.created_at)}</span>
+                        <Badge tone={s.status === "enviado" ? "success" : "warning"}>{s.status || "—"}</Badge>
+                      </div>
+                    </summary>
+                    <div className="mt-3 rounded-xl border border-border bg-surface-muted/50 p-4">
+                      <p className="whitespace-pre-wrap break-words text-sm text-foreground">{detalhe || "Sem detalhe registrado para este pedido."}</p>
+                      {s.profile_id && (
+                        <Link href={`/admin/usuarios/${s.profile_id}`} className="mt-3 inline-block text-xs font-medium text-brand-dark hover:underline">
+                          Abrir cadastro do psicólogo →
+                        </Link>
                       )}
-                      {s.preview && <p className="mt-0.5 line-clamp-2 text-xs text-foreground-muted">{s.preview}</p>}
                     </div>
-                    <div className="flex shrink-0 flex-col items-end gap-1">
-                      <span className="text-xs text-foreground-muted">{fmt(s.created_at)}</span>
-                      <Badge tone={s.status === "enviado" ? "success" : "warning"}>{s.status || "—"}</Badge>
-                    </div>
-                  </div>
+                  </details>
                 </li>
               );
             })}
