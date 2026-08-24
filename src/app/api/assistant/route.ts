@@ -213,7 +213,37 @@ export async function POST(req: NextRequest) {
     }
 
     const reply = choice?.content?.trim() || "Desculpa, não entendi. Pode reformular?";
-    await logInteracao(reply, false);
+
+    // Rede de segurança: às vezes o modelo ESCREVE que encaminhou para a equipe
+    // mas não chama a ferramenta. Se a resposta afirma (no passado) que já
+    // encaminhou/avisou/repassou o suporte, encaminhamos aqui de verdade. Assim o
+    // que a Aya promete ao usuário sempre chega ao time e ao admin.
+    const feito = /\b(j[áa]\s+)?(encaminhei|encaminhamos|encaminhad[ao]s?|repassei|repassamos|repassad[ao]s?|acionei|acionamos|acionad[ao]s?|avisei|avisamos|avisad[ao]s?|notifiquei|notificamos|notificad[ao]s?|registrei|registramos|abri(?:mos)?\s+(?:um\s+)?chamado)\b/i;
+    const futuro = /\b(vou|posso|poder(?:ia|ei)|gostaria|quer que|deseja que|irei|vamos|poderemos)\b[^.?!]*\b(encaminh|repass|acion|avis|notific|registr|abri)/i;
+    const contextoEquipe = /(equipe|suporte|time|atendimento humano)/i;
+    const afirmaEncaminhou = feito.test(reply) && contextoEquipe.test(reply) && !futuro.test(reply);
+    // Evita duplicar quando o modelo repete "já encaminhei" em turnos seguintes:
+    // só a primeira afirmação da conversa dispara o encaminhamento.
+    const jaAfirmouAntes = historico.some(
+      (m) => m.role === "assistant" && feito.test(m.content) && contextoEquipe.test(m.content) && !futuro.test(m.content)
+    );
+
+    if (afirmaEncaminhou && !jaAfirmouAntes) {
+      const ultsUser = historico.filter((m) => m.role === "user").slice(-3).map((m) => m.content).join("\n");
+      try {
+        await sendSupportRequest({
+          name: contatoNome,
+          email: contatoEmail,
+          phone: contatoTelefone,
+          plan: planoLabel || (logado ? "Raiz" : null),
+          message: `Encaminhamento automático: a Aya disse à pessoa que passaria o caso para a equipe.\n\nResposta da Aya: ${reply}\n\nÚltimas mensagens da pessoa:\n${ultsUser}`,
+          profileId: user?.id ?? null,
+        });
+        escalated = true;
+      } catch { /* nunca derruba a resposta ao usuário */ }
+    }
+
+    await logInteracao(reply, escalated);
     return NextResponse.json({ reply, escalated }, { status: 200 });
   } catch (e) {
     let detalhe = (e as Error).message.slice(0, 160);
