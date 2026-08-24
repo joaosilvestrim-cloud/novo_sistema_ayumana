@@ -151,6 +151,12 @@ export function PatientQuiz({
           })}
         </div>
 
+        {ultimo && (
+          <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            Quanto mais específico, mais afinado o resultado. Se a combinação ficar muito restrita, pode não aparecer nenhum psicólogo. Nesse caso é só voltar e afrouxar um filtro, ou escolher &quot;ver todos&quot;.
+          </p>
+        )}
+
         <div className="mt-6 flex items-center justify-between">
           <button
             type="button"
