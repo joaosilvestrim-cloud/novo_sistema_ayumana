@@ -5,6 +5,7 @@ import { CatalogFiltersForm } from "@/components/catalog/filters";
 import { PsychologistCard } from "@/components/catalog/psychologist-card";
 import {
   listPsychologists,
+  listDiscovery,
   type CatalogFilters,
 } from "@/lib/psychologists";
 import type {
@@ -59,6 +60,12 @@ export default async function CatalogoPage({
 
   const { rows, total, page, pageSize } = await listPsychologists(filters);
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  // Faixa "Conheça também": só numa navegação limpa (página 1, sem filtros).
+  const semFiltros =
+    !filters.q && !filters.especialidade && !filters.abordagem && !filters.publico &&
+    !filters.formato && !filters.genero && !filters.pais && !filters.exterior && !filters.precoMax;
+  const discovery = page === 1 && semFiltros ? await listDiscovery(4) : [];
 
   const qs = (p: number) => {
     const params = new URLSearchParams();
@@ -125,6 +132,20 @@ export default async function CatalogoPage({
                   </Link>
                 ))}
               </nav>
+            )}
+
+            {discovery.length > 0 && (
+              <section className="mt-14 border-t border-border pt-10">
+                <h2 className="text-2xl">Conheça também</h2>
+                <p className="mt-1 text-sm text-foreground-muted">
+                  Uma seleção que muda todo dia, para você descobrir mais profissionais.
+                </p>
+                <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
+                  {discovery.map((p) => (
+                    <PsychologistCard key={`disc-${p.id}`} p={p} />
+                  ))}
+                </div>
+              </section>
             )}
           </section>
         </div>

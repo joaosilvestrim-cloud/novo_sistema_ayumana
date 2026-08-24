@@ -260,6 +260,25 @@ export async function listPsychologists(filters: CatalogFilters): Promise<{
   return { rows: paged, total, page, pageSize: PAGE_SIZE };
 }
 
+/**
+ * Amostra rotativa para a faixa "Conheça também": psicólogos publicados com
+ * foto, embaralhados por dia. Dá palco a quem estaria enterrado nas páginas de
+ * trás. Gira todo dia, então todos passam por aqui ao longo do tempo.
+ */
+export async function listDiscovery(count = 4): Promise<PsychologistCard[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("psychologists")
+    .select(SELECT)
+    .eq("is_published", true)
+    .not("avatar_url", "is", null)
+    .limit(300);
+  const rows = ((data as RawRow[] | null) ?? []).map(shape);
+  const dia = new Date().toISOString().slice(0, 10);
+  rows.sort((a, b) => hash01((a.id ?? "") + dia + "disc") - hash01((b.id ?? "") + dia + "disc"));
+  return rows.slice(0, count);
+}
+
 export async function getPsychologistBySlug(
   slug: string
 ): Promise<PsychologistCard | null> {
