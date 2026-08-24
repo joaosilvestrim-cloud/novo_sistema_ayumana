@@ -78,7 +78,7 @@ export function Hero({ people = [] }: { people?: HeroPerson[] }) {
           <p className="mt-3 text-sm text-foreground-muted">
             Não sabe por onde começar?{" "}
             <Link href="/encontrar" className="font-medium text-brand-dark underline underline-offset-2 hover:text-brand">
-              Faça o teste em 4 perguntas
+              Faça o teste rápido
             </Link>
           </p>
 

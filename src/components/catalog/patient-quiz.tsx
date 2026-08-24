@@ -17,13 +17,28 @@ export function PatientQuiz({
 }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
-  const [ans, setAns] = useState<Record<string, string>>({ formato: "", exterior: "0", genero: "", especialidade: "", pais: "" });
+  const [ans, setAns] = useState<Record<string, string>>({
+    publico: "", especialidade: "", formato: "", exterior: "0", pais: "", precoMax: "", genero: "",
+  });
 
   const set = (k: string, v: string) => setAns((a) => ({ ...a, [k]: v }));
 
   // Passos. O país só aparece se a pessoa mora fora.
   const passos = useMemo(() => {
-    const base: { key: string; titulo: string; sub?: string; opcoes: Opt[]; obrigatorio?: boolean }[] = [
+    const base: { key: string; titulo: string; sub?: string; opcoes: Opt[] }[] = [
+      {
+        key: "publico",
+        titulo: "Para quem é a terapia?",
+        sub: "Ajuda a mostrar quem atende esse público.",
+        opcoes: [
+          { value: "adulto", label: "Para mim (adulto)" },
+          { value: "casal", label: "Para o casal" },
+          { value: "adolescente", label: "Para um adolescente" },
+          { value: "crianca", label: "Para uma criança" },
+          { value: "idoso", label: "Para um idoso" },
+          { value: "", label: "Prefiro ver todos" },
+        ],
+      },
       {
         key: "especialidade",
         titulo: "O que você quer trabalhar?",
@@ -57,6 +72,18 @@ export function PatientQuiz({
       });
     }
     base.push({
+      key: "precoMax",
+      titulo: "Tem uma faixa de valor por sessão?",
+      sub: "Opcional. Só filtra quem informa o valor no perfil.",
+      opcoes: [
+        { value: "", label: "Tanto faz" },
+        { value: "100", label: "Até R$ 100" },
+        { value: "150", label: "Até R$ 150" },
+        { value: "200", label: "Até R$ 200" },
+        { value: "300", label: "Até R$ 300" },
+      ],
+    });
+    base.push({
       key: "genero",
       titulo: "Preferência de gênero do profissional?",
       opcoes: [
@@ -80,8 +107,10 @@ export function PatientQuiz({
 
   function finalizar() {
     const p = new URLSearchParams();
+    if (ans.publico) p.set("publico", ans.publico);
     if (ans.especialidade) p.set("especialidade", ans.especialidade);
     if (ans.formato) p.set("formato", ans.formato);
+    if (ans.precoMax) p.set("precoMax", ans.precoMax);
     if (ans.genero) p.set("genero", ans.genero);
     if (ans.exterior === "1") {
       p.set("exterior", "1");

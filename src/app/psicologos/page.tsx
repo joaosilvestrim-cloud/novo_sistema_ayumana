@@ -95,7 +95,7 @@ export default async function CatalogoPage({
           <div>
             <p className="font-medium text-heading">Não sabe por onde começar?</p>
             <p className="text-sm text-foreground-muted">
-              Responda 4 perguntas e a gente mostra quem combina com você.
+              Responda algumas perguntas e a gente mostra quem combina com você.
             </p>
           </div>
           <span className="shrink-0 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white">

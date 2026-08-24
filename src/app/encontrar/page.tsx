@@ -28,7 +28,7 @@ export default async function EncontrarPage() {
         <header className="mb-8 text-center">
           <h1 className="text-3xl">Vamos encontrar seu psicólogo</h1>
           <p className="mt-2 text-foreground-muted">
-            Quatro perguntas rápidas. No fim, você vê profissionais que combinam com o que precisa.
+            Leva menos de um minuto. No fim, você vê profissionais que combinam com o que precisa.
           </p>
         </header>
 
