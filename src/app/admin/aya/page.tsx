@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { MessageSquare, Sparkles, LifeBuoy, TrendingUp } from "lucide-react";
 import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -27,19 +28,31 @@ export default async function AdminAyaPage() {
   const iso7 = new Date(now - 7 * 86_400_000).toISOString();
   const iso30 = new Date(now - 30 * 86_400_000).toISOString();
 
-  const [totalC, d7C, escC, recentesR, escaladasR] = await Promise.all([
+  const [totalC, d7C, recentesR, suporteR] = await Promise.all([
     admin.from("assistant_log").select("*", { count: "exact", head: true }),
     admin.from("assistant_log").select("*", { count: "exact", head: true }).gte("created_at", iso7),
-    admin.from("assistant_log").select("*", { count: "exact", head: true }).eq("escalated", true),
     admin.from("assistant_log").select("id, question, reply, escalated, logged_in, created_at").order("created_at", { ascending: false }).limit(400),
-    admin.from("assistant_log").select("id, question, reply, logged_in, created_at").eq("escalated", true).order("created_at", { ascending: false }).limit(50),
+    // Pedidos de atendimento humano: TODOS os canais (Aya e botão de ajuda do
+    // painel) passam por sendSupportRequest, que grava kind='suporte'.
+    admin.from("notifications").select("id, subject, preview, status, profile_id, created_at").eq("kind", "suporte").order("created_at", { ascending: false }).limit(200),
   ]);
 
   const total = totalC.count ?? 0;
   const em7 = d7C.count ?? 0;
-  const escaladasTotal = escC.count ?? 0;
   const recentes = (recentesR.data as Log[]) ?? [];
-  const escaladas = (escaladasR.data as Omit<Log, "escalated">[]) ?? [];
+
+  // Cada pedido gera uma notificação por destinatário (joao + luiz). Deduplica
+  // pelo horário, que é idêntico no par.
+  type Suporte = { id: string; subject: string | null; preview: string | null; status: string | null; profile_id: string | null; created_at: string };
+  const suporteRows = (suporteR.data as Suporte[]) ?? [];
+  const vistos = new Set<string>();
+  const pedidos: Suporte[] = [];
+  for (const n of suporteRows) {
+    if (vistos.has(n.created_at)) continue;
+    vistos.add(n.created_at);
+    pedidos.push(n);
+  }
+  const escaladasTotal = pedidos.length;
 
   // Perguntas mais frequentes (agrupa por texto normalizado).
   const freq = new Map<string, { texto: string; n: number }>();
@@ -73,23 +86,33 @@ export default async function AdminAyaPage() {
       <section className="rounded-2xl border border-border bg-background">
         <div className="border-b border-border px-6 py-4">
           <h2 className="flex items-center gap-2 text-lg"><LifeBuoy className="h-5 w-5 text-brand-dark" /> Pedidos de atendimento humano</h2>
-          <p className="mt-0.5 text-sm text-foreground-muted">Quando a Aya escala para vocês. Também chega por e-mail, mas fica registrado aqui.</p>
+          <p className="mt-0.5 text-sm text-foreground-muted">Todos os canais: a Aya e o botão de ajuda do painel. Também chega por e-mail; aqui fica o histórico.</p>
         </div>
-        {escaladas.length === 0 ? (
+        {pedidos.length === 0 ? (
           <div className="px-6 py-8 text-center text-sm text-foreground-muted">Ninguém pediu atendimento humano ainda.</div>
         ) : (
           <ul className="divide-y divide-border">
-            {escaladas.map((e) => (
-              <li key={e.id} className="px-6 py-3">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm text-heading">{e.question || "—"}</p>
-                  <span className="shrink-0 text-xs text-foreground-muted">{fmt(e.created_at)}</span>
-                </div>
-                <div className="mt-1 flex items-center gap-2">
-                  <Badge tone={e.logged_in ? "brand" : "neutral"}>{e.logged_in ? "logado" : "visitante"}</Badge>
-                </div>
-              </li>
-            ))}
+            {pedidos.map((s) => {
+              const nome = (s.subject || "").replace(/^Pedido de ajuda na Ayumana[:\s—-]*/i, "").trim() || "Pedido de ajuda";
+              return (
+                <li key={s.id} className="px-6 py-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      {s.profile_id ? (
+                        <Link href={`/admin/usuarios/${s.profile_id}`} className="text-sm font-medium text-heading hover:text-brand-dark hover:underline">{nome}</Link>
+                      ) : (
+                        <span className="text-sm font-medium text-heading">{nome}</span>
+                      )}
+                      {s.preview && <p className="mt-0.5 line-clamp-2 text-xs text-foreground-muted">{s.preview}</p>}
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      <span className="text-xs text-foreground-muted">{fmt(s.created_at)}</span>
+                      <Badge tone={s.status === "enviado" ? "success" : "warning"}>{s.status || "—"}</Badge>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
