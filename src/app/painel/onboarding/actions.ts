@@ -264,8 +264,12 @@ export async function saveOnboardingAction(
   }
   const galleryUrls = [...keptGallery, ...newGalleryUrls].slice(0, 8);
 
-  // Validação para envio à verificação.
-  if (intent === "submit") {
+  // Já aprovado (inclui as verificadas herdadas, que vieram sem documento).
+  const jaAprovado = existing?.verification_status === "aprovado";
+
+  // Validação de envio à verificação. Só trava quem ainda NÃO é aprovado. Quem
+  // já tem o selo pode editar QUALQUER campo e salvar, sem reenviar o documento.
+  if (intent === "submit" && !jaAprovado) {
     if (!displayName || !crpNumber || !crpUf) {
       return { error: "Preencha nome de exibição, número e UF do CRP." };
     }
@@ -356,7 +360,6 @@ export async function saveOnboardingAction(
   // pena consultar o CFP; um aprovado que só edita a bio não reconsulta.
   let precisaVerificar = false;
   if (intent === "submit") {
-    const jaAprovado = existing?.verification_status === "aprovado";
     const tinhaDocumento = !!existing?.crp_document_path;
     const numeroOuUfMudou =
       (existing?.crp_number ?? null) !== (crpNumber || null) ||
