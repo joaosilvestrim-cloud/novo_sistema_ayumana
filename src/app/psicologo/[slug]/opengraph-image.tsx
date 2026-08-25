@@ -5,7 +5,6 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const alt = "Perfil de psicólogo na Ayumana";
 
-const PETROLEO = "#05474A";
 const ACENTOS = "áàâãäéèêëíìîïóòôõöúùûüçñºªÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇÑ";
 
 function initials(name: string | null) {
@@ -70,14 +69,14 @@ export default async function Image({
           width: "100%",
           height: "100%",
           padding: "64px 72px",
-          background: "linear-gradient(135deg, #F4FAF9 0%, #E4F1EE 100%)",
+          background: "linear-gradient(135deg, #04393B 0%, #0A5F57 100%)",
           fontFamily: "Inter, sans-serif",
         }}
       >
         {/* Marca */}
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ display: "flex", width: 40, height: 40, borderRadius: 14, background: PETROLEO }} />
-          <span style={{ fontSize: 34, fontWeight: 700, color: PETROLEO }}>Ayumana</span>
+          <div style={{ display: "flex", width: 40, height: 40, borderRadius: 14, background: "#73A533" }} />
+          <span style={{ fontSize: 34, fontWeight: 700, color: "#ffffff" }}>Ayumana</span>
         </div>
 
         {/* Foto + identidade */}
@@ -99,19 +98,19 @@ export default async function Image({
                 width: 300,
                 height: 300,
                 borderRadius: 300,
-                background: PETROLEO,
+                background: "rgba(255,255,255,0.12)",
                 color: "#ffffff",
                 fontSize: 120,
                 fontWeight: 700,
-                border: "10px solid #ffffff",
+                border: "10px solid rgba(255,255,255,0.85)",
               }}
             >
               {initials(nome)}
             </div>
           )}
           <div style={{ display: "flex", flexDirection: "column", maxWidth: 640 }}>
-            <span style={{ fontSize: 60, fontWeight: 700, color: "#0f2e2c", lineHeight: 1.1 }}>{nome}</span>
-            <span style={{ fontSize: 32, color: "#4f6260", marginTop: 14 }}>
+            <span style={{ fontSize: 60, fontWeight: 700, color: "#ffffff", lineHeight: 1.1 }}>{nome}</span>
+            <span style={{ fontSize: 32, color: "#B8D4D1", marginTop: 14 }}>
               {abordagem}
               {crp ? ` · ${crp}` : ""}
             </span>
@@ -140,8 +139,8 @@ export default async function Image({
 
         {/* Rodapé */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: 28, color: "#4f6260" }}>Terapia em português, onde você estiver</span>
-          <span style={{ fontSize: 28, color: PETROLEO, fontWeight: 700 }}>ayumana.com.br</span>
+          <span style={{ fontSize: 28, color: "#9FC2BF" }}>Terapia em português, onde você estiver</span>
+          <span style={{ fontSize: 28, color: "#ffffff", fontWeight: 700 }}>ayumana.com.br</span>
         </div>
       </div>
     ),
