@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { AlertCircle, Eye, EyeOff, BadgeCheck, Trash2, X, Gift } from "lucide-react";
 import type { AdminUser } from "@/lib/admin";
@@ -15,8 +15,11 @@ const TIERS: PlanTier[] = ["essencial", "destaque", "ideal", "presenca"];
 export function UsersBulkTable({ rows, meId }: { rows: AdminUser[]; meId: string }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [plan, setPlan] = useState<PlanTier>("destaque");
+  const [aviso, setAviso] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const opRef = useRef<HTMLInputElement>(null);
+  const psyIdsRef = useRef<HTMLInputElement>(null);
+  const profileIdsRef = useRef<HTMLInputElement>(null);
 
   const toggle = (id: string) =>
     setSelected((prev) => {
@@ -30,17 +33,62 @@ export function UsersBulkTable({ rows, meId }: { rows: AdminUser[]; meId: string
     setSelected(allSelected ? new Set() : new Set(rows.map((r) => r.profileId)));
 
   const selectedRows = rows.filter((r) => selected.has(r.profileId));
-  const psyIds = useMemo(() => selectedRows.map((r) => r.psyId).filter(Boolean).join(","), [selectedRows]);
-  const profileIds = useMemo(() => selectedRows.map((r) => r.profileId).join(","), [selectedRows]);
+
+  // Regra do banco (trigger): só publica quem está aprovado E com perfil completo.
+  const podePublicar = (r: AdminUser) => r.verification === "aprovado" && !!r.profileCompleted;
+  const motivo = (r: AdminUser) => {
+    const f: string[] = [];
+    if (r.verification !== "aprovado") f.push("não está verificado");
+    if (!r.profileCompleted) f.push("perfil incompleto");
+    return f.join(" e ") || "não elegível";
+  };
+  const nomeOuEmail = (r: AdminUser) => r.name || r.email;
 
   const run = (op: string) => {
+    setAviso(null);
     if (op === "delete" && !window.confirm(`Excluir ${selected.size} usuário(s) permanentemente? Esta ação não pode ser desfeita.`)) return;
+
+    let psyIds = selectedRows.map((r) => r.psyId).filter(Boolean);
+
+    // Publicar: filtra pelos que o banco aceita e explica os barrados.
+    if (op === "publish") {
+      const elegiveis = selectedRows.filter((r) => r.psyId && podePublicar(r));
+      const barrados = selectedRows.filter((r) => !podePublicar(r));
+      if (elegiveis.length === 0) {
+        setAviso(
+          `Não dá para publicar. Para aparecer na vitrine o perfil precisa estar VERIFICADO (aprovado) e COMPLETO. ` +
+          barrados.map((r) => `${nomeOuEmail(r)}: ${motivo(r)}`).join("; ") +
+          `. Complete o perfil (ou peça para o psicólogo completar) e tente de novo.`
+        );
+        return;
+      }
+      if (barrados.length > 0) {
+        setAviso(
+          `Publiquei ${elegiveis.length} perfil(is). Não publiquei ${barrados.length}, porque o perfil precisa estar verificado e completo: ` +
+          barrados.map((r) => `${nomeOuEmail(r)} (${motivo(r)})`).join("; ") + `.`
+        );
+      }
+      psyIds = elegiveis.map((r) => r.psyId).filter(Boolean);
+    }
+
+    if (psyIdsRef.current) psyIdsRef.current.value = psyIds.join(",");
+    if (profileIdsRef.current) profileIdsRef.current.value = selectedRows.map((r) => r.profileId).join(",");
     if (opRef.current) opRef.current.value = op;
     formRef.current?.requestSubmit();
   };
 
   return (
     <div className="space-y-3">
+      {aviso && (
+        <div className="flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+          <span className="flex-1">{aviso}</span>
+          <button type="button" onClick={() => setAviso(null)} className="shrink-0 text-amber-700 hover:text-amber-900" aria-label="Fechar aviso">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       {/* Barra de ações em massa */}
       {selected.size > 0 && (
         <form
@@ -49,8 +97,8 @@ export function UsersBulkTable({ rows, meId }: { rows: AdminUser[]; meId: string
           className="flex flex-wrap items-center gap-2 rounded-xl border border-brand/40 bg-brand/5 px-4 py-3"
         >
           <input ref={opRef} type="hidden" name="op" defaultValue="" />
-          <input type="hidden" name="psy_ids" value={psyIds} />
-          <input type="hidden" name="profile_ids" value={profileIds} />
+          <input ref={psyIdsRef} type="hidden" name="psy_ids" defaultValue="" />
+          <input ref={profileIdsRef} type="hidden" name="profile_ids" defaultValue="" />
           <span className="mr-1 text-sm font-medium text-heading">{selected.size} selecionado(s)</span>
           <button type="button" onClick={() => run("publish")} className="inline-flex h-8 items-center gap-1 rounded-md border border-border bg-background px-2.5 text-xs hover:bg-surface-muted">
             <Eye className="h-3.5 w-3.5" /> Publicar
