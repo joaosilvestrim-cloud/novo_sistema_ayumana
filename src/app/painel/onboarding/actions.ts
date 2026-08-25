@@ -48,6 +48,61 @@ function toCents(value: string): number | null {
   return Math.round(n * 100);
 }
 
+/**
+ * Salva SOMENTE o documento do CRP, na hora, para dar retorno claro ("salvando"
+ * / "salvo") sem depender do salvar geral do formulário. Não mexe no status de
+ * verificação: salvar o documento não é o mesmo que enviar para verificação.
+ */
+export async function saveCrpDocumentAction(
+  formData: FormData
+): Promise<{ ok: boolean; error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Sua sessão expirou. Faça login de novo." };
+
+  const { data: existing } = await supabase
+    .from("psychologists")
+    .select("id")
+    .eq("profile_id", user.id)
+    .maybeSingle();
+  let psyId = existing?.id as string | undefined;
+  if (!psyId) {
+    const { data: inserted, error: insErr } = await supabase
+      .from("psychologists")
+      .insert({ profile_id: user.id })
+      .select("id")
+      .single();
+    if (insErr || !inserted) return { ok: false, error: "Não foi possível iniciar seu perfil." };
+    psyId = inserted.id;
+  }
+
+  const file = formData.get("crp_document") as File | null;
+  if (!file || file.size === 0) return { ok: false, error: "Nenhum arquivo recebido. Escolha o documento." };
+  if (file.size > 10 * 1024 * 1024) return { ok: false, error: "O documento excede 10 MB." };
+
+  const ext = (file.name.split(".").pop() || "pdf").toLowerCase();
+  const path = `${user.id}/crp-${Date.now()}.${ext}`;
+  const { error: upErr } = await supabase.storage
+    .from(BUCKET)
+    .upload(path, file, { upsert: true, contentType: file.type });
+  if (upErr) return { ok: false, error: `Falha no upload: ${upErr.message}` };
+
+  const { error: updErr } = await supabase
+    .from("psychologists")
+    .update({ crp_document_path: path, profile_updated_at: new Date().toISOString() })
+    .eq("id", psyId);
+  if (updErr) return { ok: false, error: `Não foi possível salvar: ${updErr.message}` };
+
+  try {
+    await createAdminClient()
+      .from("profile_change_log")
+      .insert({ psychologist_id: psyId, changed_fields: ["documento do CRP"], intent: "save" });
+  } catch { /* auditoria é acessória */ }
+
+  revalidatePath("/painel/onboarding");
+  return { ok: true };
+}
+
 export async function saveOnboardingAction(
   _prev: OnboardingState,
   formData: FormData
