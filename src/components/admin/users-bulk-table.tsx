@@ -34,14 +34,6 @@ export function UsersBulkTable({ rows, meId }: { rows: AdminUser[]; meId: string
 
   const selectedRows = rows.filter((r) => selected.has(r.profileId));
 
-  // Regra do banco (trigger): só publica quem está aprovado E com perfil completo.
-  const podePublicar = (r: AdminUser) => r.verification === "aprovado" && !!r.profileCompleted;
-  const motivo = (r: AdminUser) => {
-    const f: string[] = [];
-    if (r.verification !== "aprovado") f.push("não está verificado");
-    if (!r.profileCompleted) f.push("perfil incompleto");
-    return f.join(" e ") || "não elegível";
-  };
   const nomeOuEmail = (r: AdminUser) => r.name || r.email;
 
   const run = (op: string) => {
@@ -50,25 +42,38 @@ export function UsersBulkTable({ rows, meId }: { rows: AdminUser[]; meId: string
 
     let psyIds = selectedRows.map((r) => r.psyId).filter(Boolean);
 
-    // Publicar: filtra pelos que o banco aceita e explica os barrados.
+    // Publicar: o admin pode publicar mesmo incompleto. A única trava é a
+    // verificação (senão o selo "CRP verificado" apareceria sem conferência).
     if (op === "publish") {
-      const elegiveis = selectedRows.filter((r) => r.psyId && podePublicar(r));
-      const barrados = selectedRows.filter((r) => !podePublicar(r));
-      if (elegiveis.length === 0) {
+      const publicaveis = selectedRows.filter((r) => r.psyId && r.verification === "aprovado");
+      const naoVerificados = selectedRows.filter((r) => r.verification !== "aprovado");
+
+      if (publicaveis.length === 0) {
         setAviso(
-          `Não dá para publicar. Para aparecer na vitrine o perfil precisa estar VERIFICADO (aprovado) e COMPLETO. ` +
-          barrados.map((r) => `${nomeOuEmail(r)}: ${motivo(r)}`).join("; ") +
-          `. Complete o perfil (ou peça para o psicólogo completar) e tente de novo.`
+          `Não dá para publicar: o perfil precisa estar VERIFICADO (aprovado) primeiro, senão o selo de "CRP verificado" apareceria sem conferência. ` +
+          `Aprove antes de publicar: ${naoVerificados.map(nomeOuEmail).join(", ")}.`
         );
         return;
       }
-      if (barrados.length > 0) {
+
+      // Verificados mas incompletos: dá para publicar, mas confirmamos.
+      const incompletos = publicaveis.filter((r) => !r.profileCompleted);
+      if (incompletos.length > 0) {
+        const ok = window.confirm(
+          `Vou publicar ${publicaveis.length} perfil(is). ${incompletos.length} ainda não está(ão) 100% completo(s):\n\n` +
+          incompletos.map((r) => `• ${nomeOuEmail(r)}`).join("\n") +
+          `\n\nDá para publicar mesmo assim. Continuar?`
+        );
+        if (!ok) return;
+      }
+
+      if (naoVerificados.length > 0) {
         setAviso(
-          `Publiquei ${elegiveis.length} perfil(is). Não publiquei ${barrados.length}, porque o perfil precisa estar verificado e completo: ` +
-          barrados.map((r) => `${nomeOuEmail(r)} (${motivo(r)})`).join("; ") + `.`
+          `Publiquei os verificados. Não publiquei ${naoVerificados.length} por não estar(em) verificado(s): ` +
+          naoVerificados.map(nomeOuEmail).join(", ") + `. Aprove antes de publicar.`
         );
       }
-      psyIds = elegiveis.map((r) => r.psyId).filter(Boolean);
+      psyIds = publicaveis.map((r) => r.psyId).filter(Boolean);
     }
 
     if (psyIdsRef.current) psyIdsRef.current.value = psyIds.join(",");
