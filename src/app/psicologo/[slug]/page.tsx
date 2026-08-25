@@ -76,11 +76,19 @@ export async function generateMetadata({
   const p = await getPsychologistBySlug(slug);
   if (!p) return { title: "Perfil não encontrado" };
 
+  const semHtml = (s?: string | null) =>
+    s ? s.replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim() : "";
+
   const title = `${p.display_name}${p.approaches[0] ? ` · ${p.approaches[0].name}` : ""}`;
   const description =
-    p.headline ||
-    p.bio?.slice(0, 155) ||
-    `Psicólogo(a) brasileiro(a) com CRP verificado. Atendimento em português.`;
+    (p.headline ||
+      semHtml(p.bio).slice(0, 155) ||
+      `Psicólogo(a) brasileiro(a) com CRP verificado. Atendimento em português.`).trim();
+
+  // Foto do psicólogo no preview de compartilhamento (WhatsApp, redes). Sem foto,
+  // cai no banner da Ayumana. metadataBase deixa a URL relativa virar absoluta.
+  const foto = p.avatar_url || "/brand/ayumana-banner.jpg";
+  const fotoAlt = p.avatar_url ? `Foto de ${p.display_name}` : "Ayumana";
 
   return {
     title,
@@ -90,11 +98,15 @@ export async function generateMetadata({
       title: `${p.display_name} · Ayumana`,
       description,
       type: "profile",
+      url: `/psicologo/${p.slug}`,
+      siteName: "Ayumana",
+      images: [{ url: foto, alt: fotoAlt }],
     },
     twitter: {
       card: "summary_large_image",
       title: `${p.display_name} · Ayumana`,
       description,
+      images: [foto],
     },
   };
 }

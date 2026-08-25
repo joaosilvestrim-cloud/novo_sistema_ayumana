@@ -52,6 +52,14 @@ export const metadata: Metadata = {
     type: "website",
     locale: "pt_BR",
     siteName: "Ayumana",
+    images: [{ url: "/brand/ayumana-banner.jpg", width: 1366, height: 618, alt: "Ayumana" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Ayumana · Terapia em português, onde você estiver",
+    description:
+      "Psicólogos brasileiros para quem vive no Brasil ou no exterior. Atendimento online em português.",
+    images: ["/brand/ayumana-banner.jpg"],
   },
   verification: {
     // Código público de verificação do Google Search Console.

@@ -160,9 +160,16 @@ export function OnboardingForm({
         </div>
       )}
 
-      <p className="text-sm text-foreground-muted">
-        Campos com <span className="font-semibold text-danger">*</span> são obrigatórios para publicar o perfil.
-      </p>
+      <div className="space-y-1.5 rounded-xl border border-border bg-surface-muted/40 px-4 py-3 text-sm text-foreground-muted">
+        <p>
+          <strong className="text-heading">Pode preencher todos os campos agora</strong>, mesmo no plano gratuito. Nada fica bloqueado.
+        </p>
+        <p>
+          Campos com <span className="font-semibold text-danger">*</span> são obrigatórios para publicar. Os que têm o selo{" "}
+          <span className="inline-flex items-center rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-medium text-brand-dark">aparece no plano X</span>{" "}
+          você também preenche desde já, e eles passam a aparecer no seu perfil público quando você estiver no plano indicado.
+        </p>
+      </div>
 
       <Section title="Dados básicos">
         <Field label="Nome de exibição" htmlFor="display_name" obrigatorio hint="Como você aparece no perfil público.">
