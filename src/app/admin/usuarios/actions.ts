@@ -113,46 +113,60 @@ export async function toggleAdminAction(formData: FormData) {
   revalidatePath("/admin/usuarios/[id]", "page");
 }
 
-export async function setRoleAction(formData: FormData) {
+export async function setRoleAction(formData: FormData): Promise<{ ok: boolean; error?: string }> {
   const me = await requireAdmin();
   const profileId = String(formData.get("profile_id") ?? "");
   const role = String(formData.get("role") ?? "");
-  if (!profileId || !(["admin", "psicologo", "conteudo"] as const).includes(role as never)) return;
-  if (profileId === me.id && role !== "admin") return; // não se auto-rebaixa
+  if (!profileId || !(["admin", "psicologo", "conteudo"] as const).includes(role as never)) return { ok: false, error: "Papel inválido." };
+  if (profileId === me.id && role !== "admin") return { ok: false, error: "Você não pode rebaixar a própria conta." };
   const admin = createAdminClient();
-  await admin.from("profiles").update({ role }).eq("id", profileId);
+  const { error } = await admin.from("profiles").update({ role }).eq("id", profileId);
+  if (error) return { ok: false, error: error.message };
   revalidatePath("/admin/usuarios");
   revalidatePath("/admin/usuarios/[id]", "page");
+  return { ok: true };
 }
 
-export async function togglePublishAction(formData: FormData) {
+export async function togglePublishAction(formData: FormData): Promise<{ ok: boolean; error?: string }> {
   await requireAdmin();
   const psyId = String(formData.get("psy_id") ?? "");
   const publish = String(formData.get("publish") ?? "") === "1";
-  if (!psyId) return;
+  if (!psyId) return { ok: false, error: "Psicólogo não identificado." };
 
   const admin = createAdminClient();
-  await admin.from("psychologists").update({ is_published: publish }).eq("id", psyId);
+  const { error } = await admin.from("psychologists").update({ is_published: publish }).eq("id", psyId).select("id, is_published").maybeSingle();
+  if (error) return { ok: false, error: error.message };
   revalidatePath("/admin/usuarios");
+  revalidatePath("/admin/usuarios/[id]", "page");
   revalidatePath("/psicologos");
+  // Se pediu publicar e o banco não deixou (não verificado), avisa.
+  if (publish) {
+    const { data } = await admin.from("psychologists").select("is_published").eq("id", psyId).maybeSingle();
+    if (data && data.is_published === false) {
+      return { ok: false, error: "O banco não publicou: o perfil precisa estar verificado (aprovado) para aparecer na vitrine." };
+    }
+  }
+  return { ok: true };
 }
 
 const PLAN_TIERS = ["essencial", "destaque", "ideal", "presenca"] as const;
 
-export async function changePlanAction(formData: FormData) {
+export async function changePlanAction(formData: FormData): Promise<{ ok: boolean; error?: string }> {
   await requireAdmin();
   const psyId = String(formData.get("psy_id") ?? "");
   const plan = String(formData.get("plan") ?? "");
-  if (!psyId || !PLAN_TIERS.includes(plan as (typeof PLAN_TIERS)[number])) return;
+  if (!psyId || !PLAN_TIERS.includes(plan as (typeof PLAN_TIERS)[number])) return { ok: false, error: "Plano inválido." };
 
   const admin = createAdminClient();
-  await admin.from("psychologists").update({ plan_tier: plan }).eq("id", psyId);
+  const { error } = await admin.from("psychologists").update({ plan_tier: plan }).eq("id", psyId);
+  if (error) return { ok: false, error: error.message };
   // Revalida também a página de detalhe (onde o admin está) e a de assinaturas,
   // senão a troca salva mas a tela continua mostrando o plano antigo.
   revalidatePath("/admin/usuarios");
   revalidatePath("/admin/usuarios/[id]", "page");
   revalidatePath("/admin/assinaturas");
   revalidatePath("/psicologos");
+  return { ok: true };
 }
 
 export async function sendPasswordResetAction(formData: FormData) {
@@ -219,34 +233,39 @@ function trialFim(dias = TRIAL_DIAS): string {
 }
 
 /** Concede o teste gratuito a UM psicólogo. */
-export async function grantTrialAction(formData: FormData) {
+export async function grantTrialAction(formData: FormData): Promise<{ ok: boolean; error?: string }> {
   await requireAdmin();
   const psyId = String(formData.get("psy_id") ?? "");
   const dias = Number(formData.get("dias") ?? TRIAL_DIAS) || TRIAL_DIAS;
-  if (!psyId) return;
+  if (!psyId) return { ok: false, error: "Psicólogo não identificado." };
   const admin = createAdminClient();
-  await admin
+  const { error } = await admin
     .from("psychologists")
     .update({ trial_tier: TRIAL_TIER, trial_ends_at: trialFim(dias), ...TRIAL_RESET })
     .eq("id", psyId);
+  if (error) return { ok: false, error: error.message };
   await syncKommo(psyId, "teste");
   revalidatePath("/admin/usuarios");
-  revalidatePath(`/admin/usuarios`);
+  revalidatePath("/admin/usuarios/[id]", "page");
   revalidatePath("/psicologos");
+  return { ok: true };
 }
 
 /** Encerra o teste de UM psicólogo (volta ao plano contratado na hora). */
-export async function revokeTrialAction(formData: FormData) {
+export async function revokeTrialAction(formData: FormData): Promise<{ ok: boolean; error?: string }> {
   await requireAdmin();
   const psyId = String(formData.get("psy_id") ?? "");
-  if (!psyId) return;
+  if (!psyId) return { ok: false, error: "Psicólogo não identificado." };
   const admin = createAdminClient();
-  await admin
+  const { error } = await admin
     .from("psychologists")
     .update({ trial_tier: null, trial_ends_at: null })
     .eq("id", psyId);
+  if (error) return { ok: false, error: error.message };
   revalidatePath("/admin/usuarios");
+  revalidatePath("/admin/usuarios/[id]", "page");
   revalidatePath("/psicologos");
+  return { ok: true };
 }
 
 export async function bulkUsersAction(formData: FormData) {
@@ -310,13 +329,13 @@ export async function deleteUserAction(formData: FormData) {
   redirect("/admin/usuarios");
 }
 
-export async function quickApproveAction(formData: FormData) {
+export async function quickApproveAction(formData: FormData): Promise<{ ok: boolean; error?: string }> {
   const me = await requireAdmin();
   const psyId = String(formData.get("psy_id") ?? "");
-  if (!psyId) return;
+  if (!psyId) return { ok: false, error: "Psicólogo não identificado." };
 
   const admin = createAdminClient();
-  await admin
+  const { error } = await admin
     .from("psychologists")
     .update({
       verification_status: "aprovado",
@@ -325,9 +344,12 @@ export async function quickApproveAction(formData: FormData) {
       is_published: true,
     })
     .eq("id", psyId);
+  if (error) return { ok: false, error: error.message };
   // Campanha: se o perfil já está completo, concede o Voz de cortesia agora.
   await grantCampaignVoz(psyId);
   revalidatePath("/admin/usuarios");
+  revalidatePath("/admin/usuarios/[id]", "page");
   revalidatePath("/admin/verificacao");
   revalidatePath("/psicologos");
+  return { ok: true };
 }

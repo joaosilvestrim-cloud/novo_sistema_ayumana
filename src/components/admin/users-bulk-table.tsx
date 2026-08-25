@@ -1,8 +1,9 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useFormStatus } from "react-dom";
 import Link from "next/link";
-import { AlertCircle, Eye, EyeOff, BadgeCheck, Trash2, X, Gift } from "lucide-react";
+import { AlertCircle, Eye, EyeOff, BadgeCheck, Trash2, X, Gift, Loader2 } from "lucide-react";
 import type { AdminUser } from "@/lib/admin";
 import { Badge } from "@/components/ui/badge";
 import { UserManageModal } from "@/components/admin/user-manage-modal";
@@ -11,6 +12,18 @@ import { VERIFICATION_LABELS, type PlanTier } from "@/lib/types";
 import { bulkUsersAction } from "@/app/admin/usuarios/actions";
 
 const TIERS: PlanTier[] = ["essencial", "destaque", "ideal", "presenca"];
+
+// Mostra "Salvando…" enquanto a ação em massa está no ar. Fica dentro do <form>
+// para o useFormStatus enxergar o envio.
+function BulkSaving() {
+  const { pending } = useFormStatus();
+  if (!pending) return null;
+  return (
+    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-dark">
+      <Loader2 className="h-3.5 w-3.5 animate-spin" /> Salvando…
+    </span>
+  );
+}
 
 export function UsersBulkTable({ rows, meId }: { rows: AdminUser[]; meId: string }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -131,6 +144,7 @@ export function UsersBulkTable({ rows, meId }: { rows: AdminUser[]; meId: string
           <button type="button" onClick={() => run("delete")} className="inline-flex h-8 items-center gap-1 rounded-md border border-danger/40 bg-background px-2.5 text-xs text-danger hover:bg-danger/10">
             <Trash2 className="h-3.5 w-3.5" /> Excluir
           </button>
+          <BulkSaving />
           <button type="button" onClick={() => setSelected(new Set())} className="ml-auto inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs text-foreground-muted hover:bg-surface-muted">
             <X className="h-3.5 w-3.5" /> Limpar
           </button>

@@ -170,7 +170,7 @@ export default async function UserDetailPage({
             </div>
           </dl>
           {psyId && (
-            <form action={changePlanAction} className="mt-4 flex gap-2 border-t border-border pt-4">
+            <form action={async (fd: FormData) => { "use server"; await changePlanAction(fd); }} className="mt-4 flex gap-2 border-t border-border pt-4">
               <input type="hidden" name="psy_id" value={psyId} />
               <select name="plan" defaultValue={plan ?? "essencial"} className="h-9 flex-1 rounded-lg border border-border bg-background px-2 text-sm">
                 {TIERS.map((t) => <option key={t} value={t}>{PLAN_LABEL[t]}</option>)}
@@ -268,19 +268,19 @@ export default async function UserDetailPage({
         <h2 className="text-lg">Ações</h2>
         <div className="mt-4 flex flex-wrap gap-2">
           {psyId && verification !== "aprovado" && (
-            <form action={quickApproveAction}>
+            <form action={async (fd: FormData) => { "use server"; await quickApproveAction(fd); }}>
               <input type="hidden" name="psy_id" value={psyId} />
               <button className={`${btn} border-green-600/40 text-green-700 hover:bg-green-50`}><BadgeCheck className="h-4 w-4" /> Aprovar e publicar</button>
             </form>
           )}
           {psyId && (
-            <form action={togglePublishAction}>
+            <form action={async (fd: FormData) => { "use server"; await togglePublishAction(fd); }}>
               <input type="hidden" name="psy_id" value={psyId} />
               <input type="hidden" name="publish" value={published ? "0" : "1"} />
               <button className={btn}>{published ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}{published ? "Despublicar" : "Publicar"}</button>
             </form>
           )}
-          <form action={setRoleAction} className="flex items-center gap-2">
+          <form action={async (fd: FormData) => { "use server"; await setRoleAction(fd); }} className="flex items-center gap-2">
             <input type="hidden" name="profile_id" value={profile.id} />
             <select name="role" defaultValue={profile.role} className="h-9 rounded-lg border border-border bg-background px-2 text-sm">
               <option value="psicologo">Psicólogo</option>

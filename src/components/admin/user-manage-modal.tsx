@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Settings2, X, ExternalLink, Trash2, KeyRound, ShieldCheck,
-  Eye, EyeOff, BadgeCheck, AlertCircle, Gift, Unlock,
+  Eye, EyeOff, BadgeCheck, AlertCircle, Gift, Unlock, Loader2, Check,
 } from "lucide-react";
 import { PLAN_LABEL } from "@/lib/plan-labels";
 import { VERIFICATION_LABELS, type PlanTier, type VerificationStatus, type UserRole } from "@/lib/types";
@@ -38,28 +38,53 @@ const btn = "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bord
 
 export function UserManageModal({ u, canDelete }: { u: ManageUser; canDelete: boolean }) {
   const [open, setOpen] = useState(false);
-  const [savingPlan, setSavingPlan] = useState(false);
-  const [planMsg, setPlanMsg] = useState<string | null>(null);
+  const [pendingKey, setPendingKey] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
   const router = useRouter();
   const v = u.verification ? VERIFICATION_LABELS[u.verification] : null;
   const emTeste = !!u.trialEndsAt && new Date(u.trialEndsAt) > new Date();
 
-  // Salva o plano e dá retorno na hora. Antes o modal ficava com o valor
-  // antigo depois do Salvar, passando a sensação de que nada acontecia.
-  async function salvarPlano(fd: FormData) {
-    setSavingPlan(true);
-    setPlanMsg(null);
+  // Runner único: mostra "Salvando…" no botão, dá retorno de sucesso/erro e
+  // atualiza a tela. Antes as ações rodavam sem animação e sem avisar do erro.
+  async function run(
+    key: string,
+    fd: FormData,
+    fn: (f: FormData) => Promise<{ ok: boolean; error?: string } | void>,
+    successMsg: string
+  ) {
+    if (pendingKey) return;
+    setPendingKey(key);
+    setFeedback(null);
     try {
-      await changePlanAction(fd);
-      const novo = String(fd.get("plan"));
-      setPlanMsg(`Plano alterado para ${PLAN_LABEL[novo as PlanTier]}.`);
-      router.refresh();
-    } catch {
-      setPlanMsg("Não foi possível salvar. Tente de novo.");
+      const res = await fn(fd);
+      if (res && "ok" in res && !res.ok) {
+        setFeedback({ ok: false, msg: res.error || "Não foi possível concluir." });
+      } else {
+        setFeedback({ ok: true, msg: successMsg });
+        router.refresh();
+      }
+    } catch (e) {
+      setFeedback({ ok: false, msg: (e as Error)?.message || "Não foi possível concluir. Tente de novo." });
     } finally {
-      setSavingPlan(false);
+      setPendingKey(null);
     }
   }
+
+  const onSubmit =
+    (key: string, fn: (f: FormData) => Promise<{ ok: boolean; error?: string } | void>, successMsg: string | ((fd: FormData) => string)) =>
+    (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      const fd = new FormData(e.currentTarget);
+      run(key, fd, fn, typeof successMsg === "function" ? successMsg(fd) : successMsg);
+    };
+
+  // Conteúdo do botão: troca por "Salvando…" quando esta ação está rodando.
+  const spin = (key: string, normal: React.ReactNode) =>
+    pendingKey === key ? (
+      <span className="inline-flex items-center gap-1.5"><Loader2 className="h-4 w-4 animate-spin" /> Salvando…</span>
+    ) : (
+      normal
+    );
 
   return (
     <>
@@ -97,6 +122,13 @@ export function UserManageModal({ u, canDelete }: { u: ManageUser; canDelete: bo
             </div>
 
             <div className="max-h-[60vh] space-y-5 overflow-y-auto p-5">
+              {feedback && (
+                <div className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-sm ${feedback.ok ? "border-green-200 bg-green-50 text-green-800" : "border-danger/30 bg-danger/10 text-danger"}`}>
+                  {feedback.ok ? <Check className="mt-0.5 h-4 w-4 shrink-0" /> : <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />}
+                  <span className="flex-1">{feedback.msg}</span>
+                </div>
+              )}
+
               <div className="flex flex-wrap gap-2">
                 <Link href={`/admin/usuarios/${u.profileId}`} className={`${btn} flex-1`}>
                   <Settings2 className="h-4 w-4" /> Página completa
@@ -112,16 +144,15 @@ export function UserManageModal({ u, canDelete }: { u: ManageUser; canDelete: bo
               {u.psyId && (
                 <div>
                   <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-foreground-muted">Plano</p>
-                  <form action={salvarPlano} className="flex gap-2">
+                  <form onSubmit={onSubmit("plan", changePlanAction, (fd) => `Plano alterado para ${PLAN_LABEL[String(fd.get("plan")) as PlanTier]}.`)} className="flex gap-2">
                     <input type="hidden" name="psy_id" value={u.psyId} />
                     <select name="plan" defaultValue={u.plan ?? "essencial"} className="h-9 flex-1 rounded-lg border border-border bg-background px-2 text-sm">
                       {TIERS.map((t) => <option key={t} value={t}>{PLAN_LABEL[t]}</option>)}
                     </select>
-                    <button disabled={savingPlan} className="h-9 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary-hover disabled:opacity-60">
-                      {savingPlan ? "Salvando…" : "Salvar"}
+                    <button type="submit" disabled={!!pendingKey} className="h-9 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary-hover disabled:opacity-60">
+                      {spin("plan", "Salvar")}
                     </button>
                   </form>
-                  {planMsg && <p className="mt-1.5 text-xs text-brand-dark">{planMsg}</p>}
                 </div>
               )}
 
@@ -138,7 +169,7 @@ export function UserManageModal({ u, canDelete }: { u: ManageUser; canDelete: bo
                     <p className="mb-2 text-sm text-foreground-muted">Sem teste ativo.</p>
                   )}
                   <div className="flex flex-wrap gap-2">
-                    <form action={grantTrialAction} className="flex items-center gap-2">
+                    <form onSubmit={onSubmit("trial", grantTrialAction, `${emTeste ? "Teste renovado" : "Voz concedido"}.`)} className="flex items-center gap-2">
                       <input type="hidden" name="psy_id" value={u.psyId} />
                       <select name="dias" defaultValue="30" className="h-9 rounded-lg border border-border bg-background px-2 text-sm">
                         <option value="7">7 dias</option>
@@ -147,12 +178,12 @@ export function UserManageModal({ u, canDelete }: { u: ManageUser; canDelete: bo
                         <option value="60">60 dias</option>
                         <option value="90">90 dias</option>
                       </select>
-                      <button className={btn}><Gift className="h-4 w-4" /> {emTeste ? "Renovar" : "Conceder"} Voz</button>
+                      <button type="submit" disabled={!!pendingKey} className={btn}>{spin("trial", <><Gift className="h-4 w-4" /> {emTeste ? "Renovar" : "Conceder"} Voz</>)}</button>
                     </form>
                     {emTeste && (
-                      <form action={revokeTrialAction}>
+                      <form onSubmit={onSubmit("trial_end", revokeTrialAction, "Teste encerrado.")}>
                         <input type="hidden" name="psy_id" value={u.psyId} />
-                        <button className={btn}>Encerrar teste</button>
+                        <button type="submit" disabled={!!pendingKey} className={btn}>{spin("trial_end", "Encerrar teste")}</button>
                       </form>
                     )}
                   </div>
@@ -165,19 +196,18 @@ export function UserManageModal({ u, canDelete }: { u: ManageUser; canDelete: bo
                   <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-foreground-muted">Verificação e publicação</p>
                   <div className="flex flex-wrap gap-2">
                     {u.verification !== "aprovado" && (
-                      <form action={quickApproveAction}>
+                      <form onSubmit={onSubmit("approve", quickApproveAction, "Aprovado e publicado.")}>
                         <input type="hidden" name="psy_id" value={u.psyId} />
-                        <button className={`${btn} border-green-600/40 text-green-700 hover:bg-green-50`}>
-                          <BadgeCheck className="h-4 w-4" /> Aprovar e publicar
+                        <button type="submit" disabled={!!pendingKey} className={`${btn} border-green-600/40 text-green-700 hover:bg-green-50`}>
+                          {spin("approve", <><BadgeCheck className="h-4 w-4" /> Aprovar e publicar</>)}
                         </button>
                       </form>
                     )}
-                    <form action={togglePublishAction}>
+                    <form onSubmit={onSubmit("publish", togglePublishAction, u.published ? "Despublicado." : "Publicado na vitrine.")}>
                       <input type="hidden" name="psy_id" value={u.psyId} />
                       <input type="hidden" name="publish" value={u.published ? "0" : "1"} />
-                      <button className={btn}>
-                        {u.published ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        {u.published ? "Despublicar" : "Publicar"}
+                      <button type="submit" disabled={!!pendingKey} className={btn}>
+                        {spin("publish", <>{u.published ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}{u.published ? "Despublicar" : "Publicar"}</>)}
                       </button>
                     </form>
                   </div>
@@ -188,14 +218,14 @@ export function UserManageModal({ u, canDelete }: { u: ManageUser; canDelete: bo
               <div>
                 <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-foreground-muted">Acesso</p>
                 <div className="flex flex-wrap items-center gap-2">
-                  <form action={setRoleAction} className="flex items-center gap-2">
+                  <form onSubmit={onSubmit("role", setRoleAction, "Papel atualizado.")} className="flex items-center gap-2">
                     <input type="hidden" name="profile_id" value={u.profileId} />
                     <select name="role" defaultValue={u.role} className="h-9 rounded-lg border border-border bg-background px-2 text-sm">
                       <option value="psicologo">Psicólogo</option>
                       <option value="admin">Admin</option>
                       <option value="conteudo">Conteúdo / Estúdio</option>
                     </select>
-                    <button className={btn}><ShieldCheck className="h-4 w-4" /> Definir papel</button>
+                    <button type="submit" disabled={!!pendingKey} className={btn}>{spin("role", <><ShieldCheck className="h-4 w-4" /> Definir papel</>)}</button>
                   </form>
                   {u.email && (
                     <form action={sendPasswordResetAction}>
