@@ -52,6 +52,7 @@ export function Field({
   children,
   className,
   obrigatorio,
+  plano,
 }: {
   label?: string;
   hint?: string;
@@ -59,13 +60,25 @@ export function Field({
   children: React.ReactNode;
   className?: string;
   obrigatorio?: boolean;
+  /** Selo "aparece no plano X": o campo é preenchido por todos, mas só aparece no perfil público a partir deste plano. */
+  plano?: string;
 }) {
   return (
     <div className={cn("space-y-0", className)}>
       {label && (
-        <Label htmlFor={htmlFor}>
-          {label}
-          {obrigatorio && <span className="ml-0.5 font-semibold text-danger" title="Campo obrigatório">*</span>}
+        <Label htmlFor={htmlFor} className="flex flex-wrap items-center gap-x-2">
+          <span>
+            {label}
+            {obrigatorio && <span className="ml-0.5 font-semibold text-danger" title="Campo obrigatório">*</span>}
+          </span>
+          {plano && (
+            <span
+              className="inline-flex items-center rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-medium text-brand-dark"
+              title={`Você preenche agora. Este campo aparece no seu perfil público a partir do plano ${plano}.`}
+            >
+              aparece no {plano}
+            </span>
+          )}
         </Label>
       )}
       {children}

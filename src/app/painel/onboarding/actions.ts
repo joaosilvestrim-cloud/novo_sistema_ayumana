@@ -63,7 +63,7 @@ export async function saveOnboardingAction(
   // Garante que a linha do psicólogo existe.
   const { data: existing } = await supabase
     .from("psychologists")
-    .select("id, crp_document_path, crp_number, crp_uf, verification_status, display_name, headline, bio, gender, city, state, phone_whatsapp, instagram, session_price_cents, session_price_in_person_cents, accepting_patients, formation")
+    .select("id, crp_document_path, crp_number, crp_uf, verification_status, display_name, headline, bio, gender, city, state, phone_whatsapp, instagram, session_price_cents, session_price_in_person_cents, accepting_patients, formation, video_url")
     .eq("profile_id", user.id)
     .maybeSingle();
 
@@ -98,6 +98,10 @@ export async function saveOnboardingAction(
   const instagram = String(formData.get("instagram") ?? "").trim().replace(/^@+/, "") || null;
   const sessionPrice = toCents(String(formData.get("session_price") ?? ""));
   const sessionPriceInPerson = toCents(String(formData.get("session_price_in_person") ?? ""));
+  // Vídeo de apresentação (benefício do Voz, mas todos preenchem). Só aceita
+  // link http(s); qualquer outra coisa vira nulo, por segurança.
+  const videoRaw = String(formData.get("video_url") ?? "").trim();
+  const videoUrl = /^https?:\/\/[^\s]+$/i.test(videoRaw) ? videoRaw.slice(0, 500) : null;
   const timezone = String(formData.get("timezone") ?? "America/Sao_Paulo").trim() || "America/Sao_Paulo";
   const acceptingPatients = formData.get("accepting_patients") === "on";
   const formationRaw = String(formData.get("formation") ?? "").trim();
@@ -252,6 +256,7 @@ export async function saveOnboardingAction(
     services,
     session_price_cents: sessionPrice,
     session_price_in_person_cents: sessionPriceInPerson,
+    video_url: videoUrl,
     ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
     gallery_urls: galleryUrls,
     accepts_online: acceptsOnline,
@@ -281,6 +286,7 @@ export async function saveOnboardingAction(
   if (campoMudou(existing?.instagram, instagram)) mudancas.push("Instagram");
   if (campoMudou(existing?.gender, gender)) mudancas.push("gênero");
   if (campoMudou(existing?.session_price_cents, sessionPrice) || campoMudou(existing?.session_price_in_person_cents, sessionPriceInPerson)) mudancas.push("valores");
+  if (campoMudou(existing?.video_url, videoUrl)) mudancas.push("vídeo");
   if (campoMudou(existing?.accepting_patients, acceptingPatients)) mudancas.push("disponibilidade");
   if (campoMudou(existing?.formation, formation)) mudancas.push("formação");
   if (avatarUrl) mudancas.push("foto");

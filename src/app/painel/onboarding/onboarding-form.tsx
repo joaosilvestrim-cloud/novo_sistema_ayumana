@@ -265,6 +265,9 @@ export function OnboardingForm({
         <Field label="Serviços oferecidos" htmlFor="services" hint="Separe por vírgula. Ex.: Psicoterapia individual, Terapia de casal">
           <Input id="services" name="services" defaultValue={(psy?.services ?? []).join(", ")} />
         </Field>
+        <Field label="Vídeo de apresentação" htmlFor="video_url" plano="Voz" hint="Cole o link do YouTube ou Vimeo. Você já pode preencher. Ele aparece no seu perfil a partir do plano Voz.">
+          <Input id="video_url" name="video_url" inputMode="url" placeholder="https://youtube.com/watch?v=..." defaultValue={psy?.video_url ?? ""} />
+        </Field>
         <div>
           <Label>Fotos do consultório</Label>
           <p className="mb-2 text-sm text-foreground-muted">
@@ -353,10 +356,10 @@ export function OnboardingForm({
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Valor sessão online (R$)" htmlFor="session_price" hint="Opcional. Aparece nos planos pagos.">
+          <Field label="Valor sessão online (R$)" htmlFor="session_price" plano="Alcance" hint="Opcional. Você já pode preencher. Aparece no seu perfil a partir do plano Alcance.">
             <Input id="session_price" name="session_price" inputMode="decimal" defaultValue={psy?.session_price_cents ? (psy.session_price_cents / 100).toFixed(2) : ""} />
           </Field>
-          <Field label="Valor sessão presencial (R$)" htmlFor="session_price_in_person" hint="Opcional. Só se você atende presencial.">
+          <Field label="Valor sessão presencial (R$)" htmlFor="session_price_in_person" plano="Alcance" hint="Opcional. Só se você atende presencial. Aparece a partir do plano Alcance.">
             <Input id="session_price_in_person" name="session_price_in_person" inputMode="decimal" defaultValue={psy?.session_price_in_person_cents ? (psy.session_price_in_person_cents / 100).toFixed(2) : ""} />
           </Field>
         </div>
@@ -378,9 +381,15 @@ export function OnboardingForm({
       </Section>
 
       <Section title="Disponibilidade" description="Marque os dias e horários que você atende.">
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex flex-wrap items-center gap-2 text-sm">
           <input type="checkbox" name="accepting_patients" defaultChecked={psy?.accepting_patients ?? true} className="h-4 w-4 accent-[var(--ayu-verde)]" />
           Estou aceitando novos pacientes
+          <span
+            className="inline-flex items-center rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-medium text-brand-dark"
+            title="O selo de agenda aberta aparece no seu perfil público a partir do plano Alcance."
+          >
+            selo aparece no Alcance
+          </span>
         </label>
         <div>
           <Label>Horário de atendimento</Label>
