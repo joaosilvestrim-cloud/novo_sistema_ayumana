@@ -91,17 +91,17 @@ export default async function AdminAnalyticsPage() {
     <div className="space-y-8">
       <div>
         <h1 className="flex items-center gap-2 text-2xl"><TrendingUp className="h-6 w-6 text-brand-dark" /> Analytics do site</h1>
-        <p className="mt-1 text-foreground-muted">Acessos, páginas mais vistas e o que mais clicam. Últimos 30 dias, sem rastrear dado pessoal.</p>
+        <p className="mt-1 text-foreground-muted">Dados reais, coletados pelo próprio site. Janela padrão de 30 dias. Sem cookies de terceiros, sem IP e sem dado pessoal.</p>
       </div>
 
       {/* KPIs */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat icon={<Eye className="h-5 w-5" />} label="Visualizações (30d)" value={pageviews30} sub={`${pageviews7} nos últimos 7 dias`} />
-        <Stat icon={<Users className="h-5 w-5" />} label="Visitantes únicos (30d)" value={visitantes} />
-        <Stat icon={<MousePointerClick className="h-5 w-5" />} label="Cliques (30d)" value={clicks30} />
+        <Stat icon={<Eye className="h-5 w-5" />} label="Visualizações (30d)" value={pageviews30} sub={`Cada página aberta conta 1. ${pageviews7} nos últimos 7 dias.`} />
+        <Stat icon={<Users className="h-5 w-5" />} label="Visitantes únicos (30d)" value={visitantes} sub="Navegadores diferentes, não pessoas." />
+        <Stat icon={<MousePointerClick className="h-5 w-5" />} label="Cliques (30d)" value={clicks30} sub="Em links e botões do site." />
         <Stat icon={<Smartphone className="h-5 w-5" />} label="Mobile"
           value={`${Math.round(((devices.find((x) => x.rotulo === "mobile")?.n ?? 0) / totalDisp) * 100)}%`}
-          sub="das visualizações" />
+          sub="Das visualizações, por largura de tela." />
       </div>
 
       {/* Gráfico diário */}
@@ -121,8 +121,8 @@ export default async function AdminAnalyticsPage() {
 
       {/* Top páginas + Top cliques */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <ListaTop titulo="Páginas mais vistas" subtitulo="Onde o público mais entra." rows={paths} cor="#05474A" />
-        <ListaTop titulo="Mais clicados" subtitulo="Botões e links que mais recebem cliques." rows={clicks} cor="#53C4CC"
+        <ListaTop titulo="Páginas mais vistas" subtitulo="Nº de visualizações por página, no período." rows={paths} cor="#05474A" />
+        <ListaTop titulo="Mais clicados" subtitulo="Nº de cliques por botão ou link. 'link → /x' é um link para a página /x." rows={clicks} cor="#53C4CC"
           formata={(s) => (s.startsWith("/") ? `link → ${s}` : s)} />
       </div>
 
@@ -143,11 +143,34 @@ export default async function AdminAnalyticsPage() {
           </div>
         </section>
 
-        <ListaTop titulo="De onde vêm" subtitulo="Sites que trouxeram visitantes (origem externa)." rows={referrers} cor="#F5C84B" />
+        <ListaTop titulo="De onde vêm" subtitulo="Site externo que trouxe a pessoa, quando o navegador informa." rows={referrers} cor="#F5C84B" />
       </div>
 
+      {/* Como lemos estes números */}
+      <section className="rounded-2xl border border-border bg-surface-muted/40 p-6">
+        <h2 className="text-lg">Como lemos estes números</h2>
+        <p className="mt-0.5 text-sm text-foreground-muted">Tudo é medido pelo próprio site, no lado do visitante. Nada é estimado ou simulado.</p>
+        <dl className="mt-4 grid gap-x-8 gap-y-4 sm:grid-cols-2">
+          {[
+            ["Visualização (pageview)", "Registrada toda vez que uma página abre ou o visitante troca de rota. Abrir a mesma página em sequência não conta duas vezes."],
+            ["Visitante único", "Cada navegador recebe um código anônimo e aleatório guardado nele. Contamos códigos distintos. Limpar o navegador, usar anônimo ou outro aparelho vira um novo visitante. Por isso é 'navegadores', não 'pessoas'."],
+            ["Clique", "Registrado quando o visitante clica num link, botão ou item marcado. O rótulo vem do link (a página de destino) ou do texto do botão."],
+            ["Mobile / Desktop", "Definido pela largura da tela no momento do acesso: abaixo de 768px é mobile, o resto é desktop."],
+            ["Páginas mais vistas", "As páginas com maior número de visualizações no período."],
+            ["Mais clicados", "Os botões e links com maior número de cliques. 'link → /pagina' quer dizer um link que leva para aquela página."],
+            ["De onde vêm", "O site externo que o navegador informa como origem (o Google, por exemplo). Só aparece quando o navegador envia essa informação, então parte do tráfego fica sem origem."],
+            ["Período", "Os cartões do topo e as listas usam os últimos 30 dias. O gráfico de barras usa os últimos 14 dias."],
+          ].map(([termo, texto]) => (
+            <div key={termo}>
+              <dt className="text-sm font-semibold text-heading">{termo}</dt>
+              <dd className="mt-0.5 text-sm text-foreground-muted">{texto}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+
       <p className="flex items-center gap-1.5 text-xs text-foreground-muted">
-        <Globe className="h-3.5 w-3.5" /> Analytics próprio, sem cookies de rastreio de terceiros, sem IP e sem dado pessoal. As áreas de admin e estúdio não são contadas.
+        <Globe className="h-3.5 w-3.5" /> Analytics próprio, sem cookies de rastreio de terceiros, sem IP e sem dado pessoal. As áreas de admin e estúdio não são contadas. Acessos de robôs e buscadores podem inflar um pouco os números.
       </p>
     </div>
   );
