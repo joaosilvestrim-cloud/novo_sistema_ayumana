@@ -85,11 +85,9 @@ export async function generateMetadata({
       semHtml(p.bio).slice(0, 155) ||
       `Psicólogo(a) brasileiro(a) com CRP verificado. Atendimento em português.`).trim();
 
-  // Foto do psicólogo no preview de compartilhamento (WhatsApp, redes). Sem foto,
-  // cai no banner da Ayumana. metadataBase deixa a URL relativa virar absoluta.
-  const foto = p.avatar_url || "/brand/ayumana-banner.jpg";
-  const fotoAlt = p.avatar_url ? `Foto de ${p.display_name}` : "Ayumana";
-
+  // A imagem do compartilhamento vem do arquivo opengraph-image.tsx deste mesmo
+  // segmento (card 1200x630 com foto, nome, CRP e selo). Não definimos images
+  // aqui para não duplicar; o Twitter cai no og:image automaticamente.
   return {
     title,
     description,
@@ -100,13 +98,11 @@ export async function generateMetadata({
       type: "profile",
       url: `/psicologo/${p.slug}`,
       siteName: "Ayumana",
-      images: [{ url: foto, alt: fotoAlt }],
     },
     twitter: {
       card: "summary_large_image",
       title: `${p.display_name} · Ayumana`,
       description,
-      images: [foto],
     },
   };
 }
