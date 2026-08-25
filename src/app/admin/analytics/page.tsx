@@ -61,7 +61,7 @@ export default async function AdminAnalyticsPage() {
     admin.rpc("analytics_top", { _type: "click", _field: "label", _since: since30, _limit: 12 }),
     admin.rpc("analytics_daily", { _since: since14 }),
     admin.rpc("analytics_top", { _type: "pageview", _field: "device", _since: since30, _limit: 5 }),
-    admin.rpc("analytics_top", { _type: "pageview", _field: "referrer", _since: since30, _limit: 8 }),
+    admin.rpc("analytics_top_visitors", { _type: "pageview", _field: "referrer", _since: since30, _limit: 8 }),
   ]);
 
   const pageviews30 = pv30.count ?? 0;
@@ -83,7 +83,7 @@ export default async function AdminAnalyticsPage() {
     const achou = porDia.get(key);
     serie.push({ dia: key, pageviews: achou?.pageviews ?? 0, clicks: achou?.clicks ?? 0 });
   }
-  const maxDia = Math.max(1, ...serie.map((s) => s.pageviews));
+  const maxDia = Math.max(1, ...serie.map((s) => Math.max(s.pageviews, s.clicks)));
 
   const totalDisp = Math.max(1, devices.reduce((a, b) => a + b.n, 0));
 
@@ -106,14 +106,20 @@ export default async function AdminAnalyticsPage() {
 
       {/* Gráfico diário */}
       <section className="rounded-2xl border border-border bg-background p-6">
-        <h2 className="text-lg">Visualizações por dia</h2>
-        <p className="mt-0.5 text-sm text-foreground-muted">Últimos 14 dias.</p>
-        <div className="mt-5 flex h-40 items-end gap-1.5">
+        <h2 className="text-lg">Movimento por dia</h2>
+        <p className="mt-0.5 text-sm text-foreground-muted">Visualizações e cliques nos últimos 14 dias. Passe o mouse em cada dia para ver os números.</p>
+        <div className="mt-4 flex items-center gap-4 text-xs text-foreground-muted">
+          <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-[#73A533]" /> Visualizações</span>
+          <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-[#53C4CC]" /> Cliques</span>
+        </div>
+        <div className="mt-4 flex h-40 items-stretch gap-1.5">
           {serie.map((s) => (
-            <div key={s.dia} className="group flex flex-1 flex-col items-center justify-end gap-1" title={`${s.dia}: ${s.pageviews} visualizações, ${s.clicks} cliques`}>
-              <span className="text-[10px] text-foreground-muted opacity-0 group-hover:opacity-100">{s.pageviews}</span>
-              <div className="w-full rounded-t bg-[#73A533]" style={{ height: `${Math.round((s.pageviews / maxDia) * 100)}%`, minHeight: s.pageviews > 0 ? 3 : 0 }} />
-              <span className="text-[10px] text-foreground-muted">{s.dia.slice(8, 10)}/{s.dia.slice(5, 7)}</span>
+            <div key={s.dia} className="group flex flex-1 flex-col" title={`${s.dia.slice(8, 10)}/${s.dia.slice(5, 7)}: ${s.pageviews} visualizações, ${s.clicks} cliques`}>
+              <div className="flex flex-1 items-end justify-center gap-0.5">
+                <div className="w-2 rounded-t bg-[#73A533] transition-opacity group-hover:opacity-80" style={{ height: `${Math.round((s.pageviews / maxDia) * 100)}%`, minHeight: s.pageviews > 0 ? 3 : 0 }} />
+                <div className="w-2 rounded-t bg-[#53C4CC] transition-opacity group-hover:opacity-80" style={{ height: `${Math.round((s.clicks / maxDia) * 100)}%`, minHeight: s.clicks > 0 ? 3 : 0 }} />
+              </div>
+              <span className="mt-1 text-center text-[10px] text-foreground-muted">{s.dia.slice(8, 10)}/{s.dia.slice(5, 7)}</span>
             </div>
           ))}
         </div>
@@ -143,7 +149,7 @@ export default async function AdminAnalyticsPage() {
           </div>
         </section>
 
-        <ListaTop titulo="De onde vêm" subtitulo="Site externo que trouxe a pessoa, quando o navegador informa." rows={referrers} cor="#F5C84B" />
+        <ListaTop titulo="De onde vêm" subtitulo="Visitantes diferentes que chegaram de cada site externo." rows={referrers} cor="#F5C84B" />
       </div>
 
       {/* Como lemos estes números */}
@@ -156,10 +162,11 @@ export default async function AdminAnalyticsPage() {
             ["Visitante único", "Cada navegador recebe um código anônimo e aleatório guardado nele. Contamos códigos distintos. Limpar o navegador, usar anônimo ou outro aparelho vira um novo visitante. Por isso é 'navegadores', não 'pessoas'."],
             ["Clique", "Registrado quando o visitante clica num link, botão ou item marcado. O rótulo vem do link (a página de destino) ou do texto do botão."],
             ["Mobile / Desktop", "Definido pela largura da tela no momento do acesso: abaixo de 768px é mobile, o resto é desktop."],
+            ["Movimento por dia", "As barras verdes são visualizações e as azuis são cliques, dia a dia. As duas usam a mesma escala, então dá para comparar a altura entre elas."],
             ["Páginas mais vistas", "As páginas com maior número de visualizações no período."],
             ["Mais clicados", "Os botões e links com maior número de cliques. 'link → /pagina' quer dizer um link que leva para aquela página."],
-            ["De onde vêm", "O site externo que o navegador informa como origem (o Google, por exemplo). Só aparece quando o navegador envia essa informação, então parte do tráfego fica sem origem."],
-            ["Período", "Os cartões do topo e as listas usam os últimos 30 dias. O gráfico de barras usa os últimos 14 dias."],
+            ["De onde vêm", "Conta quantos visitantes diferentes chegaram de cada site externo (o Google, por exemplo). Um mesmo visitante que abriu várias páginas conta uma vez só. Só aparece quando o navegador informa a origem, então parte do tráfego fica sem origem."],
+            ["Período", "Os cartões do topo e as listas usam os últimos 30 dias. O gráfico usa os últimos 14 dias."],
           ].map(([termo, texto]) => (
             <div key={termo}>
               <dt className="text-sm font-semibold text-heading">{termo}</dt>
