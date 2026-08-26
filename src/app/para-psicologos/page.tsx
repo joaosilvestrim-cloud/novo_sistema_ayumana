@@ -3,6 +3,7 @@ import { PageShell } from "@/components/site/page-shell";
 import { HelpCenter } from "@/components/painel/help-center";
 import { PresencaWaitlist } from "@/components/presenca-waitlist";
 import { Button } from "@/components/ui/button";
+import type { PlanTier } from "@/lib/types";
 
 export const metadata = {
   title: "Para psicólogos",
@@ -14,6 +15,12 @@ export default async function ParaPsicologosPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const whatsapp = process.env.SUPPORT_WHATSAPP || "5511930662105";
+
+  // Preços do banco (o editor de preços do admin manda no valor exibido aqui).
+  const { data: planos } = await supabase.from("plans").select("id, price_cents");
+  const precos = Object.fromEntries(
+    (planos ?? []).map((p) => [p.id, p.price_cents as number])
+  ) as Partial<Record<PlanTier, number>>;
 
   return (
     <PageShell>
@@ -49,7 +56,7 @@ export default async function ParaPsicologosPage() {
           </p>
         </div>
         <div className="mt-10">
-          <HelpCenter mode="publico" supportWhatsapp={whatsapp} />
+          <HelpCenter mode="publico" supportWhatsapp={whatsapp} precos={precos} />
         </div>
         <p className="mt-8 text-center text-sm text-foreground-muted">
           Cobrança mensal, sem fidelidade, cancele quando quiser. Preços iniciais,

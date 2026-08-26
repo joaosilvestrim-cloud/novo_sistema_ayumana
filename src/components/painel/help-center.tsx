@@ -63,21 +63,28 @@ export function HelpCenter({
   currentPlan,
   supportWhatsapp,
   mode = "painel",
+  precos,
 }: {
   currentPlan?: PlanTier;
   supportWhatsapp: string;
   /** "painel" = psicólogo logado; "publico" = visitante do site. */
   mode?: "painel" | "publico";
+  /** Preço mensal (em centavos) por plano, vindo do banco. Cai no padrão se faltar. */
+  precos?: Partial<Record<PlanTier, number>>;
 }) {
   const publico = mode === "publico";
-  const idxAtual = publico ? -1 : PLANS.findIndex((p) => p.tier === currentPlan);
+  // Preços do banco sobrescrevem os padrões (editor de preços do admin manda aqui).
+  const plans = precos
+    ? PLANS.map((p) => ({ ...p, mensalCents: precos[p.tier] ?? p.mensalCents }))
+    : PLANS;
+  const idxAtual = publico ? -1 : plans.findIndex((p) => p.tier === currentPlan);
   // No site, começa destacando o plano mais popular (Voz).
   const [sel, setSel] = useState(publico ? 2 : Math.max(0, idxAtual));
   const [period, setPeriod] = useState<BillingPeriod>("monthly");
   const [comparar, setComparar] = useState(false);
   const [aberto, setAberto] = useState<number | null>(0);
 
-  const plano = PLANS[sel];
+  const plano = plans[sel];
   const incluidos = FEATURES.filter((f) => f.min <= sel);
   const bloqueados = FEATURES.filter((f) => f.min > sel);
   const ehAtual = !publico && sel === idxAtual;
@@ -107,7 +114,7 @@ export function HelpCenter({
 
       {/* Seletor de planos */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {PLANS.map((p, i) => {
+        {plans.map((p, i) => {
           const Icon = p.icon;
           const ativo = i === sel;
           const meu = i === idxAtual;

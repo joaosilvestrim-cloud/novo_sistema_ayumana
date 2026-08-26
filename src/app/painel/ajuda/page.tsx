@@ -1,4 +1,5 @@
 import { getMyPsychologist } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
 import { effectivePlan } from "@/lib/plan-features";
 import { HelpCenter } from "@/components/painel/help-center";
 import type { PlanTier } from "@/lib/types";
@@ -17,6 +18,13 @@ export default async function AjudaPage() {
 
   const whatsapp = process.env.SUPPORT_WHATSAPP || "5511930662105";
 
+  // Preços do banco (mesma fonte do editor de preços do admin).
+  const supabase = await createClient();
+  const { data: planos } = await supabase.from("plans").select("id, price_cents");
+  const precos = Object.fromEntries(
+    (planos ?? []).map((p) => [p.id, p.price_cents as number])
+  ) as Partial<Record<PlanTier, number>>;
+
   return (
     <div className="space-y-6">
       <div>
@@ -25,7 +33,7 @@ export default async function AjudaPage() {
           Entenda o que cada plano traz e como assinar. Clique em um plano para ver os detalhes.
         </p>
       </div>
-      <HelpCenter currentPlan={plano} supportWhatsapp={whatsapp} />
+      <HelpCenter currentPlan={plano} supportWhatsapp={whatsapp} precos={precos} />
     </div>
   );
 }
