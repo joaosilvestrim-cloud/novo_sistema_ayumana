@@ -220,10 +220,20 @@ export async function listPsychologists(filters: CatalogFilters): Promise<{
 
   if (idSet !== null) query = query.in("id", idSet);
   if (filters.q) {
-    const q = filters.q.replace(/[%,]/g, " ").trim();
-    query = query.or(
-      `display_name.ilike.%${q}%,headline.ilike.%${q}%,bio.ilike.%${q}%`
-    );
+    // Busca por palavras: cada termo precisa aparecer no nome de exibição, no
+    // título ou na bio. Assim "ana souza" acha "Ana Paula Souza", em qualquer
+    // ordem e mesmo com uma palavra no meio (a busca de frase inteira falhava).
+    const termos = filters.q
+      .replace(/[%,()]/g, " ")
+      .split(/\s+/)
+      .map((t) => t.trim())
+      .filter(Boolean)
+      .slice(0, 6);
+    for (const termo of termos) {
+      query = query.or(
+        `display_name.ilike.%${termo}%,headline.ilike.%${termo}%,bio.ilike.%${termo}%`
+      );
+    }
   }
   if (filters.exterior) query = query.eq("attends_abroad", true);
   if (filters.formato === "online") query = query.eq("accepts_online", true);
