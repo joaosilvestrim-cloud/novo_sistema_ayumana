@@ -46,6 +46,36 @@ function ListaTop({ titulo, subtitulo, rows, cor, formata }: {
   );
 }
 
+// Nomes amigáveis para as rotas mais comuns, para a lista não mostrar caminho cru.
+const NOMES_ROTA: Record<string, string> = {
+  "/": "Página inicial",
+  "/psicologos": "Busca de psicólogos",
+  "/encontrar": "Quiz (encontrar psicólogo)",
+  "/para-psicologos": "Para psicólogos (planos)",
+  "/perguntas": "Fórum",
+  "/login": "Login",
+  "/cadastro": "Cadastro",
+  "/esqueci-senha": "Acesso pela campanha",
+  "/redefinir-senha": "Redefinir senha",
+  "/painel": "Painel do psicólogo",
+  "/painel/onboarding": "Meu perfil (onboarding)",
+  "/painel/assinatura": "Assinatura",
+  "/painel/forum": "Fórum (painel)",
+  "/painel/ajuda": "Ajuda e planos",
+};
+function nomeRota(p: string): string {
+  if (NOMES_ROTA[p]) return NOMES_ROTA[p];
+  if (p.startsWith("/psicologo/")) return `Perfil: ${p.slice("/psicologo/".length)}`;
+  if (p.startsWith("/perguntas/")) return `Fórum: ${p.slice("/perguntas/".length)}`;
+  return p;
+}
+function rotuloClique(s: string): string {
+  if (/wa\.me|whatsapp/i.test(s)) return "Contato no WhatsApp";
+  if (s.startsWith("/")) return `link → ${nomeRota(s)}`;
+  if (/^https?:\/\//i.test(s)) { try { return new URL(s).hostname; } catch { return s; } }
+  return s;
+}
+
 export default async function AdminAnalyticsPage() {
   await requireAdmin();
   const admin = createAdminClient();
@@ -109,17 +139,7 @@ export default async function AdminAnalyticsPage() {
         <p className="mt-1 text-foreground-muted">Dados reais, coletados pelo próprio site. Janela padrão de 30 dias. Sem cookies de terceiros, sem IP e sem dado pessoal.</p>
       </div>
 
-      {/* KPIs */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat icon={<Eye className="h-5 w-5" />} label="Visualizações (30d)" value={pageviews30} sub={`Cada página aberta conta 1. ${pageviews7} nos últimos 7 dias.`} />
-        <Stat icon={<Users className="h-5 w-5" />} label="Visitantes únicos (30d)" value={visitantes} sub="Navegadores diferentes, não pessoas." />
-        <Stat icon={<MousePointerClick className="h-5 w-5" />} label="Cliques (30d)" value={clicks30} sub="Em links e botões do site." />
-        <Stat icon={<Smartphone className="h-5 w-5" />} label="Mobile"
-          value={`${Math.round(((devices.find((x) => x.rotulo === "mobile")?.n ?? 0) / totalDisp) * 100)}%`}
-          sub="Das visualizações, por largura de tela." />
-      </div>
-
-      {/* Valor gerado: o KPI que mais importa */}
+      {/* Valor gerado: o KPI que mais importa, primeiro */}
       <section className="rounded-2xl border border-brand/30 bg-brand/5 p-6">
         <h2 className="flex items-center gap-2 text-lg"><MessageCircle className="h-5 w-5 text-brand-dark" /> Valor gerado</h2>
         <p className="mt-0.5 text-sm text-foreground-muted">
@@ -131,6 +151,19 @@ export default async function AdminAnalyticsPage() {
           <Stat icon={<Globe2 className="h-5 w-5" />} label="Atende no exterior" value={`${exterior} / ${publicados}`} sub={`${pctExterior}% dos perfis publicados.`} />
         </div>
       </section>
+
+      {/* Tráfego geral */}
+      <div>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-foreground-muted">Tráfego do site</h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Stat icon={<Eye className="h-5 w-5" />} label="Visualizações (30d)" value={pageviews30} sub={`Cada página aberta conta 1. ${pageviews7} nos últimos 7 dias.`} />
+          <Stat icon={<Users className="h-5 w-5" />} label="Visitantes únicos (30d)" value={visitantes} sub="Navegadores diferentes, não pessoas." />
+          <Stat icon={<MousePointerClick className="h-5 w-5" />} label="Cliques (30d)" value={clicks30} sub="Em links e botões do site." />
+          <Stat icon={<Smartphone className="h-5 w-5" />} label="Mobile"
+            value={`${Math.round(((devices.find((x) => x.rotulo === "mobile")?.n ?? 0) / totalDisp) * 100)}%`}
+            sub="Das visualizações, por largura de tela." />
+        </div>
+      </div>
 
       {/* Gráfico diário */}
       <section className="rounded-2xl border border-border bg-background p-6">
@@ -155,9 +188,8 @@ export default async function AdminAnalyticsPage() {
 
       {/* Top páginas + Top cliques */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <ListaTop titulo="Páginas mais vistas" subtitulo="Nº de visualizações por página, no período." rows={paths} cor="#05474A" />
-        <ListaTop titulo="Mais clicados" subtitulo="Nº de cliques por botão ou link. 'link → /x' é um link para a página /x." rows={clicks} cor="#53C4CC"
-          formata={(s) => (s.startsWith("/") ? `link → ${s}` : s)} />
+        <ListaTop titulo="Páginas mais vistas" subtitulo="Nº de visualizações por página, no período." rows={paths} cor="#05474A" formata={nomeRota} />
+        <ListaTop titulo="Mais clicados" subtitulo="Nº de cliques por botão ou link no período." rows={clicks} cor="#53C4CC" formata={rotuloClique} />
       </div>
 
       {/* Dispositivos + Origens */}
@@ -197,6 +229,8 @@ export default async function AdminAnalyticsPage() {
         <p className="mt-0.5 text-sm text-foreground-muted">Tudo é medido pelo próprio site, no lado do visitante. Nada é estimado ou simulado.</p>
         <dl className="mt-4 grid gap-x-8 gap-y-4 sm:grid-cols-2">
           {[
+            ["Valor gerado", "Perfis vistos é quantas vezes uma página de perfil de psicólogo foi aberta. Contatos no WhatsApp é quantas vezes alguém clicou no botão de falar no WhatsApp dentro de um perfil. A conversão é contatos dividido por perfis vistos. É o número que mais importa: mede quando o paciente realmente procura o profissional."],
+            ["Atende no exterior", "Quantos perfis publicados marcaram que atendem brasileiros no exterior, sobre o total de publicados."],
             ["Visualização (pageview)", "Registrada toda vez que uma página abre ou o visitante troca de rota. Abrir a mesma página em sequência não conta duas vezes."],
             ["Visitante único", "Cada navegador recebe um código anônimo e aleatório guardado nele. Contamos códigos distintos. Limpar o navegador, usar anônimo ou outro aparelho vira um novo visitante. Por isso é 'navegadores', não 'pessoas'."],
             ["Clique", "Registrado quando o visitante clica num link, botão ou item marcado. O rótulo vem do link (a página de destino) ou do texto do botão."],
