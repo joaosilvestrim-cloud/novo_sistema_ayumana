@@ -1,4 +1,4 @@
-import { Eye, Users, MousePointerClick, TrendingUp, Smartphone, Globe } from "lucide-react";
+import { Eye, Users, MousePointerClick, TrendingUp, Smartphone, Globe, MessageCircle, Globe2 } from "lucide-react";
 import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -52,7 +52,7 @@ export default async function AdminAnalyticsPage() {
   const d = (dias: number) => new Date(now - dias * 86_400_000).toISOString();
   const since30 = d(30), since7 = d(7), since14 = d(14);
 
-  const [pv30, pv7, cl30, vis30, topPaths, topClicks, dailyR, devicesR, refsR] = await Promise.all([
+  const [pv30, pv7, cl30, vis30, topPaths, topClicks, dailyR, devicesR, refsR, perfView30, waClick30, pubTotal, extTotal] = await Promise.all([
     admin.from("analytics_events").select("*", { count: "exact", head: true }).eq("type", "pageview").gte("created_at", since30),
     admin.from("analytics_events").select("*", { count: "exact", head: true }).eq("type", "pageview").gte("created_at", since7),
     admin.from("analytics_events").select("*", { count: "exact", head: true }).eq("type", "click").gte("created_at", since30),
@@ -62,6 +62,12 @@ export default async function AdminAnalyticsPage() {
     admin.rpc("analytics_daily", { _since: since14 }),
     admin.rpc("analytics_top", { _type: "pageview", _field: "device", _since: since30, _limit: 5 }),
     admin.rpc("analytics_top_visitors", { _type: "pageview", _field: "referrer", _since: since30, _limit: 8 }),
+    // Valor gerado: perfis vistos e contatos no WhatsApp a partir do perfil.
+    admin.from("analytics_events").select("*", { count: "exact", head: true }).eq("type", "pageview").ilike("path", "/psicologo/%").gte("created_at", since30),
+    admin.from("analytics_events").select("*", { count: "exact", head: true }).eq("type", "click").ilike("path", "/psicologo/%").ilike("label", "%wa.me%").gte("created_at", since30),
+    // Base publicada e quantos atendem no exterior.
+    admin.from("psychologists").select("*", { count: "exact", head: true }).eq("is_published", true),
+    admin.from("psychologists").select("*", { count: "exact", head: true }).eq("is_published", true).eq("attends_abroad", true),
   ]);
 
   const pageviews30 = pv30.count ?? 0;
@@ -73,6 +79,14 @@ export default async function AdminAnalyticsPage() {
   const daily = (dailyR.data as Dia[]) ?? [];
   const devices = (devicesR.data as Top[]) ?? [];
   const referrers = (refsR.data as Top[]) ?? [];
+
+  // Perfil visto -> contato no WhatsApp (o KPI de valor). E atende no exterior.
+  const perfisVistos = perfView30.count ?? 0;
+  const contatosWhats = waClick30.count ?? 0;
+  const conversao = perfisVistos > 0 ? Math.round((contatosWhats / perfisVistos) * 100) : 0;
+  const publicados = pubTotal.count ?? 0;
+  const exterior = extTotal.count ?? 0;
+  const pctExterior = publicados > 0 ? Math.round((exterior / publicados) * 100) : 0;
 
   // Série de 14 dias contínua (preenche dias sem dado).
   const porDia = new Map(daily.map((x) => [x.dia, x]));
@@ -103,6 +117,19 @@ export default async function AdminAnalyticsPage() {
           value={`${Math.round(((devices.find((x) => x.rotulo === "mobile")?.n ?? 0) / totalDisp) * 100)}%`}
           sub="Das visualizações, por largura de tela." />
       </div>
+
+      {/* Valor gerado: o KPI que mais importa */}
+      <section className="rounded-2xl border border-brand/30 bg-brand/5 p-6">
+        <h2 className="flex items-center gap-2 text-lg"><MessageCircle className="h-5 w-5 text-brand-dark" /> Valor gerado</h2>
+        <p className="mt-0.5 text-sm text-foreground-muted">
+          O que mais importa: quantas pessoas viram um perfil e quantas clicaram para falar no WhatsApp. Últimos 30 dias.
+        </p>
+        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          <Stat icon={<Eye className="h-5 w-5" />} label="Perfis vistos (30d)" value={perfisVistos} sub="Aberturas de página de perfil." />
+          <Stat icon={<MessageCircle className="h-5 w-5" />} label="Contatos no WhatsApp (30d)" value={contatosWhats} sub={`${conversao}% de quem viu um perfil clicou para falar.`} />
+          <Stat icon={<Globe2 className="h-5 w-5" />} label="Atende no exterior" value={`${exterior} / ${publicados}`} sub={`${pctExterior}% dos perfis publicados.`} />
+        </div>
+      </section>
 
       {/* Gráfico diário */}
       <section className="rounded-2xl border border-border bg-background p-6">
