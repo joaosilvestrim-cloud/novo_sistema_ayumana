@@ -1,6 +1,7 @@
 import { Eye, Users, MousePointerClick, TrendingUp, Smartphone, Globe, MessageCircle, Globe2 } from "lucide-react";
 import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { CampaignLinks } from "@/components/admin/campaign-links";
 
 export const metadata = { title: "Analytics" };
 
@@ -178,6 +179,17 @@ export default async function AdminAnalyticsPage() {
 
         <ListaTop titulo="De onde vêm" subtitulo="Visitantes diferentes que chegaram de cada site externo." rows={referrers} cor="#F5C84B" />
       </div>
+
+      {/* Links da campanha com marcação de origem */}
+      <section className="rounded-2xl border border-border bg-background p-6">
+        <h2 className="text-lg">Links da campanha (marque a origem)</h2>
+        <p className="mt-0.5 text-sm text-foreground-muted">
+          Use estes links ao convidar a base pelo canal certo. Cada um registra de onde a pessoa veio, para sabermos o que converte mais. Sem isso, o acesso cai em &quot;direto&quot;.
+        </p>
+        <div className="mt-4">
+          <CampaignLinks site={process.env.NEXT_PUBLIC_SITE_URL || "https://ayumana.com.br"} />
+        </div>
+      </section>
 
       {/* Como lemos estes números */}
       <section className="rounded-2xl border border-border bg-surface-muted/40 p-6">

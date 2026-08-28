@@ -17,6 +17,7 @@ import {
   Bot,
   BarChart3,
   ClipboardList,
+  Rocket,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -62,6 +63,7 @@ const GROUPS: { title?: string; items: Item[] }[] = [
     title: "Sistema",
     items: [
       { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+      { href: "/admin/coorte", label: "Coorte relançamento", icon: Rocket },
       { href: "/admin/aya", label: "Assistente Aya", icon: Bot },
       { href: "/admin/notificacoes", label: "Notificações", icon: Bell },
       { href: "/admin/integracoes", label: "Integrações", icon: Plug },

@@ -17,7 +17,7 @@ function EsqueciSenhaForm() {
   // (WhatsApp, onde não dá para pré-preencher). Nos dois casos, recebe a pessoa
   // de forma acolhedora, não como "esqueci a senha", porque ela foi convidada.
   const emailInicial = params.get("email") ?? "";
-  const daCampanha = !!emailInicial || params.get("origem") === "campanha";
+  const daCampanha = !!emailInicial || !!params.get("origem") || (params.get("utm_source") ?? "").length > 0;
 
   // Registra o acesso à campanha por canal (email/whatsapp/direto), uma vez por
   // sessão. Alimenta o painel de reativação no admin. Toda a campanha (e-mail e
@@ -32,11 +32,12 @@ function EsqueciSenhaForm() {
     }
     const utm = (params.get("utm_source") || "").toLowerCase();
     const origem = (params.get("origem") || "").toLowerCase();
-    const canal = utm.includes("sendpulse")
-      ? "email"
-      : origem === "whatsapp" || origem === "campanha"
-        ? "whatsapp"
-        : "direto";
+    // Honra a tag explícita. Assim WhatsApp, e-mail e qualquer canal novo caem no
+    // bucket certo, em vez de tudo virar "direto".
+    let canal = "direto";
+    if (origem === "whatsapp" || origem === "wa" || origem === "zap") canal = "whatsapp";
+    else if (origem === "email" || origem === "e-mail" || utm.includes("sendpulse") || utm.includes("email")) canal = "email";
+    else if (origem) canal = origem.slice(0, 20);
     fetch("/api/track", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
