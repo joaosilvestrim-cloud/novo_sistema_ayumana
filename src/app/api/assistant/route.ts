@@ -46,7 +46,7 @@ async function callGroq(apiKey: string, messages: ChatMsg[], withTools: boolean,
     body: JSON.stringify({
       model,
       messages,
-      temperature: 0.3,
+      temperature: 0.15,
       max_tokens: 700,
       ...(withTools ? { tools: TOOLS, tool_choice: "auto" } : {}),
     }),

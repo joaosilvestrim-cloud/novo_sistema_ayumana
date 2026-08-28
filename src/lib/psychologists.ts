@@ -282,8 +282,12 @@ export async function listDiscovery(count = 4): Promise<PsychologistCard[]> {
     .select(SELECT)
     .eq("is_published", true)
     .not("avatar_url", "is", null)
-    .limit(300);
-  const rows = ((data as RawRow[] | null) ?? []).map(shape);
+    .limit(400);
+  // Só quem NÃO tem plano pago ativo (Raiz efetivo). Quem paga ou está em teste
+  // já ganha prioridade na lista; a faixa "Conheça também" é palco para os outros.
+  const rows = ((data as RawRow[] | null) ?? [])
+    .map(shape)
+    .filter((r) => effectivePlan(r) === "essencial");
   const dia = new Date().toISOString().slice(0, 10);
   rows.sort((a, b) => hash01((a.id ?? "") + dia + "disc") - hash01((b.id ?? "") + dia + "disc"));
   return rows.slice(0, count);
