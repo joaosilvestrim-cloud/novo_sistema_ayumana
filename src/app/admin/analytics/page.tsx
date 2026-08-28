@@ -1,4 +1,7 @@
-import { Eye, Users, MousePointerClick, TrendingUp, Smartphone, Globe, MessageCircle, Globe2 } from "lucide-react";
+import {
+  Eye, Users, MousePointerClick, TrendingUp, Smartphone, Globe, MessageCircle, Globe2,
+  ShieldCheck, CheckCircle2, Rocket, DollarSign, MessagesSquare, UserPlus,
+} from "lucide-react";
 import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CampaignLinks } from "@/components/admin/campaign-links";
@@ -46,6 +49,35 @@ function ListaTop({ titulo, subtitulo, rows, cor, formata }: {
   );
 }
 
+/** Barras de proporção sobre um total (ex.: % dos publicados com foto). */
+function Barras({ titulo, subtitulo, rows, total, cor }: {
+  titulo: string; subtitulo?: string; rows: { label: string; n: number }[]; total: number; cor: string;
+}) {
+  const t = Math.max(1, total);
+  return (
+    <section className="rounded-2xl border border-border bg-background p-6">
+      <h2 className="text-lg">{titulo}</h2>
+      {subtitulo && <p className="mt-0.5 text-sm text-foreground-muted">{subtitulo}</p>}
+      <div className="mt-4 space-y-2.5">
+        {rows.map((r) => {
+          const pct = Math.round((r.n / t) * 100);
+          return (
+            <div key={r.label} className="flex items-center gap-3">
+              <div className="w-44 shrink-0 truncate text-sm text-foreground" title={r.label}>{r.label}</div>
+              <div className="h-5 flex-1 overflow-hidden rounded-full bg-surface-muted">
+                <div className="h-full rounded-full" style={{ width: `${Math.max(2, pct)}%`, background: cor }} />
+              </div>
+              <div className="w-24 shrink-0 text-right text-sm text-foreground-muted">
+                <span className="font-semibold text-heading">{r.n}</span> · {pct}%
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 // Nomes amigáveis para as rotas mais comuns, para a lista não mostrar caminho cru.
 const NOMES_ROTA: Record<string, string> = {
   "/": "Página inicial",
@@ -69,6 +101,11 @@ function nomeRota(p: string): string {
   if (p.startsWith("/perguntas/")) return `Fórum: ${p.slice("/perguntas/".length)}`;
   return p;
 }
+const CANAL_NOME: Record<string, string> = {
+  whatsapp: "WhatsApp", email: "E-mail", direto: "Direto (sem marcação)", campanha: "Campanha (genérico)",
+};
+const canalNome = (s: string) => CANAL_NOME[s] ?? s;
+
 function rotuloClique(s: string): string {
   if (/wa\.me|whatsapp/i.test(s)) return "Contato no WhatsApp";
   if (s.startsWith("/")) return `link → ${nomeRota(s)}`;
@@ -119,6 +156,81 @@ export default async function AdminAnalyticsPage() {
   const exterior = extTotal.count ?? 0;
   const pctExterior = publicados > 0 ? Math.round((exterior / publicados) * 100) : 0;
 
+  // ---- Análise da base e dos perfis ----
+  const nowIso = new Date().toISOString();
+  const cont = async (b: PromiseLike<{ count: number | null }>) => (await b).count ?? 0;
+  const P = () => admin.from("psychologists").select("*", { count: "exact", head: true });
+  const Ppub = () => P().eq("is_published", true);
+
+  const [
+    baseTotal, verificadosN, completosN, emTesteN, pagantesN,
+    qFoto, qBio, qVideo, qValor, qAceita,
+    planEss, planDest, planIdeal, planPres,
+    perguntasN,
+  ] = await Promise.all([
+    cont(P()),
+    cont(P().eq("verification_status", "aprovado")),
+    cont(P().eq("profile_completed", true)),
+    cont(P().eq("trial_tier", "ideal").gt("trial_ends_at", nowIso)),
+    cont(P().eq("subscription_status", "ativa").neq("plan_tier", "essencial")),
+    cont(Ppub().not("avatar_url", "is", null)),
+    cont(Ppub().not("bio", "is", null)),
+    cont(Ppub().not("video_url", "is", null)),
+    cont(Ppub().gt("session_price_cents", 0)),
+    cont(Ppub().eq("accepting_patients", true)),
+    cont(P().eq("plan_tier", "essencial")),
+    cont(P().eq("plan_tier", "destaque")),
+    cont(P().eq("plan_tier", "ideal")),
+    cont(P().eq("plan_tier", "presenca")),
+    cont(admin.from("forum_questions").select("*", { count: "exact", head: true })),
+  ]);
+
+  // Fórum: perguntas respondidas (distintas) e total de respostas.
+  const { data: ansRows } = await admin.from("forum_answers").select("question_id").limit(20000);
+  const respostasTotais = (ansRows as { question_id: string }[] | null)?.length ?? 0;
+  const perguntasRespondidas = new Set((ansRows as { question_id: string }[] | null ?? []).map((r) => r.question_id)).size;
+
+  // Top perfis: mais vistos e mais contatados (agrega eventos por /psicologo/slug).
+  const { data: evP } = await admin.from("analytics_events").select("type, path, label").ilike("path", "/psicologo/%").gte("created_at", since30).limit(10000);
+  const vmap: Record<string, number> = {}, wmap: Record<string, number> = {};
+  for (const e of (evP as { type: string; path: string | null; label: string | null }[] | null) ?? []) {
+    const slug = (e.path ?? "").slice("/psicologo/".length);
+    if (!slug) continue;
+    if (e.type === "pageview") vmap[slug] = (vmap[slug] ?? 0) + 1;
+    else if (e.type === "click" && (e.label ?? "").includes("wa.me")) wmap[slug] = (wmap[slug] ?? 0) + 1;
+  }
+  const slugsEnvolvidos = [...new Set([...Object.keys(vmap), ...Object.keys(wmap)])].slice(0, 300);
+  const { data: nomesRows } = slugsEnvolvidos.length
+    ? await admin.from("psychologists").select("slug, display_name").in("slug", slugsEnvolvidos)
+    : { data: [] as { slug: string; display_name: string | null }[] };
+  const nomePorSlug: Record<string, string> = {};
+  for (const r of (nomesRows as { slug: string; display_name: string | null }[] | null) ?? []) nomePorSlug[r.slug] = r.display_name ?? r.slug;
+  const nomeSlug = (s: string) => nomePorSlug[s] ?? s;
+  const topVistos = Object.entries(vmap).map(([s, n]) => ({ rotulo: nomeSlug(s), n })).sort((a, b) => b.n - a.n).slice(0, 8);
+  const topContatos = Object.entries(wmap).map(([s, n]) => ({ rotulo: nomeSlug(s), n })).sort((a, b) => b.n - a.n).slice(0, 8);
+
+  // Perfis atualizados por semana (a onda de reativação). Usamos profile_updated_at
+  // em vez de created_at porque a base foi importada de uma vez; "atualizou" é o
+  // sinal de atividade real.
+  const { data: atualizados } = await admin.from("psychologists").select("profile_updated_at").gte("profile_updated_at", d(56));
+  const semanas: { label: string; n: number }[] = [];
+  for (let w = 7; w >= 0; w--) {
+    const fim = now - w * 7 * 86_400_000;
+    const ini = fim - 7 * 86_400_000;
+    const n = ((atualizados as { profile_updated_at: string | null }[] | null) ?? []).filter((c) => {
+      if (!c.profile_updated_at) return false;
+      const t = new Date(c.profile_updated_at).getTime();
+      return t >= ini && t < fim;
+    }).length;
+    const dt = new Date(ini);
+    semanas.push({ label: `${String(dt.getUTCDate()).padStart(2, "0")}/${String(dt.getUTCMonth() + 1).padStart(2, "0")}`, n });
+  }
+  const maxSemana = Math.max(1, ...semanas.map((s) => s.n));
+
+  // Campanha por canal (email/whatsapp/direto/...).
+  const campanhaR = await admin.rpc("analytics_top", { _type: "campaign", _field: "label", _since: since30, _limit: 8 });
+  const campanha = (campanhaR.data as Top[]) ?? [];
+
   // Série de 14 dias contínua (preenche dias sem dado).
   const porDia = new Map(daily.map((x) => [x.dia, x]));
   const serie: Dia[] = [];
@@ -163,6 +275,84 @@ export default async function AdminAnalyticsPage() {
             value={`${Math.round(((devices.find((x) => x.rotulo === "mobile")?.n ?? 0) / totalDisp) * 100)}%`}
             sub="Das visualizações, por largura de tela." />
         </div>
+      </div>
+
+      {/* Saúde da base */}
+      <div>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-foreground-muted">Saúde da base</h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <Stat icon={<Users className="h-5 w-5" />} label="Cadastrados" value={baseTotal} />
+          <Stat icon={<ShieldCheck className="h-5 w-5" />} label="Verificados" value={verificadosN} sub={`${baseTotal ? Math.round((verificadosN / baseTotal) * 100) : 0}% da base`} />
+          <Stat icon={<CheckCircle2 className="h-5 w-5" />} label="Perfil completo" value={completosN} sub={`${baseTotal ? Math.round((completosN / baseTotal) * 100) : 0}% da base`} />
+          <Stat icon={<Eye className="h-5 w-5" />} label="Publicados" value={publicados} sub={`${baseTotal ? Math.round((publicados / baseTotal) * 100) : 0}% da base`} />
+          <Stat icon={<Rocket className="h-5 w-5" />} label="Em teste do Voz" value={emTesteN} />
+          <Stat icon={<DollarSign className="h-5 w-5" />} label="Pagantes" value={pagantesN} />
+        </div>
+      </div>
+
+      {/* Qualidade dos perfis + Planos */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Barras
+          titulo="Qualidade dos perfis publicados"
+          subtitulo={`O que os ${publicados} perfis publicados já preencheram.`}
+          total={publicados}
+          cor="#05474A"
+          rows={[
+            { label: "Com foto", n: qFoto },
+            { label: "Com apresentação", n: qBio },
+            { label: "Com valor da sessão", n: qValor },
+            { label: "Com vídeo", n: qVideo },
+            { label: "Atende no exterior", n: exterior },
+            { label: "Aceitando pacientes", n: qAceita },
+          ]}
+        />
+        <Barras
+          titulo="Planos contratados"
+          subtitulo={`Distribuição da base por plano. Além destes, ${emTesteN} estão em teste do Voz.`}
+          total={baseTotal}
+          cor="#53C4CC"
+          rows={[
+            { label: "Raiz (grátis)", n: planEss },
+            { label: "Alcance", n: planDest },
+            { label: "Voz", n: planIdeal },
+            { label: "Presença", n: planPres },
+          ]}
+        />
+      </div>
+
+      {/* Fórum + Top perfis contatados */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <section className="rounded-2xl border border-border bg-background p-6">
+          <h2 className="flex items-center gap-2 text-lg"><MessagesSquare className="h-5 w-5 text-brand-dark" /> Fórum</h2>
+          <p className="mt-0.5 text-sm text-foreground-muted">A tese do Voz: perguntas respondidas viram páginas indexadas no Google.</p>
+          <div className="mt-4 grid grid-cols-3 gap-4">
+            <div><p className="text-2xl font-semibold text-heading">{perguntasN}</p><p className="text-xs text-foreground-muted">perguntas</p></div>
+            <div><p className="text-2xl font-semibold text-heading">{perguntasRespondidas}</p><p className="text-xs text-foreground-muted">respondidas ({perguntasN ? Math.round((perguntasRespondidas / perguntasN) * 100) : 0}%)</p></div>
+            <div><p className="text-2xl font-semibold text-heading">{respostasTotais}</p><p className="text-xs text-foreground-muted">respostas no total</p></div>
+          </div>
+          <div className="mt-4 h-2 overflow-hidden rounded-full bg-surface-muted">
+            <div className="h-full rounded-full bg-brand" style={{ width: `${perguntasN ? Math.round((perguntasRespondidas / perguntasN) * 100) : 0}%` }} />
+          </div>
+        </section>
+        <ListaTop titulo="Perfis mais contatados" subtitulo="Quem mais recebeu clique no WhatsApp (30d)." rows={topContatos} cor="#25D366" />
+      </div>
+
+      {/* Top perfis vistos + Novos cadastros */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <ListaTop titulo="Perfis mais vistos" subtitulo="Quem mais teve o perfil aberto (30d)." rows={topVistos} cor="#F5C84B" />
+        <section className="rounded-2xl border border-border bg-background p-6">
+          <h2 className="flex items-center gap-2 text-lg"><UserPlus className="h-5 w-5 text-brand-dark" /> Perfis atualizados por semana</h2>
+          <p className="mt-0.5 text-sm text-foreground-muted">Atividade da base nas últimas 8 semanas. Mostra a onda de reativação.</p>
+          <div className="mt-4 flex h-32 items-end gap-2">
+            {semanas.map((s) => (
+              <div key={s.label} className="group flex flex-1 flex-col items-center justify-end gap-1" title={`Semana de ${s.label}: ${s.n} atualizações`}>
+                <span className="text-[10px] font-medium text-foreground-muted">{s.n}</span>
+                <div className="w-full rounded-t bg-[#73A533]" style={{ height: `${Math.round((s.n / maxSemana) * 100)}%`, minHeight: s.n > 0 ? 3 : 0 }} />
+                <span className="text-[10px] text-foreground-muted">{s.label}</span>
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
 
       {/* Gráfico diário */}
@@ -212,6 +402,17 @@ export default async function AdminAnalyticsPage() {
         <ListaTop titulo="De onde vêm" subtitulo="Visitantes diferentes que chegaram de cada site externo." rows={referrers} cor="#F5C84B" />
       </div>
 
+      {/* Campanha por canal */}
+      {campanha.length > 0 && (
+        <Barras
+          titulo="Campanha por canal"
+          subtitulo="De onde vieram os acessos da campanha de reativação (quem abriu /esqueci-senha)."
+          total={Math.max(1, campanha.reduce((a, b) => a + b.n, 0))}
+          cor="#F5C84B"
+          rows={campanha.map((r) => ({ label: canalNome(r.rotulo), n: r.n }))}
+        />
+      )}
+
       {/* Links da campanha com marcação de origem */}
       <section className="rounded-2xl border border-border bg-background p-6">
         <h2 className="text-lg">Links da campanha (marque a origem)</h2>
@@ -230,6 +431,9 @@ export default async function AdminAnalyticsPage() {
         <dl className="mt-4 grid gap-x-8 gap-y-4 sm:grid-cols-2">
           {[
             ["Valor gerado", "Perfis vistos é quantas vezes uma página de perfil de psicólogo foi aberta. Contatos no WhatsApp é quantas vezes alguém clicou no botão de falar no WhatsApp dentro de um perfil. A conversão é contatos dividido por perfis vistos. É o número que mais importa: mede quando o paciente realmente procura o profissional."],
+            ["Qualidade dos perfis", "Entre os perfis publicados, quantos já preencheram cada item (foto, apresentação, valor, vídeo, exterior, agenda aberta). Bom para ver o que falta puxar na base."],
+            ["Perfis atualizados por semana", "Quantos perfis foram salvos em cada semana. Usa a data da última edição, não a de cadastro, porque a base foi importada de uma vez. É a curva de reativação."],
+            ["Fórum", "Perguntas criadas, quantas já têm ao menos uma resposta, e o total de respostas. É a base da descoberta orgânica prometida no Voz."],
             ["Atende no exterior", "Quantos perfis publicados marcaram que atendem brasileiros no exterior, sobre o total de publicados."],
             ["Visualização (pageview)", "Registrada toda vez que uma página abre ou o visitante troca de rota. Abrir a mesma página em sequência não conta duas vezes."],
             ["Visitante único", "Cada navegador recebe um código anônimo e aleatório guardado nele. Contamos códigos distintos. Limpar o navegador, usar anônimo ou outro aparelho vira um novo visitante. Por isso é 'navegadores', não 'pessoas'."],
