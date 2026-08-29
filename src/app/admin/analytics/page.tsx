@@ -321,38 +321,46 @@ export default async function AdminAnalyticsPage() {
       <section className="rounded-2xl border border-brand/30 bg-brand/5 p-6">
         <h2 className="flex items-center gap-2 text-lg"><MessageCircle className="h-5 w-5 text-brand-dark" /> Valor gerado</h2>
         <p className="mt-0.5 text-sm text-foreground-muted">
-          O que mais importa: quantas pessoas viram um perfil e quantas clicaram para falar no WhatsApp. Últimos 30 dias.
+          O elo que gera negócio: paciente vê o perfil e chama o psicólogo. Números dos últimos 30 dias. As setas comparam os últimos 7 dias com os 7 anteriores.
         </p>
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
-          <Stat icon={<Eye className="h-5 w-5" />} label="Perfis vistos (30d)" value={perfisVistos} sub="Aberturas de página de perfil." trend={<Delta atual={perfLast7N} anterior={perfPrev7N} />} />
-          <Stat icon={<MessageCircle className="h-5 w-5" />} label="Contatos no WhatsApp (30d)" value={contatosWhats} sub={`${conversao}% de quem viu um perfil clicou para falar.`} trend={<Delta atual={whatsLast7N} anterior={whatsPrev7N} />} />
-          <Stat icon={<Globe2 className="h-5 w-5" />} label="Atende no exterior" value={`${exterior} / ${publicados}`} sub={`${pctExterior}% dos perfis publicados.`} />
+          <Stat icon={<Eye className="h-5 w-5" />} label="Perfis vistos (30d)" value={perfisVistos}
+            sub="Vezes que um perfil de psicólogo foi aberto. Mais aberturas = mais gente conhecendo os profissionais." trend={<Delta atual={perfLast7N} anterior={perfPrev7N} />} />
+          <Stat icon={<MessageCircle className="h-5 w-5" />} label="Contatos no WhatsApp (30d)" value={contatosWhats}
+            sub={`Cliques no botão de falar no WhatsApp dentro de um perfil. ${conversao}% de quem viu um perfil chamou o profissional.`} trend={<Delta atual={whatsLast7N} anterior={whatsPrev7N} />} />
+          <Stat icon={<Globe2 className="h-5 w-5" />} label="Atende no exterior" value={`${exterior} / ${publicados}`}
+            sub={`Perfis publicados que atendem brasileiros fora do Brasil (${pctExterior}%). É o público com menos concorrência.`} />
         </div>
       </section>
 
       {/* Tráfego geral */}
       <div>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-foreground-muted">Tráfego do site</h2>
+        <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-foreground-muted">Tráfego do site</h2>
+        <p className="mb-3 text-xs text-foreground-muted">Volume de acesso ao site inteiro. As setas comparam os últimos 7 dias com os 7 anteriores.</p>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Stat icon={<Eye className="h-5 w-5" />} label="Visualizações (30d)" value={pageviews30} sub={`Cada página aberta conta 1. ${pageviews7} nos últimos 7 dias.`} trend={<Delta atual={pageviews7} anterior={pageviewsPrev7} />} />
-          <Stat icon={<Users className="h-5 w-5" />} label="Visitantes únicos (30d)" value={visitantes} sub="Navegadores diferentes, não pessoas." />
-          <Stat icon={<MousePointerClick className="h-5 w-5" />} label="Cliques (30d)" value={clicks30} sub="Em links e botões do site." trend={<Delta atual={clicksLast7} anterior={clicksPrev7} />} />
-          <Stat icon={<Smartphone className="h-5 w-5" />} label="Mobile"
+          <Stat icon={<Eye className="h-5 w-5" />} label="Visualizações (30d)" value={pageviews30}
+            sub={`Páginas abertas no site, cada abertura conta 1. ${pageviews7} foram nos últimos 7 dias.`} trend={<Delta atual={pageviews7} anterior={pageviewsPrev7} />} />
+          <Stat icon={<Users className="h-5 w-5" />} label="Visitantes únicos (30d)" value={visitantes}
+            sub="Navegadores diferentes que acessaram. Aproxima o nº de pessoas: o mesmo aparelho conta uma vez." />
+          <Stat icon={<MousePointerClick className="h-5 w-5" />} label="Cliques (30d)" value={clicks30}
+            sub="Toques em links e botões. Mede o quanto as pessoas agem, não só olham." trend={<Delta atual={clicksLast7} anterior={clicksPrev7} />} />
+          <Stat icon={<Smartphone className="h-5 w-5" />} label="Acessos no celular"
             value={`${Math.round(((devices.find((x) => x.rotulo === "mobile")?.n ?? 0) / totalDisp) * 100)}%`}
-            sub="Das visualizações, por largura de tela." />
+            sub="Fatia das visualizações feitas no celular (o resto é computador)." />
         </div>
       </div>
 
       {/* Saúde da base */}
       <div>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-foreground-muted">Saúde da base</h2>
+        <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-foreground-muted">Saúde da base</h2>
+        <p className="mb-3 text-xs text-foreground-muted">O funil da base de psicólogos, do cadastro até o pagamento.</p>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          <Stat icon={<Users className="h-5 w-5" />} label="Cadastrados" value={baseTotal} />
-          <Stat icon={<ShieldCheck className="h-5 w-5" />} label="Verificados" value={verificadosN} sub={`${baseTotal ? Math.round((verificadosN / baseTotal) * 100) : 0}% da base`} />
-          <Stat icon={<CheckCircle2 className="h-5 w-5" />} label="Perfil completo" value={completosN} sub={`${baseTotal ? Math.round((completosN / baseTotal) * 100) : 0}% da base`} />
-          <Stat icon={<Eye className="h-5 w-5" />} label="Publicados" value={publicados} sub={`${baseTotal ? Math.round((publicados / baseTotal) * 100) : 0}% da base`} />
-          <Stat icon={<Rocket className="h-5 w-5" />} label="Em teste do Voz" value={emTesteN} />
-          <Stat icon={<DollarSign className="h-5 w-5" />} label="Pagantes" value={pagantesN} />
+          <Stat icon={<Users className="h-5 w-5" />} label="Cadastrados" value={baseTotal} sub="Total de psicólogos na base (inclui herdados da plataforma antiga)." />
+          <Stat icon={<ShieldCheck className="h-5 w-5" />} label="Verificados" value={verificadosN} sub={`CRP conferido pela equipe. ${baseTotal ? Math.round((verificadosN / baseTotal) * 100) : 0}% da base.`} />
+          <Stat icon={<CheckCircle2 className="h-5 w-5" />} label="Perfil completo" value={completosN} sub={`Preencheram tudo o que é obrigatório. ${baseTotal ? Math.round((completosN / baseTotal) * 100) : 0}% da base.`} />
+          <Stat icon={<Eye className="h-5 w-5" />} label="Publicados" value={publicados} sub={`Aparecem na vitrine. ${baseTotal ? Math.round((publicados / baseTotal) * 100) : 0}% da base.`} />
+          <Stat icon={<Rocket className="h-5 w-5" />} label="Em teste do Voz" value={emTesteN} sub="Usando o plano Voz de cortesia, sem pagar ainda." />
+          <Stat icon={<DollarSign className="h-5 w-5" />} label="Pagantes" value={pagantesN} sub="Com assinatura paga ativa." />
         </div>
       </div>
 
