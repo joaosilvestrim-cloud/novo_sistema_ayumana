@@ -1,6 +1,7 @@
 import {
   Eye, Users, MousePointerClick, TrendingUp, Smartphone, Globe, MessageCircle, Globe2,
   ShieldCheck, CheckCircle2, Rocket, DollarSign, MessagesSquare, UserPlus,
+  ArrowUpRight, ArrowDownRight, Minus,
 } from "lucide-react";
 import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -11,10 +12,38 @@ export const metadata = { title: "Analytics" };
 type Top = { rotulo: string; n: number };
 type Dia = { dia: string; pageviews: number; clicks: number };
 
-function Stat({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: string | number; sub?: string }) {
+/** Selo de variação: últimos 7 dias vs os 7 anteriores. Sobe verde, cai vermelho. */
+function Delta({ atual, anterior }: { atual: number; anterior: number }) {
+  if (atual === 0 && anterior === 0) return null;
+  const pct = anterior === 0 ? 100 : Math.round(((atual - anterior) / anterior) * 100);
+  const igual = pct === 0;
+  const up = pct > 0;
+  const forte = Math.abs(pct) >= 30;
+  const cor = igual ? "bg-surface-muted text-foreground-muted" : up ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700";
+  const Icon = igual ? Minus : up ? ArrowUpRight : ArrowDownRight;
+  // Limita a exibição para não mostrar números absurdos (ex.: +3900%).
+  const clamp = Math.max(-999, Math.min(999, pct));
+  const texto = `${up ? "+" : ""}${clamp}%${Math.abs(pct) > 999 ? "+" : ""}`;
+  return (
+    <span
+      title={`Últimos 7 dias vs. os 7 anteriores (${up ? "+" : ""}${pct}%)`}
+      className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${cor} ${forte ? "animate-pulse" : ""}`}
+    >
+      <Icon className="h-3 w-3" />
+      {texto}
+    </span>
+  );
+}
+
+function Stat({ icon, label, value, sub, trend }: {
+  icon: React.ReactNode; label: string; value: string | number; sub?: string; trend?: React.ReactNode;
+}) {
   return (
     <div className="rounded-2xl border border-border bg-background p-5">
-      <div className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-teal-100 text-teal-800">{icon}</div>
+      <div className="flex items-start justify-between gap-2">
+        <div className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-teal-100 text-teal-800">{icon}</div>
+        {trend}
+      </div>
       <p className="mt-3 text-2xl font-semibold text-heading">{value}</p>
       <p className="text-sm text-foreground-muted">{label}</p>
       {sub && <p className="mt-0.5 text-xs text-foreground-muted">{sub}</p>}
@@ -38,7 +67,7 @@ function ListaTop({ titulo, subtitulo, rows, cor, formata }: {
             <div key={r.rotulo} className="flex items-center gap-3">
               <div className="w-40 shrink-0 truncate text-sm text-foreground sm:w-56" title={r.rotulo}>{formata ? formata(r.rotulo) : r.rotulo}</div>
               <div className="h-5 flex-1 overflow-hidden rounded-full bg-surface-muted">
-                <div className="h-full rounded-full" style={{ width: `${Math.max(4, Math.round((r.n / max) * 100))}%`, background: cor }} />
+                <div className="ayu-bar-w h-full rounded-full" style={{ width: `${Math.max(4, Math.round((r.n / max) * 100))}%`, background: cor }} />
               </div>
               <div className="w-12 shrink-0 text-right text-sm font-semibold text-heading">{r.n}</div>
             </div>
@@ -65,7 +94,7 @@ function Barras({ titulo, subtitulo, rows, total, cor }: {
             <div key={r.label} className="flex items-center gap-3">
               <div className="w-44 shrink-0 truncate text-sm text-foreground" title={r.label}>{r.label}</div>
               <div className="h-5 flex-1 overflow-hidden rounded-full bg-surface-muted">
-                <div className="h-full rounded-full" style={{ width: `${Math.max(2, pct)}%`, background: cor }} />
+                <div className="ayu-bar-w h-full rounded-full" style={{ width: `${Math.max(2, pct)}%`, background: cor }} />
               </div>
               <div className="w-24 shrink-0 text-right text-sm text-foreground-muted">
                 <span className="font-semibold text-heading">{r.n}</span> · {pct}%
@@ -155,6 +184,25 @@ export default async function AdminAnalyticsPage() {
   const publicados = pubTotal.count ?? 0;
   const exterior = extTotal.count ?? 0;
   const pctExterior = publicados > 0 ? Math.round((exterior / publicados) * 100) : 0;
+
+  // Momentum: últimos 7 dias vs. os 7 anteriores (alta/queda).
+  const AE = () => admin.from("analytics_events").select("*", { count: "exact", head: true });
+  const [pvPrev7, clLast7, clPrev7, perfLast7, perfPrev7, whatsLast7, whatsPrev7] = await Promise.all([
+    AE().eq("type", "pageview").gte("created_at", since14).lt("created_at", since7),
+    AE().eq("type", "click").gte("created_at", since7),
+    AE().eq("type", "click").gte("created_at", since14).lt("created_at", since7),
+    AE().eq("type", "pageview").ilike("path", "/psicologo/%").gte("created_at", since7),
+    AE().eq("type", "pageview").ilike("path", "/psicologo/%").gte("created_at", since14).lt("created_at", since7),
+    AE().eq("type", "click").ilike("path", "/psicologo/%").ilike("label", "%wa.me%").gte("created_at", since7),
+    AE().eq("type", "click").ilike("path", "/psicologo/%").ilike("label", "%wa.me%").gte("created_at", since14).lt("created_at", since7),
+  ]);
+  const pageviewsPrev7 = pvPrev7.count ?? 0;
+  const clicksLast7 = clLast7.count ?? 0;
+  const clicksPrev7 = clPrev7.count ?? 0;
+  const perfLast7N = perfLast7.count ?? 0;
+  const perfPrev7N = perfPrev7.count ?? 0;
+  const whatsLast7N = whatsLast7.count ?? 0;
+  const whatsPrev7N = whatsPrev7.count ?? 0;
 
   // ---- Análise da base e dos perfis ----
   const nowIso = new Date().toISOString();
@@ -246,9 +294,27 @@ export default async function AdminAnalyticsPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="flex items-center gap-2 text-2xl"><TrendingUp className="h-6 w-6 text-brand-dark" /> Analytics do site</h1>
-        <p className="mt-1 text-foreground-muted">Dados reais, coletados pelo próprio site. Janela padrão de 30 dias. Sem cookies de terceiros, sem IP e sem dado pessoal.</p>
+      <style>{`
+        @keyframes ayuGrowW { from { transform: scaleX(0) } to { transform: scaleX(1) } }
+        @keyframes ayuGrowH { from { transform: scaleY(0) } to { transform: scaleY(1) } }
+        @keyframes ayuRise { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
+        .ayu-bar-w { transform-origin: left center; animation: ayuGrowW .7s cubic-bezier(.2,.7,.3,1) both; }
+        .ayu-bar-h { transform-origin: center bottom; animation: ayuGrowH .6s cubic-bezier(.2,.7,.3,1) both; }
+        .ayu-rise { animation: ayuRise .5s ease-out both; }
+      `}</style>
+
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="flex items-center gap-2 text-2xl"><TrendingUp className="h-6 w-6 text-brand-dark" /> Analytics do site</h1>
+          <p className="mt-1 text-foreground-muted">Dados reais, coletados pelo próprio site. Janela padrão de 30 dias. Sem cookies de terceiros, sem IP e sem dado pessoal.</p>
+        </div>
+        <span className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground-muted">
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75" />
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-green-500" />
+          </span>
+          Dados ao vivo
+        </span>
       </div>
 
       {/* Valor gerado: o KPI que mais importa, primeiro */}
@@ -258,8 +324,8 @@ export default async function AdminAnalyticsPage() {
           O que mais importa: quantas pessoas viram um perfil e quantas clicaram para falar no WhatsApp. Últimos 30 dias.
         </p>
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
-          <Stat icon={<Eye className="h-5 w-5" />} label="Perfis vistos (30d)" value={perfisVistos} sub="Aberturas de página de perfil." />
-          <Stat icon={<MessageCircle className="h-5 w-5" />} label="Contatos no WhatsApp (30d)" value={contatosWhats} sub={`${conversao}% de quem viu um perfil clicou para falar.`} />
+          <Stat icon={<Eye className="h-5 w-5" />} label="Perfis vistos (30d)" value={perfisVistos} sub="Aberturas de página de perfil." trend={<Delta atual={perfLast7N} anterior={perfPrev7N} />} />
+          <Stat icon={<MessageCircle className="h-5 w-5" />} label="Contatos no WhatsApp (30d)" value={contatosWhats} sub={`${conversao}% de quem viu um perfil clicou para falar.`} trend={<Delta atual={whatsLast7N} anterior={whatsPrev7N} />} />
           <Stat icon={<Globe2 className="h-5 w-5" />} label="Atende no exterior" value={`${exterior} / ${publicados}`} sub={`${pctExterior}% dos perfis publicados.`} />
         </div>
       </section>
@@ -268,9 +334,9 @@ export default async function AdminAnalyticsPage() {
       <div>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-foreground-muted">Tráfego do site</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Stat icon={<Eye className="h-5 w-5" />} label="Visualizações (30d)" value={pageviews30} sub={`Cada página aberta conta 1. ${pageviews7} nos últimos 7 dias.`} />
+          <Stat icon={<Eye className="h-5 w-5" />} label="Visualizações (30d)" value={pageviews30} sub={`Cada página aberta conta 1. ${pageviews7} nos últimos 7 dias.`} trend={<Delta atual={pageviews7} anterior={pageviewsPrev7} />} />
           <Stat icon={<Users className="h-5 w-5" />} label="Visitantes únicos (30d)" value={visitantes} sub="Navegadores diferentes, não pessoas." />
-          <Stat icon={<MousePointerClick className="h-5 w-5" />} label="Cliques (30d)" value={clicks30} sub="Em links e botões do site." />
+          <Stat icon={<MousePointerClick className="h-5 w-5" />} label="Cliques (30d)" value={clicks30} sub="Em links e botões do site." trend={<Delta atual={clicksLast7} anterior={clicksPrev7} />} />
           <Stat icon={<Smartphone className="h-5 w-5" />} label="Mobile"
             value={`${Math.round(((devices.find((x) => x.rotulo === "mobile")?.n ?? 0) / totalDisp) * 100)}%`}
             sub="Das visualizações, por largura de tela." />
@@ -331,7 +397,7 @@ export default async function AdminAnalyticsPage() {
             <div><p className="text-2xl font-semibold text-heading">{respostasTotais}</p><p className="text-xs text-foreground-muted">respostas no total</p></div>
           </div>
           <div className="mt-4 h-2 overflow-hidden rounded-full bg-surface-muted">
-            <div className="h-full rounded-full bg-brand" style={{ width: `${perguntasN ? Math.round((perguntasRespondidas / perguntasN) * 100) : 0}%` }} />
+            <div className="ayu-bar-w h-full rounded-full bg-brand" style={{ width: `${perguntasN ? Math.round((perguntasRespondidas / perguntasN) * 100) : 0}%` }} />
           </div>
         </section>
         <ListaTop titulo="Perfis mais contatados" subtitulo="Quem mais recebeu clique no WhatsApp (30d)." rows={topContatos} cor="#25D366" />
@@ -347,7 +413,7 @@ export default async function AdminAnalyticsPage() {
             {semanas.map((s) => (
               <div key={s.label} className="group flex flex-1 flex-col items-center justify-end gap-1" title={`Semana de ${s.label}: ${s.n} atualizações`}>
                 <span className="text-[10px] font-medium text-foreground-muted">{s.n}</span>
-                <div className="w-full rounded-t bg-[#73A533]" style={{ height: `${Math.round((s.n / maxSemana) * 100)}%`, minHeight: s.n > 0 ? 3 : 0 }} />
+                <div className="ayu-bar-h w-full rounded-t bg-[#73A533]" style={{ height: `${Math.round((s.n / maxSemana) * 100)}%`, minHeight: s.n > 0 ? 3 : 0 }} />
                 <span className="text-[10px] text-foreground-muted">{s.label}</span>
               </div>
             ))}
@@ -367,8 +433,8 @@ export default async function AdminAnalyticsPage() {
           {serie.map((s) => (
             <div key={s.dia} className="group flex flex-1 flex-col" title={`${s.dia.slice(8, 10)}/${s.dia.slice(5, 7)}: ${s.pageviews} visualizações, ${s.clicks} cliques`}>
               <div className="flex flex-1 items-end justify-center gap-0.5">
-                <div className="w-2 rounded-t bg-[#73A533] transition-opacity group-hover:opacity-80" style={{ height: `${Math.round((s.pageviews / maxDia) * 100)}%`, minHeight: s.pageviews > 0 ? 3 : 0 }} />
-                <div className="w-2 rounded-t bg-[#53C4CC] transition-opacity group-hover:opacity-80" style={{ height: `${Math.round((s.clicks / maxDia) * 100)}%`, minHeight: s.clicks > 0 ? 3 : 0 }} />
+                <div className="ayu-bar-h w-2 rounded-t bg-[#73A533] transition-opacity group-hover:opacity-80" style={{ height: `${Math.round((s.pageviews / maxDia) * 100)}%`, minHeight: s.pageviews > 0 ? 3 : 0 }} />
+                <div className="ayu-bar-h w-2 rounded-t bg-[#53C4CC] transition-opacity group-hover:opacity-80" style={{ height: `${Math.round((s.clicks / maxDia) * 100)}%`, minHeight: s.clicks > 0 ? 3 : 0 }} />
               </div>
               <span className="mt-1 text-center text-[10px] text-foreground-muted">{s.dia.slice(8, 10)}/{s.dia.slice(5, 7)}</span>
             </div>
@@ -391,7 +457,7 @@ export default async function AdminAnalyticsPage() {
               <div key={dv.rotulo} className="flex items-center gap-3">
                 <div className="w-20 shrink-0 text-sm capitalize text-foreground">{dv.rotulo}</div>
                 <div className="h-5 flex-1 overflow-hidden rounded-full bg-surface-muted">
-                  <div className="h-full rounded-full bg-[#73A533]" style={{ width: `${Math.round((dv.n / totalDisp) * 100)}%` }} />
+                  <div className="ayu-bar-w h-full rounded-full bg-[#73A533]" style={{ width: `${Math.round((dv.n / totalDisp) * 100)}%` }} />
                 </div>
                 <div className="w-16 shrink-0 text-right text-sm text-foreground-muted">{Math.round((dv.n / totalDisp) * 100)}%</div>
               </div>
