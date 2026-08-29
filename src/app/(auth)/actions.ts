@@ -10,7 +10,7 @@ export async function signInAction(
   _prev: AuthState,
   formData: FormData
 ): Promise<AuthState> {
-  const email = String(formData.get("email") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
   const next = String(formData.get("next") ?? "/painel");
 
@@ -42,7 +42,7 @@ export async function signUpAction(
   formData: FormData
 ): Promise<AuthState> {
   const fullName = String(formData.get("full_name") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
 
   if (!fullName || !email || !password) {
@@ -60,15 +60,23 @@ export async function signUpAction(
   });
 
   if (error) {
-    if (error.message.toLowerCase().includes("registered")) {
-      return { error: "Já existe uma conta com este e-mail." };
+    if (error.message.toLowerCase().includes("registered") || error.message.toLowerCase().includes("already")) {
+      return { error: "Já existe uma conta com este e-mail. Faça login abaixo, ou use \"Esqueci minha senha\" se não lembra a senha." };
     }
     return { error: "Não foi possível criar a conta. Tente novamente." };
   }
 
+  // Com a confirmação de e-mail ligada, o Supabase NÃO retorna erro para um
+  // e-mail que já existe (proteção contra enumeração): devolve um "sucesso" com
+  // identities vazio. Sem tratar isso, cada nova tentativa reenviava e-mail e a
+  // pessoa achava que o cadastro não completava. Aqui detectamos e orientamos.
+  if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+    return { error: "Já existe uma conta com este e-mail. Faça login abaixo, ou use \"Esqueci minha senha\" se não lembra a senha." };
+  }
+
   // Se a confirmação de e-mail estiver ativa, não há sessão ainda.
   if (!data.session) {
-    redirect("/login?confirme=1");
+    redirect(`/login?confirme=1&email=${encodeURIComponent(email)}`);
   }
 
   revalidatePath("/", "layout");
