@@ -22,6 +22,15 @@ export default async function EditarComunidadePage({ params }: { params: Promise
   const eventos = (ev as CommunityEvent[] | null) ?? [];
   const site = process.env.NEXT_PUBLIC_SITE_URL || "https://ayumana.com.br";
 
+  // Métricas do funil desta comunidade (atribuídas pelo slug).
+  const cnt = async (b: PromiseLike<{ count: number | null }>) => (await b).count ?? 0;
+  const AE = () => admin.from("analytics_events").select("*", { count: "exact", head: true }).eq("community", c.slug);
+  const [mViews, mPerfis, mWhats] = await Promise.all([
+    cnt(AE().eq("type", "pageview").ilike("path", "/comunidades/%")),
+    cnt(AE().eq("type", "pageview").ilike("path", "/psicologo/%")),
+    cnt(AE().eq("type", "click").ilike("label", "%wa.me%")),
+  ]);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -41,6 +50,17 @@ export default async function EditarComunidadePage({ params }: { params: Promise
           </ConfirmButton>
         </form>
       </div>
+
+      {/* Métricas do funil desta comunidade */}
+      <section className="rounded-2xl border border-brand/30 bg-brand/5 p-5">
+        <h2 className="text-lg">Funil desta comunidade</h2>
+        <p className="mt-0.5 text-sm text-foreground-muted">Atribuído pela origem, desde que a pessoa chega pela página da comunidade até o clique no WhatsApp.</p>
+        <div className="mt-4 grid grid-cols-3 gap-4">
+          <div><p className="text-2xl font-semibold text-heading">{mViews}</p><p className="text-xs text-foreground-muted">visitas à página</p></div>
+          <div><p className="text-2xl font-semibold text-heading">{mPerfis}</p><p className="text-xs text-foreground-muted">perfis abertos</p></div>
+          <div><p className="text-2xl font-semibold text-brand-dark">{mWhats}</p><p className="text-xs text-foreground-muted">contatos no WhatsApp</p></div>
+        </div>
+      </section>
 
       <CommunityForm c={c} site={site} />
 
