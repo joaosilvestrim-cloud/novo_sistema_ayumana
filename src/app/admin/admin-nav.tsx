@@ -18,6 +18,7 @@ import {
   BarChart3,
   ClipboardList,
   Rocket,
+  Users2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -50,6 +51,7 @@ const GROUPS: { title?: string; items: Item[] }[] = [
       { href: "/admin/assinaturas", label: "Assinaturas", icon: CreditCard },
       { href: "/admin/cupons", label: "Cupons", icon: Ticket },
       { href: "/admin/presenca", label: "Fila Presença", icon: Sparkles, badgeKey: "presenca" },
+      { href: "/admin/comunidades", label: "Comunidades", icon: Users2 },
     ],
   },
   {

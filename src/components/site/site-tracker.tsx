@@ -50,6 +50,24 @@ function send(payload: Record<string, unknown>) {
 
 const interno = (p: string) => p.startsWith("/admin") || p.startsWith("/estudio");
 
+/**
+ * Atribuição de comunidade: ao entrar numa landing /comunidades/{slug}, guarda o
+ * slug na sessão. A partir daí, todo evento (busca, perfil, clique no WhatsApp)
+ * carrega essa origem, para medir o funil de cada parceiro até o contato.
+ */
+function communityAtual(path: string): string | null {
+  try {
+    const m = path.match(/^\/comunidades\/([^/?#]+)/);
+    if (m && m[1]) {
+      sessionStorage.setItem("ayu_community", m[1]);
+      return m[1];
+    }
+    return sessionStorage.getItem("ayu_community");
+  } catch {
+    return null;
+  }
+}
+
 export function SiteTracker() {
   const pathname = usePathname();
   const ultimo = useRef<string>("");
@@ -58,7 +76,7 @@ export function SiteTracker() {
   useEffect(() => {
     if (!pathname || interno(pathname) || ultimo.current === pathname) return;
     ultimo.current = pathname;
-    send({ type: "pageview", path: pathname, referrer: referrerHost(), device: device(), visitor: visitorId() });
+    send({ type: "pageview", path: pathname, referrer: referrerHost(), device: device(), visitor: visitorId(), community: communityAtual(pathname) });
   }, [pathname]);
 
   // Cliques em links, botões e qualquer elemento com data-track.
@@ -76,7 +94,7 @@ export function SiteTracker() {
       }
       if (!label) label = (alvo.textContent || "").trim().slice(0, 60);
       if (!label) return;
-      send({ type: "click", path: p, label, device: device(), visitor: visitorId() });
+      send({ type: "click", path: p, label, device: device(), visitor: visitorId(), community: communityAtual(p) });
     };
     document.addEventListener("click", onClick, true);
     return () => document.removeEventListener("click", onClick, true);

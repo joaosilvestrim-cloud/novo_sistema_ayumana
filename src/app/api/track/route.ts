@@ -19,6 +19,8 @@ export async function POST(req: NextRequest) {
       referrer: body.referrer ? String(body.referrer).slice(0, 200) : null,
       device: body.device === "mobile" ? "mobile" : body.device === "desktop" ? "desktop" : null,
       visitor: body.visitor ? String(body.visitor).slice(0, 60) : null,
+      // Atribuição de comunidade (slug), para medir o funil de cada parceiro.
+      community: body.community ? String(body.community).slice(0, 80) : null,
     });
   } catch {
     // silêncio: analytics nunca pode quebrar o site
