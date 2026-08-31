@@ -1,6 +1,6 @@
 // Tipos do domínio Ayumana (espelham a migration 0001).
 
-export type UserRole = "psicologo" | "admin" | "conteudo";
+export type UserRole = "psicologo" | "admin" | "conteudo" | "comunidade";
 
 export type ContentStatusKey = "briefing" | "producao" | "revisao" | "ajustes" | "aprovado" | "entregue";
 export type ContentFormat = "post" | "story" | "reel" | "carrossel" | "outro";

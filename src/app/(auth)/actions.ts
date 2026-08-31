@@ -31,6 +31,7 @@ export async function signInAction(
     const { data: prof } = await supabase.from("profiles").select("role").eq("id", data.user.id).maybeSingle();
     if (prof?.role === "conteudo") dest = "/estudio";
     else if (prof?.role === "admin") dest = "/admin";
+    else if (prof?.role === "comunidade") dest = "/parceiro";
   }
 
   revalidatePath("/", "layout");

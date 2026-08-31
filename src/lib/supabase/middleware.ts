@@ -34,7 +34,7 @@ export async function updateSession(request: NextRequest) {
 
   // Rotas que exigem login.
   const isPrivate =
-    pathname.startsWith("/painel") || pathname.startsWith("/admin");
+    pathname.startsWith("/painel") || pathname.startsWith("/admin") || pathname.startsWith("/parceiro");
 
   if (isPrivate && !user) {
     const url = request.nextUrl.clone();

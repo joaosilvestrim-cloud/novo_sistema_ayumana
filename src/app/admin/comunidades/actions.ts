@@ -162,6 +162,55 @@ export async function saveCommunityPsychologistsAction(formData: FormData): Prom
   return { ok: true };
 }
 
+/** Cria (ou reaproveita) o acesso de leitura do responsável pela comunidade. */
+export async function createCommunityManagerAction(formData: FormData): Promise<{ ok: boolean; error?: string; email?: string; password?: string; created?: boolean }> {
+  await requireAdmin();
+  const admin = createAdminClient();
+  const communityId = s(formData, "community_id");
+  const email = (s(formData, "manager_email") ?? "").toLowerCase();
+  const name = s(formData, "manager_name");
+  if (!communityId) return { ok: false, error: "Comunidade não identificada." };
+  if (!email || !email.includes("@")) return { ok: false, error: "Informe um e-mail válido." };
+
+  const { data: list } = await admin.auth.admin.listUsers({ page: 1, perPage: 2000 });
+  let user = (list?.users ?? []).find((u) => (u.email || "").toLowerCase() === email) ?? null;
+  let password: string | undefined;
+  let created = false;
+
+  if (!user) {
+    password = `ayumana${new Date().getFullYear()}`;
+    const { data, error } = await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { full_name: name || null },
+    });
+    if (error || !data.user) return { ok: false, error: `Não foi possível criar o acesso: ${error?.message ?? "erro"}` };
+    user = data.user;
+    created = true;
+    // Usuário novo é criado JÁ como responsável de comunidade.
+    await admin.from("profiles").upsert({ id: user.id, email, full_name: name || null, role: "comunidade" }, { onConflict: "id" });
+  }
+  // Para usuário existente, não mexemos no papel dele (pode ser psicólogo/admin).
+
+  const { error: linkErr } = await admin.from("community_managers").upsert({ community_id: communityId, profile_id: user.id });
+  if (linkErr) return { ok: false, error: linkErr.message };
+
+  revalidatePath(`/admin/comunidades/${communityId}`);
+  return { ok: true, email, password, created };
+}
+
+/** Remove o acesso de um responsável. */
+export async function removeCommunityManagerAction(formData: FormData) {
+  await requireAdmin();
+  const admin = createAdminClient();
+  const communityId = String(formData.get("community_id") ?? "");
+  const profileId = String(formData.get("profile_id") ?? "");
+  if (!communityId || !profileId) return;
+  await admin.from("community_managers").delete().eq("community_id", communityId).eq("profile_id", profileId);
+  revalidatePath(`/admin/comunidades/${communityId}`);
+}
+
 /** Marca um lead institucional como tratado / não tratado. */
 export async function toggleLeadHandledAction(formData: FormData) {
   await requireAdmin();

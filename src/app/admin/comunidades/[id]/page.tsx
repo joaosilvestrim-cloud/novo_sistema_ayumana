@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { CommunityForm } from "@/components/admin/community-form";
 import { CommunityEventsManager } from "@/components/admin/community-events-manager";
 import { CommunityPsychologistsPicker } from "@/components/admin/community-psychologists-picker";
+import { CommunityManagerAccess } from "@/components/admin/community-manager-access";
 import { ConfirmButton } from "@/components/admin/confirm-button";
 import { deleteCommunityAction } from "../actions";
 import type { Community, CommunityEvent } from "@/lib/communities";
@@ -38,6 +39,11 @@ export default async function EditarComunidadePage({ params }: { params: Promise
     .map((p) => ({ id: p.id, name: p.display_name ?? "(sem nome)", crp: p.crp_number ?? null }));
   const { data: cur } = await admin.from("community_psychologists").select("psychologist_id").eq("community_id", id).order("sort_order");
   const currentIds = ((cur as { psychologist_id: string }[] | null) ?? []).map((r) => r.psychologist_id);
+
+  // Responsáveis com acesso de leitura.
+  const { data: mgrs } = await admin.from("community_managers").select("profile_id, profile:profiles(full_name, email)").eq("community_id", id);
+  const managers = ((mgrs as { profile_id: string; profile: { full_name: string | null; email: string | null } | null }[] | null) ?? [])
+    .map((m) => ({ profileId: m.profile_id, name: m.profile?.full_name ?? null, email: m.profile?.email ?? null }));
 
   return (
     <div className="space-y-6">
@@ -78,6 +84,8 @@ export default async function EditarComunidadePage({ params }: { params: Promise
       <CommunityForm c={c} site={site} />
 
       <CommunityPsychologistsPicker communityId={c.id} all={all} currentIds={currentIds} />
+
+      <CommunityManagerAccess communityId={c.id} managers={managers} />
 
       <CommunityEventsManager communityId={c.id} eventos={eventos} />
     </div>
