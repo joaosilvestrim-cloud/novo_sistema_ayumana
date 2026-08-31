@@ -31,10 +31,10 @@ export function CommunityForm({ c, site }: { c: Community | null; site: string }
       const res = await saveCommunityAction(fd);
       if (res.ok) {
         setMsg({ ok: true, text: "Comunidade salva." });
-        if (!c && res.slug) {
-          // Criou agora: recarrega para a tela de edição (via lista).
-          router.push("/admin/comunidades");
-          router.refresh();
+        if (!c && res.id) {
+          // Criou agora: leva direto à tela de edição completa (acesso do
+          // responsável, curadoria de psicólogos e eventos ficam lá).
+          router.push(`/admin/comunidades/${res.id}`);
         } else {
           router.refresh();
         }

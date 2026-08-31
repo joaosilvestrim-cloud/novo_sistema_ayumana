@@ -11,7 +11,7 @@ const s = (fd: FormData, k: string) => {
   return v || null;
 };
 
-export async function saveCommunityAction(formData: FormData): Promise<{ ok: boolean; error?: string; slug?: string }> {
+export async function saveCommunityAction(formData: FormData): Promise<{ ok: boolean; error?: string; slug?: string; id?: string }> {
   await requireAdmin();
   const admin = createAdminClient();
 
@@ -73,22 +73,24 @@ export async function saveCommunityAction(formData: FormData): Promise<{ ok: boo
     updated_at: new Date().toISOString(),
   };
 
+  let savedId = id ?? undefined;
   if (id) {
     const { error } = await admin.from("communities").update(record).eq("id", id);
     if (error) return { ok: false, error: error.message };
   } else {
-    const { error } = await admin.from("communities").insert(record);
-    if (error) {
-      if (error.message.includes("duplicate") || error.code === "23505") {
+    const { data: ins, error } = await admin.from("communities").insert(record).select("id").single();
+    if (error || !ins) {
+      if (error?.message.includes("duplicate") || error?.code === "23505") {
         return { ok: false, error: `Já existe uma comunidade com o slug "${slug}". Escolha outro.` };
       }
-      return { ok: false, error: error.message };
+      return { ok: false, error: error?.message ?? "Não foi possível criar." };
     }
+    savedId = ins.id as string;
   }
   revalidatePath("/admin/comunidades");
   revalidatePath("/comunidades");
   revalidatePath(`/comunidades/${slug}`);
-  return { ok: true, slug };
+  return { ok: true, slug, id: savedId };
 }
 
 export async function deleteCommunityAction(formData: FormData) {
