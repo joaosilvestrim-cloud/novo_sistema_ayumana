@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Loader2, Check, AlertCircle, ExternalLink } from "lucide-react";
 import { Field, Input, Select, Label } from "@/components/ui/field";
 import { COUNTRIES } from "@/lib/types";
-import { COMMUNITY_TYPE_LABEL, type Community } from "@/lib/communities";
+import { COMMUNITY_TYPE_LABEL, type Community } from "@/lib/communities-types";
 import { saveCommunityAction } from "@/app/admin/comunidades/actions";
 
 const STATUS: { v: string; label: string }[] = [

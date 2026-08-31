@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarPlus, Loader2, Trash2, Check, AlertCircle } from "lucide-react";
 import { Field, Input, Select } from "@/components/ui/field";
-import type { CommunityEvent } from "@/lib/communities";
+import type { CommunityEvent } from "@/lib/communities-types";
 import { saveEventAction, deleteEventAction } from "@/app/admin/comunidades/actions";
 
 const STATUS = [
