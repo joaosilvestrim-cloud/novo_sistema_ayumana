@@ -293,6 +293,17 @@ export async function listDiscovery(count = 4): Promise<PsychologistCard[]> {
   return rows.slice(0, count);
 }
 
+/** Psicólogos publicados por lista de ids, na ordem dos ids (curadoria de comunidade). */
+export async function listPsychologistsByIds(ids: string[]): Promise<PsychologistCard[]> {
+  if (!ids.length) return [];
+  const supabase = await createClient();
+  const { data } = await supabase.from("psychologists").select(SELECT).in("id", ids).eq("is_published", true);
+  const rows = ((data as RawRow[] | null) ?? []).map(shape);
+  const ordem = new Map(ids.map((id, i) => [id, i]));
+  rows.sort((a, b) => (ordem.get(a.id ?? "") ?? 0) - (ordem.get(b.id ?? "") ?? 0));
+  return rows;
+}
+
 export async function getPsychologistBySlug(
   slug: string
 ): Promise<PsychologistCard | null> {

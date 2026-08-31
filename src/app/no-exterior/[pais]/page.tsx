@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Clock, Globe2, ShieldCheck, Check } from "lucide-react";
+import { Clock, Globe2, ShieldCheck, Check, Users2, ArrowRight } from "lucide-react";
 import { PageShell } from "@/components/site/page-shell";
 import { PsychologistCard } from "@/components/catalog/psychologist-card";
 import { Button } from "@/components/ui/button";
 import { COUNTRY_LANDINGS, getCountryLanding } from "@/lib/countries-content";
 import { listPsychologists } from "@/lib/psychologists";
+import { listCommunitiesByCountry } from "@/lib/communities";
 
 export function generateStaticParams() {
   return COUNTRY_LANDINGS.map((c) => ({ pais: c.slug }));
@@ -37,7 +38,10 @@ export default async function CountryLandingPage({
   const c = getCountryLanding(pais);
   if (!c) notFound();
 
-  const { rows } = await listPsychologists({ pais: c.code, exterior: true });
+  const [{ rows }, comunidades] = await Promise.all([
+    listPsychologists({ pais: c.code, exterior: true }),
+    listCommunitiesByCountry(c.code),
+  ]);
 
   return (
     <PageShell>
@@ -108,6 +112,31 @@ export default async function CountryLandingPage({
             </div>
           )}
         </section>
+
+        {/* Comunidades e parceiros neste país */}
+        {comunidades.length > 0 && (
+          <section className="mt-16">
+            <h2 className="flex items-center gap-2 text-2xl"><Users2 className="h-6 w-6 text-brand-dark" /> Comunidades e parceiros {c.demonym}</h2>
+            <p className="mt-1 text-foreground-muted">Ações gratuitas da Ayumana junto a associações e grupos brasileiros.</p>
+            <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {comunidades.map((cm) => (
+                <Link key={cm.id} href={`/comunidades/${cm.slug}`} className="group flex items-center gap-3 rounded-2xl border border-border bg-background p-4 transition-colors hover:border-brand hover:bg-brand/5">
+                  {cm.logo_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={cm.logo_url} alt={cm.name} className="h-10 w-10 rounded-lg object-contain" />
+                  ) : (
+                    <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand/10 text-brand-dark"><Users2 className="h-5 w-5" /></span>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium text-heading group-hover:text-brand-dark">{cm.name}</p>
+                    {cm.city_region && <p className="truncate text-xs text-foreground-muted">{cm.city_region}</p>}
+                  </div>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-foreground-muted group-hover:text-brand-dark" />
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Links para outros países */}
         <section className="mt-16 border-t border-border pt-8">

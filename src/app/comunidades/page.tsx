@@ -3,6 +3,7 @@ import { Globe2, Users2, Heart, ArrowRight, MessageCircle } from "lucide-react";
 import { PageShell } from "@/components/site/page-shell";
 import { Button } from "@/components/ui/button";
 import { listPublicCommunities } from "@/lib/communities";
+import { CommunityLeadForm } from "@/components/site/community-lead-form";
 import { COUNTRIES } from "@/lib/types";
 
 export const metadata = {
@@ -36,7 +37,7 @@ export default async function ComunidadesHubPage() {
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Button href="/psicologos?exterior=1" size="lg">Encontrar um psicólogo</Button>
-            <a href={waLink} target="_blank" rel="noopener noreferrer" className="inline-flex h-12 items-center gap-2 rounded-lg border border-border px-5 font-medium text-heading hover:bg-surface-muted">
+            <a href="#parceria" className="inline-flex h-12 items-center gap-2 rounded-lg border border-border px-5 font-medium text-heading hover:bg-surface-muted">
               <MessageCircle className="h-5 w-5" /> Levar para minha comunidade
             </a>
           </div>
@@ -89,17 +90,19 @@ export default async function ComunidadesHubPage() {
       </section>
 
       {/* Para líderes */}
-      <section className="mx-auto max-w-5xl px-4 py-16">
-        <div className="flex flex-col items-center gap-6 rounded-2xl border border-brand/30 bg-brand/5 p-8 text-center md:flex-row md:justify-between md:text-left">
+      <section id="parceria" className="mx-auto max-w-5xl px-4 py-16">
+        <div className="grid gap-8 md:grid-cols-2 md:items-start">
           <div>
             <h2 className="flex items-center gap-2 text-2xl font-semibold text-heading"><Heart className="h-6 w-6 text-brand-dark" /> Lidera uma comunidade brasileira no exterior?</h2>
-            <p className="mt-2 max-w-xl text-foreground-muted">
+            <p className="mt-3 text-foreground-muted">
               A gente monta uma ação gratuita de saúde emocional sob medida para os seus membros, com psicólogos brasileiros verificados. Sem custo para a comunidade.
             </p>
+            <p className="mt-4 text-sm text-foreground-muted">Prefere falar direto?</p>
+            <a href={waLink} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex h-11 items-center gap-2 rounded-lg border border-border px-4 font-medium text-heading hover:bg-surface-muted">
+              <MessageCircle className="h-5 w-5" /> Chamar no WhatsApp
+            </a>
           </div>
-          <a href={waLink} target="_blank" rel="noopener noreferrer" className="inline-flex h-12 shrink-0 items-center gap-2 rounded-lg bg-primary px-6 font-semibold text-primary-foreground hover:bg-primary-hover">
-            Quero levar a Ayumana
-          </a>
+          <CommunityLeadForm />
         </div>
       </section>
     </PageShell>

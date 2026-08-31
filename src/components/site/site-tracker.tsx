@@ -68,6 +68,24 @@ function communityAtual(path: string): string | null {
   }
 }
 
+/** UTMs de primeira visita, guardadas na sessão, anexadas a todos os eventos. */
+function utms(): { utm_source?: string; utm_medium?: string; utm_campaign?: string } {
+  try {
+    const sp = new URLSearchParams(location.search);
+    for (const k of ["utm_source", "utm_medium", "utm_campaign"]) {
+      const v = sp.get(k);
+      if (v && !sessionStorage.getItem("ayu_" + k)) sessionStorage.setItem("ayu_" + k, v.slice(0, 60));
+    }
+    return {
+      utm_source: sessionStorage.getItem("ayu_utm_source") || undefined,
+      utm_medium: sessionStorage.getItem("ayu_utm_medium") || undefined,
+      utm_campaign: sessionStorage.getItem("ayu_utm_campaign") || undefined,
+    };
+  } catch {
+    return {};
+  }
+}
+
 export function SiteTracker() {
   const pathname = usePathname();
   const ultimo = useRef<string>("");
@@ -76,7 +94,7 @@ export function SiteTracker() {
   useEffect(() => {
     if (!pathname || interno(pathname) || ultimo.current === pathname) return;
     ultimo.current = pathname;
-    send({ type: "pageview", path: pathname, referrer: referrerHost(), device: device(), visitor: visitorId(), community: communityAtual(pathname) });
+    send({ type: "pageview", path: pathname, referrer: referrerHost(), device: device(), visitor: visitorId(), community: communityAtual(pathname), ...utms() });
   }, [pathname]);
 
   // Cliques em links, botões e qualquer elemento com data-track.
@@ -94,7 +112,7 @@ export function SiteTracker() {
       }
       if (!label) label = (alvo.textContent || "").trim().slice(0, 60);
       if (!label) return;
-      send({ type: "click", path: p, label, device: device(), visitor: visitorId(), community: communityAtual(p) });
+      send({ type: "click", path: p, label, device: device(), visitor: visitorId(), community: communityAtual(p), ...utms() });
     };
     document.addEventListener("click", onClick, true);
     return () => document.removeEventListener("click", onClick, true);

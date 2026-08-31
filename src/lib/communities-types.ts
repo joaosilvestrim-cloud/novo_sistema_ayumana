@@ -27,6 +27,7 @@ export type Community = {
   is_public: boolean;
   seo_title: string | null;
   seo_description: string | null;
+  themes: string[];
   created_at: string;
   updated_at: string;
 };
@@ -35,6 +36,7 @@ export type CommunityEvent = {
   id: string;
   community_id: string;
   title: string;
+  slug: string | null;
   theme: string | null;
   starts_at: string | null;
   timezone: string | null;
@@ -43,8 +45,29 @@ export type CommunityEvent = {
   signup_url: string | null;
   recording_url: string | null;
   status: "proximo" | "realizado" | "cancelado";
+  is_public: boolean;
   created_at: string;
 };
+
+/** Lead institucional (líder de comunidade interessado na parceria). */
+export type CommunityLead = {
+  id: string;
+  community_name: string | null;
+  country_code: string | null;
+  contact_name: string | null;
+  contact_email: string | null;
+  message: string | null;
+  source_slug: string | null;
+  handled: boolean;
+  created_at: string;
+};
+
+/** Temas padrão sugeridos para os encontros. */
+export const COMMUNITY_THEMES = [
+  "Ansiedade", "Saudade", "Adaptação", "Maternidade longe da rede de apoio",
+  "Relacionamentos", "Filhos entre culturas", "Burnout", "Pertencimento",
+  "Solidão", "Carreira no exterior", "Luto migratório", "Documentação e incerteza",
+] as const;
 
 export const COMMUNITY_TYPE_LABEL: Record<CommunityType, string> = {
   associacao: "Associação",

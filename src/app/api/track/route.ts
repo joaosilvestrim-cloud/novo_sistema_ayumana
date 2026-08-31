@@ -21,6 +21,9 @@ export async function POST(req: NextRequest) {
       visitor: body.visitor ? String(body.visitor).slice(0, 60) : null,
       // Atribuição de comunidade (slug), para medir o funil de cada parceiro.
       community: body.community ? String(body.community).slice(0, 80) : null,
+      utm_source: body.utm_source ? String(body.utm_source).slice(0, 60) : null,
+      utm_medium: body.utm_medium ? String(body.utm_medium).slice(0, 60) : null,
+      utm_campaign: body.utm_campaign ? String(body.utm_campaign).slice(0, 60) : null,
     });
   } catch {
     // silêncio: analytics nunca pode quebrar o site

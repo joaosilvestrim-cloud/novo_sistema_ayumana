@@ -7,13 +7,13 @@ import {
 import { PageShell } from "@/components/site/page-shell";
 import { Button } from "@/components/ui/button";
 import { PsychologistCard } from "@/components/catalog/psychologist-card";
-import { getPublicCommunity, listCommunityEvents } from "@/lib/communities";
-import { listPsychologists } from "@/lib/psychologists";
+import { getPublicCommunity, listCommunityEvents, listCuratedPsychologistIds } from "@/lib/communities";
+import { listPsychologists, listPsychologistsByIds } from "@/lib/psychologists";
 import { listOpenQuestions } from "@/lib/forum";
 import { COUNTRIES } from "@/lib/types";
 import { COUNTRY_LANDINGS } from "@/lib/countries-content";
 
-const TEMAS = ["Ansiedade", "Saudade", "Adaptação", "Maternidade", "Relacionamentos", "Filhos bilíngues", "Burnout", "Pertencimento"];
+const TEMAS_PADRAO = ["Ansiedade", "Saudade", "Adaptação", "Maternidade", "Relacionamentos", "Filhos bilíngues", "Burnout", "Pertencimento"];
 const paisNome = (code: string) => COUNTRIES.find((p) => p.code === code)?.name ?? code;
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -35,12 +35,14 @@ export default async function ComunidadeLandingPage({ params }: { params: Promis
   const c = await getPublicCommunity(slug);
   if (!c) notFound();
 
-  const [{ rows: psis }, eventos, perguntas] = await Promise.all([
+  const [{ rows: psisAuto }, eventos, perguntas, curatedIds] = await Promise.all([
     listPsychologists({ pais: c.country_code, exterior: true }),
     listCommunityEvents(c.id),
     listOpenQuestions(4),
+    listCuratedPsychologistIds(c.id),
   ]);
-  const destaque = psis.slice(0, 4);
+  // Curadoria manda; sem curadoria, mostra automaticamente quem atende no país/exterior.
+  const destaque = curatedIds.length ? (await listPsychologistsByIds(curatedIds)).slice(0, 6) : psisAuto.slice(0, 4);
   const pais = paisNome(c.country_code);
   const buscaHref = `/psicologos?pais=${c.country_code}&exterior=1`;
   const countryLanding = COUNTRY_LANDINGS.find((l) => l.code === c.country_code);
@@ -111,7 +113,7 @@ export default async function ComunidadeLandingPage({ params }: { params: Promis
       <section className="mx-auto max-w-6xl px-4 py-8">
         <h2 className="text-xl font-semibold text-heading">Temas mais comuns de quem vive em {pais}</h2>
         <div className="mt-4 flex flex-wrap gap-2">
-          {TEMAS.map((t) => (
+          {(c.themes.length ? c.themes : TEMAS_PADRAO).map((t) => (
             <Link key={t} href={`/psicologos?exterior=1&pais=${c.country_code}&q=${encodeURIComponent(t)}`} className="rounded-full border border-border bg-background px-3 py-1.5 text-sm text-foreground-muted transition-colors hover:border-brand hover:text-brand-dark">
               {t}
             </Link>
@@ -128,7 +130,11 @@ export default async function ComunidadeLandingPage({ params }: { params: Promis
               <div key={ev.id} className="rounded-2xl border border-border bg-background p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <p className="text-lg font-semibold text-heading">{ev.title}</p>
+                    {ev.slug ? (
+                      <Link href={`/comunidades/${c.slug}/${ev.slug}`} className="text-lg font-semibold text-heading hover:text-brand-dark hover:underline">{ev.title}</Link>
+                    ) : (
+                      <p className="text-lg font-semibold text-heading">{ev.title}</p>
+                    )}
                     <p className="mt-0.5 flex items-center gap-2 text-sm text-brand-dark"><CalendarClock className="h-4 w-4" /> {fmtEvento(ev.starts_at)}</p>
                     {ev.theme && <p className="mt-1 text-sm text-foreground-muted">{ev.theme}</p>}
                     {ev.description && <p className="mt-2 max-w-2xl text-sm text-foreground-muted">{ev.description}</p>}

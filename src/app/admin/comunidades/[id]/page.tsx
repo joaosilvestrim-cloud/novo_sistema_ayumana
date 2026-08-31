@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CommunityForm } from "@/components/admin/community-form";
 import { CommunityEventsManager } from "@/components/admin/community-events-manager";
+import { CommunityPsychologistsPicker } from "@/components/admin/community-psychologists-picker";
 import { ConfirmButton } from "@/components/admin/confirm-button";
 import { deleteCommunityAction } from "../actions";
 import type { Community, CommunityEvent } from "@/lib/communities";
@@ -30,6 +31,13 @@ export default async function EditarComunidadePage({ params }: { params: Promise
     cnt(AE().eq("type", "pageview").ilike("path", "/psicologo/%")),
     cnt(AE().eq("type", "click").ilike("label", "%wa.me%")),
   ]);
+
+  // Dados para a curadoria de psicólogos.
+  const { data: allPsi } = await admin.from("psychologists").select("id, display_name, crp_number").eq("is_published", true).order("display_name");
+  const all = ((allPsi as { id: string; display_name: string | null; crp_number: string | null }[] | null) ?? [])
+    .map((p) => ({ id: p.id, name: p.display_name ?? "(sem nome)", crp: p.crp_number ?? null }));
+  const { data: cur } = await admin.from("community_psychologists").select("psychologist_id").eq("community_id", id).order("sort_order");
+  const currentIds = ((cur as { psychologist_id: string }[] | null) ?? []).map((r) => r.psychologist_id);
 
   return (
     <div className="space-y-6">
@@ -63,6 +71,8 @@ export default async function EditarComunidadePage({ params }: { params: Promise
       </section>
 
       <CommunityForm c={c} site={site} />
+
+      <CommunityPsychologistsPicker communityId={c.id} all={all} currentIds={currentIds} />
 
       <CommunityEventsManager communityId={c.id} eventos={eventos} />
     </div>

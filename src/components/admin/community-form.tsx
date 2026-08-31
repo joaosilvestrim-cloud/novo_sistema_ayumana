@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Loader2, Check, AlertCircle, ExternalLink } from "lucide-react";
 import { Field, Input, Select, Label } from "@/components/ui/field";
 import { COUNTRIES } from "@/lib/types";
-import { COMMUNITY_TYPE_LABEL, type Community } from "@/lib/communities-types";
+import { COMMUNITY_TYPE_LABEL, COMMUNITY_THEMES, type Community } from "@/lib/communities-types";
 import { saveCommunityAction } from "@/app/admin/comunidades/actions";
 
 const STATUS: { v: string; label: string }[] = [
@@ -99,13 +99,39 @@ export function CommunityForm({ c, site }: { c: Community | null; site: string }
         <Field label="Texto de apresentação" htmlFor="intro_text" hint="Explica a parceria em 2-3 frases.">
           <textarea id="intro_text" name="intro_text" defaultValue={c?.intro_text ?? ""} className="min-h-24 w-full resize-y rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-brand" />
         </Field>
+
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="URL do logo do parceiro" htmlFor="logo_url">
-            <Input id="logo_url" name="logo_url" defaultValue={c?.logo_url ?? ""} placeholder="https://..." />
-          </Field>
-          <Field label="URL da imagem de capa" htmlFor="cover_image_url">
-            <Input id="cover_image_url" name="cover_image_url" defaultValue={c?.cover_image_url ?? ""} placeholder="https://..." />
-          </Field>
+          <div>
+            <Label>Logo do parceiro</Label>
+            {c?.logo_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={c.logo_url} alt="logo" className="mb-2 h-12 w-12 rounded-lg border border-border object-contain" />
+            )}
+            <input type="file" name="logo_file" accept="image/*" className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-surface-muted file:px-3 file:py-1.5 file:text-sm file:text-heading" />
+            <Input name="logo_url" defaultValue={c?.logo_url ?? ""} placeholder="ou cole uma URL" className="mt-2" />
+          </div>
+          <div>
+            <Label>Imagem de capa</Label>
+            {c?.cover_image_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={c.cover_image_url} alt="capa" className="mb-2 h-12 w-20 rounded-lg border border-border object-cover" />
+            )}
+            <input type="file" name="cover_file" accept="image/*" className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-surface-muted file:px-3 file:py-1.5 file:text-sm file:text-heading" />
+            <Input name="cover_image_url" defaultValue={c?.cover_image_url ?? ""} placeholder="ou cole uma URL" className="mt-2" />
+          </div>
+        </div>
+
+        <div>
+          <Label>Temas dos encontros desta comunidade</Label>
+          <p className="mb-2 text-xs text-foreground-muted">Aparecem na landing como atalhos de busca. Selecione os que fazem sentido.</p>
+          <div className="flex flex-wrap gap-2">
+            {COMMUNITY_THEMES.map((t) => (
+              <label key={t} className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border px-3 py-1.5 text-sm has-[:checked]:border-brand has-[:checked]:bg-brand/10 has-[:checked]:text-brand-dark">
+                <input type="checkbox" name="themes" value={t} defaultChecked={(c?.themes ?? []).includes(t)} className="h-3.5 w-3.5 accent-[var(--ayu-verde)]" />
+                {t}
+              </label>
+            ))}
+          </div>
         </div>
       </section>
 

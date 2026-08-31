@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Users2, Plus, Globe2 } from "lucide-react";
+import { Users2, Plus, Globe2, Inbox } from "lucide-react";
 import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Badge } from "@/components/ui/badge";
@@ -29,9 +29,14 @@ export default async function AdminComunidadesPage() {
           <h1 className="flex items-center gap-2 text-2xl"><Users2 className="h-6 w-6 text-brand-dark" /> Comunidades</h1>
           <p className="mt-1 text-foreground-muted">Ayumana nas Comunidades. Cada parceiro ganha uma landing própria e rastreável.</p>
         </div>
-        <Link href="/admin/comunidades/nova" className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary-hover">
-          <Plus className="h-4 w-4" /> Nova comunidade
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/admin/comunidades/leads" className="inline-flex h-10 items-center gap-2 rounded-lg border border-border px-4 text-sm font-medium text-heading hover:bg-surface-muted">
+            <Inbox className="h-4 w-4" /> Interesses de parceria
+          </Link>
+          <Link href="/admin/comunidades/nova" className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary-hover">
+            <Plus className="h-4 w-4" /> Nova comunidade
+          </Link>
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-2xl border border-border bg-background">
