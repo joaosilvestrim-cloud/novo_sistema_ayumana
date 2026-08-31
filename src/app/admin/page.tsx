@@ -13,6 +13,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { getMetrics } from "@/lib/admin";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { formatPrice } from "@/lib/whatsapp";
 import { PLAN_LABEL } from "@/lib/plan-labels";
 
@@ -64,6 +65,32 @@ export default async function AdminDashboard() {
   const m = await getMetrics();
   const maxPlan = Math.max(1, ...PLAN_ORDER.map((p) => m.planos[p]));
 
+  // Detalhes extras: alcance e qualidade da base publicada.
+  const admin = createAdminClient();
+  const nowIso = new Date().toISOString();
+  const cnt = async (b: PromiseLike<{ count: number | null }>) => (await b).count ?? 0;
+  const P = () => admin.from("psychologists").select("*", { count: "exact", head: true });
+  const Ppub = () => P().eq("is_published", true);
+  const [emTesteVoz, extPub, completoPub, fotoPub, videoPub, valorPub, pagantes] = await Promise.all([
+    cnt(P().eq("trial_tier", "ideal").gt("trial_ends_at", nowIso)),
+    cnt(Ppub().eq("attends_abroad", true)),
+    cnt(Ppub().eq("profile_completed", true)),
+    cnt(Ppub().not("avatar_url", "is", null)),
+    cnt(Ppub().not("video_url", "is", null)),
+    cnt(Ppub().gt("session_price_cents", 0)),
+    cnt(P().eq("subscription_status", "ativa").neq("plan_tier", "essencial")),
+  ]);
+  const pub = Math.max(1, m.psicologos.publicados);
+  const pct = (n: number) => Math.round((n / pub) * 100);
+  const totalBase = Math.max(1, m.psicologos.total);
+  const qualidade = [
+    { label: "Com foto", n: fotoPub, ajuda: "Perfis publicados que já têm foto de perfil." },
+    { label: "Perfil completo", n: completoPub, ajuda: "Preencheram todos os campos obrigatórios." },
+    { label: "Com valor da sessão", n: valorPub, ajuda: "Mostram o preço no perfil (planos pagos)." },
+    { label: "Com vídeo", n: videoPub, ajuda: "Colaram um vídeo de apresentação (plano Voz)." },
+    { label: "Atende no exterior", n: extPub, ajuda: "Marcaram que atendem brasileiros fora do Brasil." },
+  ];
+
   return (
     <div className="space-y-8">
       <div>
@@ -111,7 +138,8 @@ export default async function AdminDashboard() {
 
       {/* KPIs de usuários, clique abre a lista já filtrada */}
       <section>
-        <h2 className="mb-3 text-lg">Usuários</h2>
+        <h2 className="text-lg">Usuários</h2>
+        <p className="mb-3 mt-0.5 text-sm text-foreground-muted">Situação dos perfis na jornada. Clique em qualquer cartão para abrir a lista já filtrada.</p>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
             icon={Clock}
@@ -173,12 +201,15 @@ export default async function AdminDashboard() {
         {/* Distribuição por plano */}
         <section className="rounded-2xl border border-border bg-background p-6">
           <h2 className="text-lg">Psicólogos por plano</h2>
+          <p className="mt-0.5 text-sm text-foreground-muted">
+            Quantos estão em cada plano contratado. Quem está no teste do Voz aparece no plano que assinou, não no Voz.
+          </p>
           <div className="mt-5 space-y-4">
             {PLAN_ORDER.map((p) => (
               <div key={p}>
                 <div className="mb-1 flex items-center justify-between text-sm">
                   <span className="text-foreground">{PLAN_LABEL[p]}</span>
-                  <span className="font-medium text-heading">{m.planos[p]}</span>
+                  <span className="text-foreground-muted"><strong className="text-heading">{m.planos[p]}</strong> · {Math.round((m.planos[p] / totalBase) * 100)}%</span>
                 </div>
                 <div className="h-2.5 overflow-hidden rounded-full bg-surface-muted">
                   <div
@@ -189,11 +220,17 @@ export default async function AdminDashboard() {
               </div>
             ))}
           </div>
+          <p className="mt-4 border-t border-border pt-3 text-sm text-foreground-muted">
+            Além destes, <strong className="text-heading">{emTesteVoz}</strong> estão com o Voz de cortesia (teste) e <strong className="text-heading">{pagantes}</strong> pagam assinatura ativa.
+          </p>
         </section>
 
         {/* Verificação + crescimento */}
         <section className="rounded-2xl border border-border bg-background p-6">
           <h2 className="text-lg">Verificação de CRP</h2>
+          <p className="mt-0.5 text-sm text-foreground-muted">
+            Em que ponto da conferência de CRP cada perfil está. Só quem está &quot;Verificado&quot; pode aparecer publicado.
+          </p>
           <dl className="mt-5 grid grid-cols-2 gap-4">
             {[
               ["Verificados", m.verificacao.aprovado, "text-green-600"],
@@ -220,29 +257,28 @@ export default async function AdminDashboard() {
         </section>
       </div>
 
-      {/* De onde vêm estes números */}
-      <section className="rounded-2xl border border-border bg-surface-muted/40 p-6">
-        <h2 className="text-lg">De onde vêm estes números</h2>
-        <p className="mt-0.5 text-sm text-foreground-muted">A origem de cada indicador, para não restar dúvida do que está sendo contado.</p>
-        <dl className="mt-4 grid gap-x-8 gap-y-4 sm:grid-cols-2">
-          {[
-            ["Psicólogos publicados", "Perfis com o selo publicado, visíveis na busca (is_published). No total inclui rascunhos e não publicados."],
-            ["Verificações pendentes", "CRPs que foram enviados e aguardam a conferência manual da equipe."],
-            ["MRR estimado", "Soma do valor mensal das assinaturas pagas ativas. Não inclui quem está em teste gratuito."],
-            ["Artigos publicados", "Posts do blog com status publicado. O complemento é o total de perguntas publicadas no fórum."],
-            ["Aguardando aprovação", "Psicólogos com verificação de CRP em análise."],
-            ["Perfis incompletos", "Publicados ou não que ainda não preencheram todos os campos obrigatórios."],
-            ["Não publicados", "Perfis em rascunho, que ainda não aparecem na vitrine."],
-            ["Novos em 30 dias", "Psicólogos cuja conta foi criada nos últimos 30 dias (inclui herdados importados nesse período)."],
-            ["Psicólogos por plano", "Contagem pelo plano contratado (plan_tier). Quem está em teste do Voz aparece no plano que contratou, não no Voz."],
-            ["Verificação de CRP", "Distribuição pelo status: verificado, em análise, não enviado e reprovado."],
-          ].map(([termo, texto]) => (
-            <div key={termo}>
-              <dt className="text-sm font-semibold text-heading">{termo}</dt>
-              <dd className="mt-0.5 text-sm text-foreground-muted">{texto}</dd>
+      {/* Alcance e qualidade da base */}
+      <section className="rounded-2xl border border-border bg-background p-6">
+        <h2 className="text-lg">Alcance e qualidade da base</h2>
+        <p className="mt-0.5 text-sm text-foreground-muted">
+          Dos {m.psicologos.publicados} perfis publicados, quantos já têm cada item. Serve para saber o que ainda falta puxar na base.
+        </p>
+        <div className="mt-5 space-y-4">
+          {qualidade.map((q) => (
+            <div key={q.label}>
+              <div className="mb-1 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+                <div className="min-w-0">
+                  <span className="text-sm font-medium text-foreground">{q.label}</span>
+                  <span className="ml-2 text-xs text-foreground-muted">{q.ajuda}</span>
+                </div>
+                <span className="shrink-0 text-sm text-foreground-muted"><strong className="text-heading">{q.n}</strong> · {pct(q.n)}%</span>
+              </div>
+              <div className="h-2.5 overflow-hidden rounded-full bg-surface-muted">
+                <div className="h-full rounded-full bg-brand" style={{ width: `${pct(q.n)}%` }} />
+              </div>
             </div>
           ))}
-        </dl>
+        </div>
       </section>
     </div>
   );
