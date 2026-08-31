@@ -105,7 +105,7 @@ export default async function CountryLandingPage({
               </Button>
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-5 md:grid-cols-2">
               {rows.map((p) => (
                 <PsychologistCard key={p.id} p={p} />
               ))}

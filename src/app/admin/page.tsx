@@ -69,7 +69,7 @@ export default async function AdminDashboard() {
       <div>
         <h1 className="text-2xl">Visão geral</h1>
         <p className="mt-1 text-foreground-muted">
-          O panorama da Ayumana em tempo real.
+          O panorama da Ayumana. Todos os números vêm direto do banco, atualizados a cada carregamento. Clique num cartão para abrir a lista por trás dele.
         </p>
       </div>
 
@@ -219,6 +219,31 @@ export default async function AdminDashboard() {
           </div>
         </section>
       </div>
+
+      {/* De onde vêm estes números */}
+      <section className="rounded-2xl border border-border bg-surface-muted/40 p-6">
+        <h2 className="text-lg">De onde vêm estes números</h2>
+        <p className="mt-0.5 text-sm text-foreground-muted">A origem de cada indicador, para não restar dúvida do que está sendo contado.</p>
+        <dl className="mt-4 grid gap-x-8 gap-y-4 sm:grid-cols-2">
+          {[
+            ["Psicólogos publicados", "Perfis com o selo publicado, visíveis na busca (is_published). No total inclui rascunhos e não publicados."],
+            ["Verificações pendentes", "CRPs que foram enviados e aguardam a conferência manual da equipe."],
+            ["MRR estimado", "Soma do valor mensal das assinaturas pagas ativas. Não inclui quem está em teste gratuito."],
+            ["Artigos publicados", "Posts do blog com status publicado. O complemento é o total de perguntas publicadas no fórum."],
+            ["Aguardando aprovação", "Psicólogos com verificação de CRP em análise."],
+            ["Perfis incompletos", "Publicados ou não que ainda não preencheram todos os campos obrigatórios."],
+            ["Não publicados", "Perfis em rascunho, que ainda não aparecem na vitrine."],
+            ["Novos em 30 dias", "Psicólogos cuja conta foi criada nos últimos 30 dias (inclui herdados importados nesse período)."],
+            ["Psicólogos por plano", "Contagem pelo plano contratado (plan_tier). Quem está em teste do Voz aparece no plano que contratou, não no Voz."],
+            ["Verificação de CRP", "Distribuição pelo status: verificado, em análise, não enviado e reprovado."],
+          ].map(([termo, texto]) => (
+            <div key={termo}>
+              <dt className="text-sm font-semibold text-heading">{termo}</dt>
+              <dd className="mt-0.5 text-sm text-foreground-muted">{texto}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
     </div>
   );
 }

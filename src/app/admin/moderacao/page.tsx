@@ -17,7 +17,15 @@ type PendingAnswer = {
   id: string;
   body: string;
   created_at: string;
-  question: { title: string } | null;
+  question_id: string;
+  question: { title: string; body: string | null } | null;
+  psychologist: { display_name: string | null; crp_number: string | null } | null;
+};
+
+type ContextAnswer = {
+  id: string;
+  body: string;
+  question_id: string;
   psychologist: { display_name: string | null; crp_number: string | null } | null;
 };
 
@@ -61,7 +69,7 @@ export default async function ModeracaoPage() {
     admin
       .from("forum_answers")
       .select(
-        "id, body, created_at, question:forum_questions(title), psychologist:psychologists(display_name, crp_number)"
+        "id, body, created_at, question_id, question:forum_questions(title, body), psychologist:psychologists(display_name, crp_number)"
       )
       .eq("status", "pendente")
       .order("created_at", { ascending: true }),
@@ -69,6 +77,25 @@ export default async function ModeracaoPage() {
 
   const q = (questions as PendingQuestion[]) ?? [];
   const a = (answers as unknown as PendingAnswer[]) ?? [];
+
+  // Contexto: respostas JÁ publicadas nas mesmas perguntas das respostas pendentes.
+  const questionIds = [...new Set(a.map((x) => x.question_id).filter(Boolean))];
+  let contextoPorPergunta = new Map<string, ContextAnswer[]>();
+  if (questionIds.length) {
+    const { data: pubs } = await admin
+      .from("forum_answers")
+      .select("id, body, question_id, psychologist:psychologists(display_name, crp_number)")
+      .in("question_id", questionIds)
+      .eq("status", "publicada")
+      .order("created_at", { ascending: true });
+    const lista = (pubs as unknown as ContextAnswer[]) ?? [];
+    contextoPorPergunta = lista.reduce((map, ans) => {
+      const arr = map.get(ans.question_id) ?? [];
+      arr.push(ans);
+      map.set(ans.question_id, arr);
+      return map;
+    }, new Map<string, ContextAnswer[]>());
+  }
 
   return (
     <div className="space-y-10">
@@ -96,7 +123,7 @@ export default async function ModeracaoPage() {
                 <div className="min-w-0">
                   <p className="font-medium text-heading">{item.title}</p>
                   {item.body && (
-                    <p className="mt-1 line-clamp-3 text-sm text-foreground-muted">{item.body}</p>
+                    <p className="mt-1 whitespace-pre-line text-sm text-foreground-muted">{item.body}</p>
                   )}
                   <p className="mt-2 text-xs text-foreground-muted">por {item.author_alias}</p>
                 </div>
@@ -118,22 +145,52 @@ export default async function ModeracaoPage() {
             Nenhuma resposta pendente.
           </p>
         ) : (
-          <ul className="space-y-3">
-            {a.map((item) => (
-              <li key={item.id} className="flex items-start justify-between gap-4 rounded-2xl border border-border bg-background p-5">
-                <div className="min-w-0">
-                  <p className="text-xs text-foreground-muted">
-                    Em: <span className="font-medium text-heading">{item.question?.title}</span>
-                  </p>
-                  <p className="mt-1 text-sm text-foreground">{item.body}</p>
-                  <p className="mt-2 text-xs text-foreground-muted">
-                    {item.psychologist?.display_name}
-                    {item.psychologist?.crp_number ? ` · CRP ${item.psychologist.crp_number}` : ""}
-                  </p>
-                </div>
-                <Decision action={moderateAnswerAction} id={item.id} />
-              </li>
-            ))}
+          <ul className="space-y-4">
+            {a.map((item) => {
+              const contexto = contextoPorPergunta.get(item.question_id) ?? [];
+              return (
+                <li key={item.id} className="rounded-2xl border border-border bg-background p-5">
+                  {/* Pergunta, para dar contexto */}
+                  <div className="rounded-xl bg-surface-muted/50 p-4">
+                    <p className="text-xs font-medium uppercase tracking-wide text-foreground-muted">Pergunta</p>
+                    <p className="mt-1 font-medium text-heading">{item.question?.title}</p>
+                    {item.question?.body && <p className="mt-1 whitespace-pre-line text-sm text-foreground-muted">{item.question.body}</p>}
+                  </div>
+
+                  {/* Respostas já publicadas, para o moderador comparar */}
+                  {contexto.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-xs font-medium text-foreground-muted">Já publicadas nesta pergunta ({contexto.length}):</p>
+                      <ul className="mt-1 space-y-2">
+                        {contexto.map((ca) => (
+                          <li key={ca.id} className="rounded-lg border border-border px-3 py-2 text-sm">
+                            <p className="whitespace-pre-line text-foreground">{ca.body}</p>
+                            <p className="mt-1 text-xs text-foreground-muted">
+                              {ca.psychologist?.display_name}
+                              {ca.psychologist?.crp_number ? ` · CRP ${ca.psychologist.crp_number}` : ""}
+                            </p>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* A resposta em análise */}
+                  <div className="mt-3 rounded-xl border-2 border-brand/40 bg-brand/5 p-4">
+                    <p className="text-xs font-medium uppercase tracking-wide text-brand-dark">Resposta para aprovar</p>
+                    <p className="mt-1 whitespace-pre-line text-sm text-foreground">{item.body}</p>
+                    <p className="mt-2 text-xs text-foreground-muted">
+                      {item.psychologist?.display_name}
+                      {item.psychologist?.crp_number ? ` · CRP ${item.psychologist.crp_number}` : ""}
+                    </p>
+                  </div>
+
+                  <div className="mt-4 flex justify-end">
+                    <Decision action={moderateAnswerAction} id={item.id} />
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
