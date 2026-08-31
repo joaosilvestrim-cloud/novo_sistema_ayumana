@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { listPublicCommunities } from "@/lib/communities";
 import { CommunityLeadForm } from "@/components/site/community-lead-form";
 import { COUNTRIES } from "@/lib/types";
+import { COUNTRY_LANDINGS } from "@/lib/countries-content";
 
 export const metadata = {
   title: "Ayumana nas Comunidades",
@@ -20,6 +21,11 @@ export default async function ComunidadesHubPage() {
   const comunidades = await listPublicCommunities();
   const wa = process.env.SUPPORT_WHATSAPP || "5511930662105";
   const waLink = `https://wa.me/${wa}?text=${encodeURIComponent("Olá! Quero levar a Ayumana para a minha comunidade.")}`;
+
+  // Países com comunidades parceiras (a "lista de países" da seção 4.1).
+  const porPais = new Map<string, number>();
+  for (const c of comunidades) porPais.set(c.country_code, (porPais.get(c.country_code) ?? 0) + 1);
+  const paises = [...porPais.entries()].map(([code, n]) => ({ code, n, nome: paisNome(code), slug: COUNTRY_LANDINGS.find((l) => l.code === code)?.slug }));
 
   return (
     <PageShell>
@@ -48,6 +54,18 @@ export default async function ComunidadesHubPage() {
       <section className="mx-auto max-w-6xl px-4 py-16">
         <h2 className="text-2xl font-semibold text-heading">Comunidades parceiras</h2>
         <p className="mt-1 text-foreground-muted">Associações e grupos que já caminham com a Ayumana.</p>
+        {paises.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {paises.map((p) => {
+              const inner = (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-sm text-foreground-muted transition-colors hover:border-brand hover:text-brand-dark">
+                  <Globe2 className="h-3.5 w-3.5" /> {p.nome} <span className="rounded-full bg-brand/10 px-1.5 text-xs font-semibold text-brand-dark">{p.n}</span>
+                </span>
+              );
+              return p.slug ? <Link key={p.code} href={`/no-exterior/${p.slug}`}>{inner}</Link> : <span key={p.code}>{inner}</span>;
+            })}
+          </div>
+        )}
         {comunidades.length === 0 ? (
           <div className="mt-6 rounded-2xl border border-dashed border-border bg-background p-10 text-center text-foreground-muted">
             Em breve. Estamos construindo as primeiras parcerias.

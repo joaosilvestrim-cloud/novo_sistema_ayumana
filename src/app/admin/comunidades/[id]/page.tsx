@@ -61,8 +61,13 @@ export default async function EditarComunidadePage({ params }: { params: Promise
 
       {/* Métricas do funil desta comunidade */}
       <section className="rounded-2xl border border-brand/30 bg-brand/5 p-5">
-        <h2 className="text-lg">Funil desta comunidade</h2>
-        <p className="mt-0.5 text-sm text-foreground-muted">Atribuído pela origem, desde que a pessoa chega pela página da comunidade até o clique no WhatsApp.</p>
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <h2 className="text-lg">Funil desta comunidade</h2>
+            <p className="mt-0.5 text-sm text-foreground-muted">Atribuído pela origem, desde que a pessoa chega pela página da comunidade até o clique no WhatsApp.</p>
+          </div>
+          <Link href={`/admin/comunidades/${c.id}/relatorio`} className="shrink-0 text-sm font-medium text-brand-dark hover:underline">Relatório completo →</Link>
+        </div>
         <div className="mt-4 grid grid-cols-3 gap-4">
           <div><p className="text-2xl font-semibold text-heading">{mViews}</p><p className="text-xs text-foreground-muted">visitas à página</p></div>
           <div><p className="text-2xl font-semibold text-heading">{mPerfis}</p><p className="text-xs text-foreground-muted">perfis abertos</p></div>
