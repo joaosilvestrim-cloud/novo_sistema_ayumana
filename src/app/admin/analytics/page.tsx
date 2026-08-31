@@ -1,7 +1,8 @@
+import Link from "next/link";
 import {
   Eye, Users, MousePointerClick, TrendingUp, Smartphone, Globe, MessageCircle, Globe2,
   ShieldCheck, CheckCircle2, Rocket, DollarSign, MessagesSquare, UserPlus,
-  ArrowUpRight, ArrowDownRight, Minus,
+  ArrowUpRight, ArrowDownRight, Minus, AlertCircle,
 } from "lucide-react";
 import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -397,16 +398,37 @@ export default async function AdminAnalyticsPage() {
       {/* Fórum + Top perfis contatados */}
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="rounded-2xl border border-border bg-background p-6">
-          <h2 className="flex items-center gap-2 text-lg"><MessagesSquare className="h-5 w-5 text-brand-dark" /> Fórum</h2>
-          <p className="mt-0.5 text-sm text-foreground-muted">A tese do Voz: perguntas respondidas viram páginas indexadas no Google.</p>
-          <div className="mt-4 grid grid-cols-3 gap-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="flex items-center gap-2 text-lg"><MessagesSquare className="h-5 w-5 text-brand-dark" /> Fórum</h2>
+              <p className="mt-0.5 text-sm text-foreground-muted">A tese do Voz: perguntas respondidas viram páginas indexadas no Google.</p>
+            </div>
+            <Link href="/admin/moderacao" className="shrink-0 text-sm font-medium text-brand-dark hover:underline">Abrir fórum →</Link>
+          </div>
+          <div className="mt-5 grid grid-cols-3 gap-4">
             <div><p className="text-2xl font-semibold text-heading">{perguntasN}</p><p className="text-xs text-foreground-muted">perguntas</p></div>
-            <div><p className="text-2xl font-semibold text-heading">{perguntasRespondidas}</p><p className="text-xs text-foreground-muted">respondidas ({perguntasN ? Math.round((perguntasRespondidas / perguntasN) * 100) : 0}%)</p></div>
+            <div><p className="text-2xl font-semibold text-green-700">{perguntasRespondidas}</p><p className="text-xs text-foreground-muted">respondidas ({perguntasN ? Math.round((perguntasRespondidas / perguntasN) * 100) : 0}%)</p></div>
             <div><p className="text-2xl font-semibold text-heading">{respostasTotais}</p><p className="text-xs text-foreground-muted">respostas no total</p></div>
           </div>
-          <div className="mt-4 h-2 overflow-hidden rounded-full bg-surface-muted">
-            <div className="ayu-bar-w h-full rounded-full bg-brand" style={{ width: `${perguntasN ? Math.round((perguntasRespondidas / perguntasN) * 100) : 0}%` }} />
+          {/* Barra segmentada: respondidas vs sem resposta */}
+          <div className="mt-5 flex h-7 overflow-hidden rounded-full bg-surface-muted text-[11px] font-bold">
+            {perguntasRespondidas > 0 && (
+              <div className="ayu-bar-w flex items-center justify-center bg-[#2FA36B] text-white" style={{ width: `${Math.round((perguntasRespondidas / Math.max(1, perguntasN)) * 100)}%`, minWidth: 26 }}>{perguntasRespondidas}</div>
+            )}
+            {perguntasN - perguntasRespondidas > 0 && (
+              <div className="flex items-center justify-center bg-neutral-300 text-neutral-700" style={{ width: `${Math.round(((perguntasN - perguntasRespondidas) / Math.max(1, perguntasN)) * 100)}%` }}>{perguntasN - perguntasRespondidas}</div>
+            )}
           </div>
+          <div className="mt-2 flex flex-wrap gap-4 text-xs text-foreground-muted">
+            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#2FA36B]" /> respondidas</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-neutral-300" /> sem resposta</span>
+          </div>
+          {perguntasN - perguntasRespondidas > 0 && (
+            <div className="mt-4 flex items-start gap-2 rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-2 text-sm text-yellow-800">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span><strong>{perguntasN - perguntasRespondidas}</strong> perguntas ainda sem nenhuma resposta. Peça a um psicólogo do Voz para responder e virar página no Google.</span>
+            </div>
+          )}
         </section>
         <ListaTop titulo="Perfis mais contatados" subtitulo="Quem mais recebeu clique no WhatsApp (30d)." rows={topContatos} cor="#25D366" />
       </div>
