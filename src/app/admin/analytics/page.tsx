@@ -7,6 +7,7 @@ import {
 import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CampaignLinks } from "@/components/admin/campaign-links";
+import { BrazilHeatmap } from "@/components/admin/brazil-heatmap";
 
 export const metadata = { title: "Analytics" };
 
@@ -293,6 +294,30 @@ export default async function AdminAnalyticsPage() {
 
   const totalDisp = Math.max(1, devices.reduce((a, b) => a + b.n, 0));
 
+  // Distribuição por estado (mapa de calor). Conta pelo estado do perfil; se
+  // estiver vazio, usa a UF do CRP. Normaliza sigla e nome por extenso.
+  const { data: estadosRaw } = await admin.from("psychologists").select("state, crp_uf").limit(20000);
+  const UF_SET = new Set(["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"]);
+  const NOME_UF: Record<string, string> = {
+    acre:"AC", alagoas:"AL", amapa:"AP", amazonas:"AM", bahia:"BA", ceara:"CE", "distrito federal":"DF",
+    "espirito santo":"ES", goias:"GO", maranhao:"MA", "mato grosso":"MT", "mato grosso do sul":"MS",
+    "minas gerais":"MG", para:"PA", paraiba:"PB", parana:"PR", pernambuco:"PE", piaui:"PI",
+    "rio de janeiro":"RJ", "rio grande do norte":"RN", "rio grande do sul":"RS", rondonia:"RO",
+    roraima:"RR", "santa catarina":"SC", "sao paulo":"SP", sergipe:"SE", tocantins:"TO",
+  };
+  const paraUF = (v: string | null): string | null => {
+    if (!v) return null;
+    const s = v.trim();
+    if (s.length === 2 && UF_SET.has(s.toUpperCase())) return s.toUpperCase();
+    const chave = s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+    return NOME_UF[chave] ?? null;
+  };
+  const contagemUF: Record<string, number> = {};
+  for (const p of (estadosRaw as { state: string | null; crp_uf: string | null }[] | null) ?? []) {
+    const uf = paraUF(p.state) ?? paraUF(p.crp_uf);
+    if (uf) contagemUF[uf] = (contagemUF[uf] ?? 0) + 1;
+  }
+
   return (
     <div className="space-y-8">
       <style>{`
@@ -364,6 +389,20 @@ export default async function AdminAnalyticsPage() {
           <Stat icon={<DollarSign className="h-5 w-5" />} label="Pagantes" value={pagantesN} sub="Com assinatura paga ativa." />
         </div>
       </div>
+
+      {/* Mapa: psicólogos por estado */}
+      <section className="rounded-2xl border border-border bg-background p-6">
+        <div className="mb-4 flex items-center gap-2">
+          <Globe className="h-5 w-5 text-brand-dark" />
+          <div>
+            <h2 className="text-lg">Psicólogos por estado</h2>
+            <p className="text-xs text-foreground-muted">
+              Mapa de calor da base por UF. Conta pelo estado do perfil (ou a UF do CRP quando o estado não está preenchido). Quanto mais verde, mais profissionais.
+            </p>
+          </div>
+        </div>
+        <BrazilHeatmap counts={contagemUF} />
+      </section>
 
       {/* Qualidade dos perfis + Planos */}
       <div className="grid gap-6 lg:grid-cols-2">
