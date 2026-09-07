@@ -113,6 +113,32 @@ export async function createSubscription(params: {
   return { subscriptionId: sub.id, checkoutUrl };
 }
 
+/** Situação do pagamento de uma assinatura (a cobrança mais recente). */
+export async function getSubscriptionPayment(subscriptionId: string): Promise<{
+  status: string | null;
+  value: number | null;
+  dueDate: string | null;
+  paymentDate: string | null;
+  invoiceUrl: string | null;
+} | null> {
+  try {
+    const payments = await asaas<{
+      data: { status?: string; value?: number; dueDate?: string; paymentDate?: string; clientPaymentDate?: string; invoiceUrl?: string }[];
+    }>(`/subscriptions/${subscriptionId}/payments`);
+    const p = payments.data?.[0];
+    if (!p) return null;
+    return {
+      status: p.status ?? null,
+      value: p.value ?? null,
+      dueDate: p.dueDate ?? null,
+      paymentDate: p.paymentDate ?? p.clientPaymentDate ?? null,
+      invoiceUrl: p.invoiceUrl ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 /** Cancela a assinatura no Asaas. */
 export async function cancelSubscription(subscriptionId: string): Promise<void> {
   await asaas(`/subscriptions/${subscriptionId}`, { method: "DELETE" });

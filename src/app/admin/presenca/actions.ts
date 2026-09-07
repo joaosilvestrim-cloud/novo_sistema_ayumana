@@ -23,7 +23,7 @@ export async function setWaitlistStatusAction(formData: FormData) {
  * Presença pendente, para o webhook liberar automaticamente quando pagar.
  */
 export async function generatePresencaChargeAction(formData: FormData): Promise<{ ok: boolean; error?: string; checkoutUrl?: string }> {
-  await requireAdmin();
+  const me = await requireAdmin();
   if (!isAsaasConfigured()) {
     return { ok: false, error: "O Asaas ainda não está ligado (falta a chave ASAAS_API_KEY). Enquanto isso, gere a cobrança pelo painel do Asaas." };
   }
@@ -71,7 +71,13 @@ export async function generatePresencaChargeAction(formData: FormData): Promise<
       }).eq("id", insc.psychologist_id);
     }
 
-    await admin.from("presenca_waitlist").update({ status: "aprovado", checkout_url: checkoutUrl, asaas_subscription_id: subscriptionId }).eq("id", id);
+    await admin.from("presenca_waitlist").update({
+      status: "aprovado",
+      checkout_url: checkoutUrl,
+      asaas_subscription_id: subscriptionId,
+      charge_created_by: me.id,
+      charge_created_at: new Date().toISOString(),
+    }).eq("id", id);
     revalidatePath("/admin/presenca");
     return { ok: true, checkoutUrl: checkoutUrl ?? undefined };
   } catch (e) {
