@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Badge } from "@/components/ui/badge";
 import { setWaitlistStatusAction } from "./actions";
+import { PresencaCharge } from "@/components/admin/presenca-charge";
 
 export const metadata = { title: "Fila Presença" };
 
@@ -11,7 +12,7 @@ type Row = {
   id: string; psychologist_id: string | null;
   name: string | null; email: string | null; phone: string | null;
   city: string | null; crp: string | null; note: string | null;
-  status: string; created_at: string;
+  status: string; created_at: string; checkout_url: string | null;
 };
 
 const STATUS = ["pendente", "contatado", "aprovado", "recusado"] as const;
@@ -25,7 +26,7 @@ export default async function AdminPresencaPage() {
 
   const { data } = await admin
     .from("presenca_waitlist")
-    .select("id, psychologist_id, name, email, phone, city, crp, note, status, created_at")
+    .select("id, psychologist_id, name, email, phone, city, crp, note, status, created_at, checkout_url")
     .order("created_at", { ascending: false });
   const rows = (data as Row[]) ?? [];
 
@@ -89,6 +90,7 @@ export default async function AdminPresencaPage() {
                       </select>
                       <button className="h-9 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary-hover">Salvar</button>
                     </form>
+                    <PresencaCharge id={r.id} checkoutUrl={r.checkout_url} phone={r.phone} name={r.name} />
                     {perfil && (
                       <Link href={`/admin/usuarios/${perfil}`} className="text-xs font-medium text-brand-dark hover:underline">Ver no admin →</Link>
                     )}
