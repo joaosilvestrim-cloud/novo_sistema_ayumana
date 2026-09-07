@@ -40,7 +40,7 @@ export async function joinPresencaWaitlistAction(
       const { data: existente } = await admin
         .from("presenca_waitlist")
         .select("id").eq("psychologist_id", psy.id)
-        .in("status", ["pendente", "contatado", "aprovado"]).maybeSingle();
+        .in("status", ["novo", "contatado", "cobranca_gerada"]).maybeSingle();
       if (existente) return { ok: true, error: null, jaInscrito: true };
       name = name || (psy.display_name as string) || (prof?.full_name as string) || "";
       phone = phone || ((psy.phone_whatsapp as string) ?? "");

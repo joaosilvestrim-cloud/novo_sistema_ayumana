@@ -5,7 +5,7 @@ import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ensureCustomer, createSubscription, isAsaasConfigured } from "@/lib/payments/asaas";
 
-const STATUSES = ["pendente", "contatado", "aprovado", "recusado"];
+const STATUSES = ["novo", "contatado", "cobranca_gerada", "recusado"];
 
 export async function setWaitlistStatusAction(formData: FormData) {
   await requireAdmin();
@@ -72,7 +72,7 @@ export async function generatePresencaChargeAction(formData: FormData): Promise<
     }
 
     await admin.from("presenca_waitlist").update({
-      status: "aprovado",
+      status: "cobranca_gerada",
       checkout_url: checkoutUrl,
       asaas_subscription_id: subscriptionId,
       charge_created_by: me.id,

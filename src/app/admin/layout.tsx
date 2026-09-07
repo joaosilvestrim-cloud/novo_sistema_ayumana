@@ -19,7 +19,7 @@ export default async function AdminLayout({
     supabase.from("psychologists").select("*", { count: "exact", head: true }).eq("verification_status", "pendente"),
     supabase.from("forum_questions").select("*", { count: "exact", head: true }).eq("status", "pendente"),
     supabase.from("forum_answers").select("*", { count: "exact", head: true }).eq("status", "pendente"),
-    supabase.from("presenca_waitlist").select("*", { count: "exact", head: true }).eq("status", "pendente"),
+    supabase.from("presenca_waitlist").select("*", { count: "exact", head: true }).eq("status", "novo"),
   ]);
   const badges = {
     verificacao: verif.count ?? 0,

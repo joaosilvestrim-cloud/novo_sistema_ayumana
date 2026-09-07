@@ -26,9 +26,12 @@ function statusPagamento(st: string | null | undefined): { label: string; tone: 
   return { label: st, tone: "neutral" };
 }
 
-const STATUS = ["pendente", "contatado", "aprovado", "recusado"] as const;
+const STATUS = ["novo", "contatado", "cobranca_gerada", "recusado"] as const;
+const STATUS_LABEL: Record<string, string> = {
+  novo: "Novo", contatado: "Contatado", cobranca_gerada: "Cobrança gerada", recusado: "Recusado",
+};
 const TONE: Record<string, "warning" | "brand" | "success" | "neutral"> = {
-  pendente: "warning", contatado: "brand", aprovado: "success", recusado: "neutral",
+  novo: "warning", contatado: "brand", cobranca_gerada: "success", recusado: "neutral",
 };
 
 export default async function AdminPresencaPage() {
@@ -69,7 +72,7 @@ export default async function AdminPresencaPage() {
     }
   }
 
-  const pendentes = rows.filter((r) => r.status === "pendente").length;
+  const pendentes = rows.filter((r) => r.status === "novo").length;
   const fmt = (iso: string) => new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
   const wa = (t: string | null) => (t ? `https://wa.me/${t.replace(/\D/g, "")}` : null);
 
@@ -81,7 +84,7 @@ export default async function AdminPresencaPage() {
           <p className="mt-1 text-foreground-muted">Quem se inscreveu para o plano Presença (vagas limitadas). Chame conforme abre vaga.</p>
         </div>
         <div className="flex gap-2">
-          <span className="rounded-full bg-yellow-400/15 px-3 py-1 text-sm font-medium text-yellow-700">{pendentes} pendente(s)</span>
+          <span className="rounded-full bg-yellow-400/15 px-3 py-1 text-sm font-medium text-yellow-700">{pendentes} novo(s)</span>
           <span className="rounded-full bg-surface-muted px-3 py-1 text-sm font-medium text-foreground">{rows.length} no total</span>
         </div>
       </div>
@@ -139,7 +142,7 @@ export default async function AdminPresencaPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-medium text-heading">{r.name || "—"}</span>
-                      <Badge tone={TONE[r.status] ?? "neutral"}>{r.status}</Badge>
+                      <Badge tone={TONE[r.status] ?? "neutral"}>{STATUS_LABEL[r.status] ?? r.status}</Badge>
                       {!r.psychologist_id && <Badge tone="neutral">sem conta</Badge>}
                     </div>
                     <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-foreground-muted">
@@ -173,10 +176,11 @@ export default async function AdminPresencaPage() {
                     <form action={setWaitlistStatusAction} className="flex items-center gap-1.5">
                       <input type="hidden" name="id" value={r.id} />
                       <select name="status" defaultValue={r.status} className="h-9 rounded-lg border border-border bg-background px-2 text-sm">
-                        {STATUS.map((s) => <option key={s} value={s}>{s}</option>)}
+                        {STATUS.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
                       </select>
                       <button className="h-9 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary-hover">Salvar</button>
                     </form>
+                    <span className="text-[11px] text-foreground-muted">Etapa manual. “Pago” é automático pelo Asaas.</span>
                     <PresencaCharge id={r.id} checkoutUrl={r.checkout_url} phone={r.phone} name={r.name} />
                     {perfil && (
                       <Link href={`/admin/usuarios/${perfil}`} className="text-xs font-medium text-brand-dark hover:underline">Ver no admin →</Link>
