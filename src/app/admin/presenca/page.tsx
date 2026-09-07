@@ -34,6 +34,17 @@ const TONE: Record<string, "warning" | "brand" | "success" | "neutral"> = {
   novo: "warning", contatado: "brand", cobranca_gerada: "success", recusado: "neutral",
 };
 
+// Normaliza o status para o pipeline atual. Cobre valores antigos ("pendente",
+// "aprovado") e nunca mostra "Novo" quando a cobrança já foi gerada.
+function normalizeStatus(raw: string, temCobranca: boolean): string {
+  let s = raw;
+  if (s === "aprovado") s = "cobranca_gerada";
+  else if (s === "pendente") s = "novo";
+  if (!(STATUS as readonly string[]).includes(s)) s = "novo";
+  if (temCobranca && s === "novo") s = "cobranca_gerada";
+  return s;
+}
+
 export default async function AdminPresencaPage() {
   await requireAdmin();
   const admin = createAdminClient();
@@ -72,7 +83,7 @@ export default async function AdminPresencaPage() {
     }
   }
 
-  const pendentes = rows.filter((r) => r.status === "novo").length;
+  const pendentes = rows.filter((r) => normalizeStatus(r.status, !!(r.asaas_subscription_id || r.checkout_url)) === "novo").length;
   const fmt = (iso: string) => new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
   const wa = (t: string | null) => (t ? `https://wa.me/${t.replace(/\D/g, "")}` : null);
 
@@ -130,6 +141,7 @@ export default async function AdminPresencaPage() {
               : sp.tone === "warning" ? "bg-yellow-400/15 text-yellow-700"
               : "bg-surface-muted text-foreground-muted";
             const geradaPor = r.charge_created_by ? nomePorAdmin.get(r.charge_created_by) : null;
+            const st = normalizeStatus(r.status, !!(r.asaas_subscription_id || r.checkout_url));
             const pago = sp.tone === "success";
             return (
               <li key={r.id} className={`rounded-2xl border bg-background p-5 ${pago ? "border-green-500/50 ring-1 ring-green-500/30" : "border-border"}`}>
@@ -142,7 +154,7 @@ export default async function AdminPresencaPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-medium text-heading">{r.name || "—"}</span>
-                      <Badge tone={TONE[r.status] ?? "neutral"}>{STATUS_LABEL[r.status] ?? r.status}</Badge>
+                      <Badge tone={TONE[st] ?? "neutral"}>{STATUS_LABEL[st] ?? st}</Badge>
                       {!r.psychologist_id && <Badge tone="neutral">sem conta</Badge>}
                     </div>
                     <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-foreground-muted">
@@ -175,7 +187,7 @@ export default async function AdminPresencaPage() {
                   <div className="flex shrink-0 flex-col items-end gap-2">
                     <form action={setWaitlistStatusAction} className="flex items-center gap-1.5">
                       <input type="hidden" name="id" value={r.id} />
-                      <select name="status" defaultValue={r.status} className="h-9 rounded-lg border border-border bg-background px-2 text-sm">
+                      <select name="status" defaultValue={st} className="h-9 rounded-lg border border-border bg-background px-2 text-sm">
                         {STATUS.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
                       </select>
                       <button className="h-9 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary-hover">Salvar</button>
