@@ -1,94 +1,55 @@
-// Mapa de calor do Brasil por estado (tile map). Cada estado é um bloco
-// posicionado na grade conforme a geografia; a cor vai do claro (poucos) ao
-// verde escuro (muitos). Server component, sem biblioteca externa.
+// Mapa de calor do Brasil por estado, com o desenho geográfico real (SVG
+// projetado do GeoJSON do IBGE). A cor de cada estado vai do claro (poucos)
+// ao verde escuro (muitos). Server component, sem biblioteca externa.
+import { BRAZIL_VIEWBOX, BRAZIL_PATHS } from "./brazil-geo";
 
-type UF = { uf: string; nome: string; col: number; row: number };
-
-// Posições numa grade 6 colunas x 9 linhas, aproximando o mapa do Brasil.
-const ESTADOS: UF[] = [
-  { uf: "RR", nome: "Roraima", col: 3, row: 1 },
-  { uf: "AP", nome: "Amapá", col: 5, row: 1 },
-  { uf: "AM", nome: "Amazonas", col: 2, row: 2 },
-  { uf: "PA", nome: "Pará", col: 3, row: 2 },
-  { uf: "MA", nome: "Maranhão", col: 4, row: 2 },
-  { uf: "CE", nome: "Ceará", col: 5, row: 2 },
-  { uf: "RN", nome: "Rio Grande do Norte", col: 6, row: 2 },
-  { uf: "AC", nome: "Acre", col: 1, row: 3 },
-  { uf: "RO", nome: "Rondônia", col: 2, row: 3 },
-  { uf: "TO", nome: "Tocantins", col: 3, row: 3 },
-  { uf: "PI", nome: "Piauí", col: 4, row: 3 },
-  { uf: "PE", nome: "Pernambuco", col: 5, row: 3 },
-  { uf: "PB", nome: "Paraíba", col: 6, row: 3 },
-  { uf: "MT", nome: "Mato Grosso", col: 2, row: 4 },
-  { uf: "GO", nome: "Goiás", col: 3, row: 4 },
-  { uf: "BA", nome: "Bahia", col: 4, row: 4 },
-  { uf: "AL", nome: "Alagoas", col: 5, row: 4 },
-  { uf: "SE", nome: "Sergipe", col: 6, row: 4 },
-  { uf: "MS", nome: "Mato Grosso do Sul", col: 2, row: 5 },
-  { uf: "DF", nome: "Distrito Federal", col: 3, row: 5 },
-  { uf: "MG", nome: "Minas Gerais", col: 4, row: 5 },
-  { uf: "ES", nome: "Espírito Santo", col: 5, row: 5 },
-  { uf: "SP", nome: "São Paulo", col: 3, row: 6 },
-  { uf: "RJ", nome: "Rio de Janeiro", col: 4, row: 6 },
-  { uf: "PR", nome: "Paraná", col: 3, row: 7 },
-  { uf: "SC", nome: "Santa Catarina", col: 3, row: 8 },
-  { uf: "RS", nome: "Rio Grande do Sul", col: 3, row: 9 },
-];
+const NOME_UF: Record<string, string> = Object.fromEntries(BRAZIL_PATHS.map((s) => [s.uf, s.name]));
 
 // Interpola do verde bem claro ao verde escuro conforme a intensidade (0..1).
 function corDaIntensidade(t: number): string {
   const clara = [234, 243, 224]; // #EAF3E0
-  const escura = [30, 74, 20]; // #1E4A14
+  const escura = [26, 74, 18]; // #1A4A12
   const c = clara.map((a, i) => Math.round(a + (escura[i] - a) * t));
   return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
 }
 
-export function BrazilHeatmap({ counts }: { counts: Record<string, number> }) {
+export function BrazilHeatmap({ counts, semLocal }: { counts: Record<string, number>; semLocal?: number }) {
   const max = Math.max(1, ...Object.values(counts));
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
-  const comDado = ESTADOS.filter((e) => (counts[e.uf] ?? 0) > 0).length;
+  const comDado = Object.values(counts).filter((n) => n > 0).length;
 
-  const ranking = [...ESTADOS]
-    .map((e) => ({ ...e, n: counts[e.uf] ?? 0 }))
+  const ranking = Object.entries(counts)
+    .map(([uf, n]) => ({ uf, nome: NOME_UF[uf] ?? uf, n }))
     .filter((e) => e.n > 0)
     .sort((a, b) => b.n - a.n)
-    .slice(0, 6);
+    .slice(0, 8);
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_260px]">
-      {/* Mapa */}
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+      {/* Mapa geográfico real */}
       <div>
-        <div
-          className="mx-auto grid w-full max-w-md gap-1.5"
-          style={{ gridTemplateColumns: "repeat(6, 1fr)", gridTemplateRows: "repeat(9, 1fr)" }}
-        >
-          {ESTADOS.map((e) => {
-            const n = counts[e.uf] ?? 0;
-            const t = n === 0 ? 0 : 0.18 + 0.82 * (n / max);
-            const bg = n === 0 ? "var(--surface-muted, #eef1f0)" : corDaIntensidade(t);
-            const claro = t < 0.55;
+        <svg viewBox={BRAZIL_VIEWBOX} className="mx-auto block w-full max-w-xl" role="img" aria-label="Mapa de psicólogos por estado">
+          {BRAZIL_PATHS.map((s) => {
+            const n = counts[s.uf] ?? 0;
+            const t = n === 0 ? 0 : 0.16 + 0.84 * (n / max);
+            const fill = n === 0 ? "#eef1f0" : corDaIntensidade(t);
             return (
-              <div
-                key={e.uf}
-                title={`${e.nome} (${e.uf}): ${n} ${n === 1 ? "psicólogo" : "psicólogos"}`}
-                className="flex aspect-square flex-col items-center justify-center rounded-lg border border-black/5 transition-transform hover:scale-105"
-                style={{ gridColumn: e.col, gridRow: e.row, background: bg }}
-              >
-                <span className={`text-[11px] font-bold leading-none ${claro ? "text-foreground" : "text-white"}`}>{e.uf}</span>
-                <span className={`mt-0.5 text-[13px] font-semibold leading-none ${claro ? "text-heading" : "text-white"}`}>{n}</span>
-              </div>
+              <path key={s.uf} d={s.d} fill={fill} stroke="#ffffff" strokeWidth={1} strokeLinejoin="round" className="transition-opacity hover:opacity-80">
+                <title>{`${s.name} (${s.uf}): ${n} ${n === 1 ? "psicólogo" : "psicólogos"}`}</title>
+              </path>
             );
           })}
-        </div>
+        </svg>
 
         {/* Legenda de cor */}
-        <div className="mx-auto mt-4 flex max-w-md items-center gap-3">
+        <div className="mx-auto mt-3 flex max-w-md items-center gap-3">
           <span className="text-xs text-foreground-muted">0</span>
-          <div className="h-2.5 flex-1 rounded-full" style={{ background: `linear-gradient(to right, ${corDaIntensidade(0.18)}, ${corDaIntensidade(1)})` }} />
+          <div className="h-2.5 flex-1 rounded-full" style={{ background: `linear-gradient(to right, ${corDaIntensidade(0.16)}, ${corDaIntensidade(1)})` }} />
           <span className="text-xs text-foreground-muted">{max}</span>
         </div>
         <p className="mx-auto mt-1 max-w-md text-center text-xs text-foreground-muted">
-          Passe o mouse em cada estado para ver o número. {total} psicólogos em {comDado} estados.
+          Passe o mouse em cada estado para ver o número. {total} psicólogos localizados em {comDado} estados.
+          {semLocal ? ` ${semLocal} sem cidade/estado informado.` : ""}
         </p>
       </div>
 
@@ -96,12 +57,12 @@ export function BrazilHeatmap({ counts }: { counts: Record<string, number> }) {
       <div className="rounded-xl border border-border bg-surface-muted/40 p-4">
         <p className="text-sm font-semibold text-heading">Onde estão</p>
         {ranking.length === 0 ? (
-          <p className="mt-2 text-xs text-foreground-muted">Sem estado preenchido nos perfis ainda.</p>
+          <p className="mt-2 text-xs text-foreground-muted">Sem localização preenchida nos perfis ainda.</p>
         ) : (
           <ul className="mt-3 space-y-2">
             {ranking.map((e) => (
               <li key={e.uf} className="flex items-center gap-2">
-                <span className="w-7 shrink-0 text-xs font-bold text-brand-dark">{e.uf}</span>
+                <span className="w-8 shrink-0 text-xs font-bold text-brand-dark" title={e.nome}>{e.uf}</span>
                 <div className="h-2 flex-1 overflow-hidden rounded-full bg-background">
                   <div className="h-full rounded-full bg-brand-dark" style={{ width: `${Math.round((e.n / max) * 100)}%` }} />
                 </div>

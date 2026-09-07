@@ -8,6 +8,7 @@ import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CampaignLinks } from "@/components/admin/campaign-links";
 import { BrazilHeatmap } from "@/components/admin/brazil-heatmap";
+import { CITY_UF } from "@/lib/city-uf";
 
 export const metadata = { title: "Analytics" };
 
@@ -294,9 +295,11 @@ export default async function AdminAnalyticsPage() {
 
   const totalDisp = Math.max(1, devices.reduce((a, b) => a + b.n, 0));
 
-  // Distribuição por estado (mapa de calor). Conta pelo estado do perfil; se
-  // estiver vazio, usa a UF do CRP. Normaliza sigla e nome por extenso.
-  const { data: estadosRaw } = await admin.from("psychologists").select("state, crp_uf").limit(20000);
+  // Distribuição por estado (mapa de calor). Ordem de preferência para achar a
+  // UF: estado do perfil -> UF do CRP -> cidade (via tabela de municípios do
+  // IBGE, só nomes que existem em um único estado). Assim a maioria da base,
+  // que preencheu a cidade mas não o estado, entra no mapa.
+  const { data: estadosRaw } = await admin.from("psychologists").select("state, crp_uf, city").limit(20000);
   const UF_SET = new Set(["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"]);
   const NOME_UF: Record<string, string> = {
     acre:"AC", alagoas:"AL", amapa:"AP", amazonas:"AM", bahia:"BA", ceara:"CE", "distrito federal":"DF",
@@ -305,17 +308,24 @@ export default async function AdminAnalyticsPage() {
     "rio de janeiro":"RJ", "rio grande do norte":"RN", "rio grande do sul":"RS", rondonia:"RO",
     roraima:"RR", "santa catarina":"SC", "sao paulo":"SP", sergipe:"SE", tocantins:"TO",
   };
+  const norm = (v: string) => v.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
   const paraUF = (v: string | null): string | null => {
     if (!v) return null;
     const s = v.trim();
     if (s.length === 2 && UF_SET.has(s.toUpperCase())) return s.toUpperCase();
-    const chave = s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
-    return NOME_UF[chave] ?? null;
+    return NOME_UF[norm(s)] ?? null;
+  };
+  const cidadeUF = (v: string | null): string | null => {
+    if (!v) return null;
+    const chave = norm(v.trim()).replace(/[^a-z]/g, "");
+    return CITY_UF[chave] ?? null;
   };
   const contagemUF: Record<string, number> = {};
-  for (const p of (estadosRaw as { state: string | null; crp_uf: string | null }[] | null) ?? []) {
-    const uf = paraUF(p.state) ?? paraUF(p.crp_uf);
+  let semLocal = 0;
+  for (const p of (estadosRaw as { state: string | null; crp_uf: string | null; city: string | null }[] | null) ?? []) {
+    const uf = paraUF(p.state) ?? paraUF(p.crp_uf) ?? cidadeUF(p.city);
     if (uf) contagemUF[uf] = (contagemUF[uf] ?? 0) + 1;
+    else semLocal++;
   }
 
   return (
@@ -397,11 +407,11 @@ export default async function AdminAnalyticsPage() {
           <div>
             <h2 className="text-lg">Psicólogos por estado</h2>
             <p className="text-xs text-foreground-muted">
-              Mapa de calor da base por UF. Conta pelo estado do perfil (ou a UF do CRP quando o estado não está preenchido). Quanto mais verde, mais profissionais.
+              Mapa de calor da base por UF. Usa o estado do perfil; quando falta, deduz pela UF do CRP e pela cidade informada. Quanto mais verde, mais profissionais.
             </p>
           </div>
         </div>
-        <BrazilHeatmap counts={contagemUF} />
+        <BrazilHeatmap counts={contagemUF} semLocal={semLocal} />
       </section>
 
       {/* Qualidade dos perfis + Planos */}
