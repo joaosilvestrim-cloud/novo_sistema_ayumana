@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail, emailShell, type EmailBlock } from "@/lib/email";
+import { effectivePlan } from "@/lib/plan-features";
 import type { PlanTier } from "@/lib/types";
 
 /** Endereço que aparece no "para" dos comunicados; a base vai em cópia oculta. */
@@ -40,7 +41,7 @@ async function destinatarios(
       .filter((e) => e.includes("@"));
   }
 
-  let q = admin.from("psychologists").select("profile_id, plan_tier, is_published, profile_completed, trial_ends_at");
+  let q = admin.from("psychologists").select("profile_id, plan_tier, is_published, profile_completed, trial_tier, trial_ends_at");
 
   if (publico === "publicados") q = q.eq("is_published", true);
   if (publico === "incompletos") q = q.eq("profile_completed", false);
@@ -49,7 +50,14 @@ async function destinatarios(
   if (publico === "em_teste") q = q.gt("trial_ends_at", new Date().toISOString());
 
   const { data } = await q;
-  const ids = (data ?? []).map((r) => r.profile_id as string).filter(Boolean);
+  const rows = publico === "em_teste"
+    ? (data ?? []).filter((r) => effectivePlan({
+        plan_tier: r.plan_tier as PlanTier,
+        trial_tier: r.trial_tier as PlanTier | null,
+        trial_ends_at: r.trial_ends_at as string | null,
+      }) !== r.plan_tier)
+    : (data ?? []);
+  const ids = rows.map((r) => r.profile_id as string).filter(Boolean);
   if (!ids.length) return [];
 
   const emails: string[] = [];

@@ -7,7 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 const DIAS = 30;
 const TIER = "ideal"; // plano "Voz"
 
-/** Concede o teste gratuito do Voz por 30 dias a todos os psicólogos. */
+/** Concede o teste gratuito do Voz por 30 dias a quem ainda não tem Voz ou Presença. */
 export async function grantTrialAllAction() {
   await requireAdmin();
   const admin = createAdminClient();
@@ -22,7 +22,7 @@ export async function grantTrialAllAction() {
       trial_notified_7: false,
       trial_notified_1: false,
     })
-    .not("id", "is", null);
+    .in("plan_tier", ["essencial", "destaque"]);
 
   revalidatePath("/admin/assinaturas");
   revalidatePath("/psicologos");

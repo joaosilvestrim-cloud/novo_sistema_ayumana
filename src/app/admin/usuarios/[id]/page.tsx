@@ -21,6 +21,7 @@ import {
   changePlanAction, deleteUserAction, sendPasswordResetAction, setPasswordAction,
 } from "../actions";
 import { applyDiscountAction, removeDiscountAction } from "../discount-actions";
+import { effectivePlan, trialAtivo } from "@/lib/plan-features";
 
 export const metadata = { title: "Gerenciar usuário" };
 
@@ -64,6 +65,13 @@ export default async function UserDetailPage({
   const { profile, psy } = detail;
   const s = (k: string) => (psy?.[k] as string | null) ?? null;
   const plan = (s("plan_tier") as PlanTier) ?? null;
+  const planSource = {
+    plan_tier: plan ?? "essencial",
+    trial_tier: s("trial_tier") as PlanTier | null,
+    trial_ends_at: s("trial_ends_at"),
+  };
+  const accessPlan = psy ? effectivePlan(planSource) : null;
+  const emCortesia = !!psy && trialAtivo(planSource) && accessPlan !== plan;
   const verification = (s("verification_status") as VerificationStatus) ?? null;
   const subscription = (s("subscription_status") as SubscriptionStatus) ?? null;
   const published = !!psy?.["is_published"];
@@ -119,6 +127,7 @@ export default async function UserDetailPage({
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <Badge tone={profile.role === "admin" ? "brand" : profile.role === "conteudo" ? "warning" : "neutral"}>{profile.role === "admin" ? "Admin" : profile.role === "conteudo" ? "Conteúdo" : "Psicólogo"}</Badge>
             {v && <Badge tone={v.tone}>{v.label}</Badge>}
+            {emCortesia && accessPlan && <Badge tone="brand">Acesso {PLAN_LABEL[accessPlan]} · cortesia</Badge>}
             <Badge tone={published ? "success" : "neutral"}>{published ? "Publicado" : "Rascunho"}</Badge>
             {psy && !completed && <Badge tone="warning">Perfil incompleto</Badge>}
           </div>
@@ -157,8 +166,15 @@ export default async function UserDetailPage({
           </h2>
           <dl className="mt-4 space-y-3">
             <div>
-              <dt className="text-xs text-foreground-muted">Plano atual</dt>
-              <dd className="text-sm font-medium text-heading">{plan ? PLAN_LABEL[plan] : "—"}</dd>
+              <dt className="text-xs text-foreground-muted">Acesso efetivo</dt>
+              <dd className="text-sm font-medium text-heading">
+                {accessPlan ? PLAN_LABEL[accessPlan] : "—"}
+                {emCortesia && <Badge tone="brand" className="ml-2">Cortesia até {fmtDate(s("trial_ends_at"))}</Badge>}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs text-foreground-muted">Plano contratado / base</dt>
+              <dd className="text-sm text-heading">{plan ? PLAN_LABEL[plan] : "—"}</dd>
             </div>
             <div>
               <dt className="text-xs text-foreground-muted">Status</dt>

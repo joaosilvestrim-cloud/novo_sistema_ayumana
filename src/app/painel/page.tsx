@@ -12,17 +12,22 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ShareProfile } from "@/components/share-profile";
 import { VERIFICATION_LABELS, type Plan } from "@/lib/types";
+import { effectivePlan, trialAtivo } from "@/lib/plan-features";
+import { PLAN_LABEL } from "@/lib/plan-labels";
 
 export default async function PainelHome() {
   const profile = await getProfile();
   const psy = await getMyPsychologist();
+  const baseTier = psy?.plan_tier ?? "essencial";
+  const accessTier = psy ? effectivePlan(psy) : baseTier;
+  const emCortesia = !!psy && trialAtivo(psy) && accessTier !== baseTier;
 
   const supabase = await createClient();
   const { data: plan } = psy
     ? await supabase
         .from("plans")
         .select("*")
-        .eq("id", psy.plan_tier)
+        .eq("id", accessTier)
         .single<Plan>()
     : { data: null };
 
@@ -126,10 +131,15 @@ export default async function PainelHome() {
             <FileText className="h-5 w-5 text-teal-600" />
             <div>
               <p className="font-medium text-heading">
-                Plano {plan?.name ?? "Raiz"}
+                Acesso {plan?.name ?? "Raiz"}
+                {emCortesia && (
+                  <Badge tone="brand" className="ml-2">Cortesia</Badge>
+                )}
               </p>
               <p className="text-sm text-foreground-muted">
-                {plan?.price_label ?? "Grátis"}
+                {emCortesia
+                  ? `Até ${new Date(psy!.trial_ends_at!).toLocaleDateString("pt-BR")} · plano contratado ${PLAN_LABEL[baseTier]}`
+                  : plan?.price_label ?? "Grátis"}
               </p>
             </div>
           </div>

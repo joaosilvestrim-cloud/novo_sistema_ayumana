@@ -58,44 +58,31 @@ type HeroRow = {
   city: string | null;
   state: string | null;
   plan_tier: PlanTier;
+  trial_tier: PlanTier | null;
+  trial_ends_at: string | null;
   approaches: { approach: { name: string } | null }[] | null;
 };
 
 const HERO_FIELDS =
-  "slug, display_name, avatar_url, city, state, plan_tier, approaches:psychologist_approaches(approach:approaches(name))";
+  "slug, display_name, avatar_url, city, state, plan_tier, trial_tier, trial_ends_at, approaches:psychologist_approaches(approach:approaches(name))";
 
 /**
  * Pool de profissionais reais para a animação da home (a home rotaciona entre eles).
- * TODOS os IDEAL publicados com foto entram; se sobrar espaço, completa com outros.
+ * Prioriza o plano efetivo, incluindo quem está com Voz de cortesia.
  */
 export async function listHeroPeople(limit = 12): Promise<HeroPerson[]> {
   const supabase = await createClient();
 
-  // 1) Todos os IDEAL publicados com foto (têm prioridade e passam pela animação).
-  const { data: ideal } = await supabase
+  const { data } = await supabase
     .from("psychologists")
     .select(HERO_FIELDS)
     .eq("is_published", true)
     .not("avatar_url", "is", null)
-    .eq("plan_tier", "ideal")
-    .limit(limit);
+    .limit(400);
 
-  let rows = (ideal ?? []) as unknown as HeroRow[];
-
-  // 2) Se houver poucos IDEAL, completa com outros publicados com foto (planos pagos primeiro).
-  if (rows.length < Math.min(limit, 6)) {
-    const { data: others } = await supabase
-      .from("psychologists")
-      .select(HERO_FIELDS)
-      .eq("is_published", true)
-      .not("avatar_url", "is", null)
-      .neq("plan_tier", "ideal")
-      .limit(40);
-    const extra = ((others ?? []) as unknown as HeroRow[]).sort(
-      (a, b) => (PLAN_PRIORITY[b.plan_tier] ?? 0) - (PLAN_PRIORITY[a.plan_tier] ?? 0)
-    );
-    rows = [...rows, ...extra].slice(0, limit);
-  }
+  const rows = ((data ?? []) as unknown as HeroRow[])
+    .sort((a, b) => (PLAN_PRIORITY[effectivePlan(b)] ?? 0) - (PLAN_PRIORITY[effectivePlan(a)] ?? 0))
+    .slice(0, limit);
 
   return rows.map((r) => ({
     name: r.display_name,

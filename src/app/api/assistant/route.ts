@@ -5,6 +5,7 @@ import { sendSupportRequest } from "@/lib/email";
 import { buildSystemPrompt, type UserContexto } from "@/lib/assistant/knowledge";
 import { avaliarCompletude } from "@/lib/profile-completeness";
 import { PLAN_LABEL } from "@/lib/plan-labels";
+import { effectivePlan, trialAtivo } from "@/lib/plan-features";
 import type { PlanTier } from "@/lib/types";
 
 export const maxDuration = 30;
@@ -122,8 +123,13 @@ export async function POST(req: NextRequest) {
     if (psy) {
       psyId = psy.id as string;
       contatoTelefone = (psy.phone_whatsapp as string) ?? null;
-      const emTeste = !!psy.trial_ends_at && new Date(psy.trial_ends_at as string) > new Date();
-      const efetivo = (emTeste ? (psy.trial_tier as PlanTier) : (psy.plan_tier as PlanTier)) ?? "essencial";
+      const planSource = {
+        plan_tier: (psy.plan_tier as PlanTier) ?? "essencial",
+        trial_tier: psy.trial_tier as PlanTier | null,
+        trial_ends_at: psy.trial_ends_at as string | null,
+      };
+      const efetivo = effectivePlan(planSource);
+      const emTeste = trialAtivo(planSource) && efetivo !== planSource.plan_tier;
       planoLabel = PLAN_LABEL[efetivo] ?? "Raiz";
 
       // O que falta no perfil desta pessoa, para a Aya responder exatamente.
@@ -151,7 +157,7 @@ export async function POST(req: NextRequest) {
         nome: contatoNome,
         plano: planoLabel,
         emTeste,
-        trialFim: psy.trial_ends_at ? new Date(psy.trial_ends_at as string).toLocaleDateString("pt-BR") : null,
+        trialFim: emTeste && psy.trial_ends_at ? new Date(psy.trial_ends_at as string).toLocaleDateString("pt-BR") : null,
         verificacao: (psy.verification_status as string) ?? null,
         perfilCompleto: !!psy.profile_completed,
         publicado: !!psy.is_published,

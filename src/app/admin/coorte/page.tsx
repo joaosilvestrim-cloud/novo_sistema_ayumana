@@ -45,7 +45,7 @@ export default async function CoortePage() {
   await requireAdmin();
   const admin = createAdminClient();
   const nowIso = new Date().toISOString();
-  const since30 = new Date(Date.now() - 30 * 86_400_000).toISOString();
+  const since30 = new Date(new Date(nowIso).getTime() - 30 * 86_400_000).toISOString();
 
   const c = async (b: PromiseLike<{ count: number | null }>) => (await b).count ?? 0;
 
@@ -55,7 +55,7 @@ export default async function CoortePage() {
     c(admin.from("psychologists").select("*", { count: "exact", head: true }).eq("verification_status", "aprovado")),
     c(admin.from("psychologists").select("*", { count: "exact", head: true }).eq("profile_completed", true)),
     c(admin.from("psychologists").select("*", { count: "exact", head: true }).eq("is_published", true)),
-    c(admin.from("psychologists").select("*", { count: "exact", head: true }).eq("trial_tier", "ideal").gt("trial_ends_at", nowIso)),
+    c(admin.from("psychologists").select("*", { count: "exact", head: true }).eq("trial_tier", "ideal").gt("trial_ends_at", nowIso).in("plan_tier", ["essencial", "destaque"])),
     c(admin.from("psychologists").select("*", { count: "exact", head: true }).eq("subscription_status", "ativa").neq("plan_tier", "essencial")),
   ]);
 
@@ -64,6 +64,7 @@ export default async function CoortePage() {
     .from("psychologists")
     .select("id, display_name, slug, profile_completed, attends_abroad, video_url, trial_ends_at, profile_updated_at")
     .eq("trial_tier", "ideal")
+    .in("plan_tier", ["essencial", "destaque"])
     .gt("trial_ends_at", nowIso)
     .order("trial_ends_at", { ascending: true });
   const coorte = (coorteRaw as Row[] | null) ?? [];

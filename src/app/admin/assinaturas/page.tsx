@@ -11,6 +11,7 @@ import { PlanPriceEditor } from "@/components/admin/plan-price-editor";
 import { grantTrialAllAction, endTrialAllAction } from "./actions";
 import { Badge } from "@/components/ui/badge";
 import { PLAN_LABEL } from "@/lib/plan-labels";
+import { effectivePlan, trialAtivo } from "@/lib/plan-features";
 import { chargeCents, formatCents } from "@/lib/pricing";
 import { type PlanTier, type SubscriptionStatus } from "@/lib/types";
 import {
@@ -157,9 +158,8 @@ export default async function AdminAssinaturasPage() {
   const precoPlano: Record<string, number> = {};
   for (const p of (plansRaw ?? []) as { id: string; price_cents: number }[]) precoPlano[p.id] = p.price_cents;
 
-  const trialAtivo = (p: Psy) => !!p.trial_ends_at && new Date(p.trial_ends_at) > now;
   const cupomAtivo = (p: Psy) => !!p.coupon_pct && (!p.coupon_ends_at || new Date(p.coupon_ends_at) > now);
-  const planoEfetivo = (p: Psy): PlanTier => (trialAtivo(p) ? (p.trial_tier ?? p.plan_tier) : p.plan_tier);
+  const cortesiaAtiva = (p: Psy) => trialAtivo(p) && effectivePlan(p) !== p.plan_tier;
   const emDias = (iso: string) => Math.ceil((new Date(iso).getTime() - now.getTime()) / 86_400_000);
   const desde = (iso: string) => {
     const min = Math.floor((now.getTime() - new Date(iso).getTime()) / 60_000);
@@ -186,7 +186,7 @@ export default async function AdminAssinaturasPage() {
   const arpuCents = pagantes.length ? Math.round(mrrCents / pagantes.length) : 0;
 
   // Testes e campanha.
-  const trials = psys.filter(trialAtivo);
+  const trials = psys.filter(cortesiaAtiva);
   const trials7 = trials.filter((p) => emDias(p.trial_ends_at!) <= 7);
   const cortesiaConcedida = psys.filter((p) => p.campaign_voz_granted_at).length;
   const cortesiaExpirada = psys.filter((p) => p.campaign_voz_granted_at && p.trial_ends_at && new Date(p.trial_ends_at) <= now);
@@ -215,7 +215,7 @@ export default async function AdminAssinaturasPage() {
   const dist: Record<PlanTier, number> = { essencial: 0, destaque: 0, ideal: 0, presenca: 0 };
   for (const p of psys) {
     const pagante = p.subscription_status === "ativa" && p.plan_tier !== "essencial";
-    dist[pagante ? p.plan_tier : planoEfetivo(p)]++;
+    dist[pagante ? p.plan_tier : effectivePlan(p)]++;
   }
 
   // Lista de testes a vencer (acionável para conversão).
@@ -238,7 +238,7 @@ export default async function AdminAssinaturasPage() {
     else if (p.pending_plan_tier) gAguardando.push(p);
     else if (p.subscription_status === "atrasada") gAtrasadas.push(p);
     else if (p.subscription_status === "cancelada") gCanceladas.push(p);
-    else if (trialAtivo(p)) gTeste.push(p);
+    else if (cortesiaAtiva(p)) gTeste.push(p);
     else if (p.plan_tier !== "essencial") gCortesia.push(p);
   }
   const periodoLabel = (x: string | null) => (x === "yearly" ? "anual" : "mensal");
@@ -414,10 +414,10 @@ export default async function AdminAssinaturasPage() {
         <div className="mt-5 flex flex-wrap gap-2">
           <form action={grantTrialAllAction}>
             <ConfirmButton
-              message="Conceder 30 dias do plano Voz a TODOS os psicólogos? Isso reinicia o prazo de quem já está em teste."
+              message="Conceder 30 dias do plano Voz a todos que estão no Raiz ou Destaque? Isso reinicia o prazo de quem já está em teste."
               className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary-hover"
             >
-              <Gift className="h-4 w-4" /> Conceder 30 dias a todos
+              <Gift className="h-4 w-4" /> Conceder a Raiz e Destaque
             </ConfirmButton>
           </form>
           {trials.length > 0 && (
@@ -454,8 +454,8 @@ export default async function AdminAssinaturasPage() {
         ) : (
           <ul className="divide-y divide-border">
             {atualizacoesRecentes.slice(0, 80).map((p) => {
-              const emTeste = trialAtivo(p);
-              const efetivo = planoEfetivo(p);
+              const emTeste = cortesiaAtiva(p);
+              const efetivo = effectivePlan(p);
               const email = emailPorProfile.get(p.profile_id);
               const wa = waLink(p.phone_whatsapp);
               const local = [p.city, p.state].filter(Boolean).join(" / ");

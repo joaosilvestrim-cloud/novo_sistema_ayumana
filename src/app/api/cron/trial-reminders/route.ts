@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendTrialEnding } from "@/lib/email";
 import { PLAN_LABEL } from "@/lib/plan-labels";
+import { effectivePlan } from "@/lib/plan-features";
 import type { PlanTier } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await admin
     .from("psychologists")
-    .select("id, profile_id, display_name, trial_tier, trial_ends_at, trial_notified_7, trial_notified_1")
+    .select("id, profile_id, display_name, plan_tier, trial_tier, trial_ends_at, trial_notified_7, trial_notified_1")
     .not("trial_ends_at", "is", null)
     .gt("trial_ends_at", new Date(agora).toISOString());
 
@@ -38,6 +39,7 @@ export async function GET(request: NextRequest) {
     id: string;
     profile_id: string;
     display_name: string | null;
+    plan_tier: PlanTier;
     trial_tier: PlanTier | null;
     trial_ends_at: string;
     trial_notified_7: boolean;
@@ -48,6 +50,7 @@ export async function GET(request: NextRequest) {
   let enviados1 = 0;
 
   for (const p of ((data ?? []) as Row[])) {
+    if (effectivePlan(p) === p.plan_tier) continue;
     const dias = Math.ceil((new Date(p.trial_ends_at).getTime() - agora) / 86_400_000);
     const marca =
       dias <= 1 && !p.trial_notified_1 ? "trial_notified_1"

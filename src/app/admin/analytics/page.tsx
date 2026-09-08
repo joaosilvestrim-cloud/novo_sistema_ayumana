@@ -148,7 +148,7 @@ function rotuloClique(s: string): string {
 export default async function AdminAnalyticsPage() {
   await requireAdmin();
   const admin = createAdminClient();
-  const now = Date.now();
+  const now = new Date().getTime();
   const d = (dias: number) => new Date(now - dias * 86_400_000).toISOString();
   const since30 = d(30), since7 = d(7), since14 = d(14);
 
@@ -222,7 +222,7 @@ export default async function AdminAnalyticsPage() {
     cont(P()),
     cont(P().eq("verification_status", "aprovado")),
     cont(P().eq("profile_completed", true)),
-    cont(P().eq("trial_tier", "ideal").gt("trial_ends_at", nowIso)),
+    cont(P().eq("trial_tier", "ideal").gt("trial_ends_at", nowIso).in("plan_tier", ["essencial", "destaque"])),
     cont(P().eq("subscription_status", "ativa").neq("plan_tier", "essencial")),
     cont(Ppub().not("avatar_url", "is", null)),
     cont(Ppub().not("bio", "is", null)),

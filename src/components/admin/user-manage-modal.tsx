@@ -10,6 +10,7 @@ import {
 import { PLAN_LABEL } from "@/lib/plan-labels";
 import { VERIFICATION_LABELS, type PlanTier, type VerificationStatus, type UserRole } from "@/lib/types";
 import { ConfirmButton } from "@/components/admin/confirm-button";
+import { effectivePlan, planAtLeast, trialAtivo } from "@/lib/plan-features";
 import {
   setRoleAction, togglePublishAction, quickApproveAction,
   changePlanAction, deleteUserAction, sendPasswordResetAction,
@@ -42,7 +43,15 @@ export function UserManageModal({ u, canDelete }: { u: ManageUser; canDelete: bo
   const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
   const router = useRouter();
   const v = u.verification ? VERIFICATION_LABELS[u.verification] : null;
-  const emTeste = !!u.trialEndsAt && new Date(u.trialEndsAt) > new Date();
+  const planSource = {
+    plan_tier: u.plan ?? "essencial",
+    trial_tier: u.trialTier,
+    trial_ends_at: u.trialEndsAt,
+  };
+  const testeRegistrado = trialAtivo(planSource);
+  const planoEfetivo = effectivePlan(planSource);
+  const emTeste = testeRegistrado && planoEfetivo !== planSource.plan_tier;
+  const podeReceberVoz = !planAtLeast(planSource.plan_tier, "ideal");
 
   // Runner único: mostra "Salvando…" no botão, dá retorno de sucesso/erro e
   // atualiza a tela. Antes as ações rodavam sem animação e sem avisar do erro.
@@ -143,7 +152,19 @@ export function UserManageModal({ u, canDelete }: { u: ManageUser; canDelete: bo
               {/* Plano */}
               {u.psyId && (
                 <div>
-                  <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-foreground-muted">Plano</p>
+                  <div className="mb-3 rounded-lg border border-brand/30 bg-brand/5 px-3 py-2">
+                    <p className="text-xs text-foreground-muted">Acesso efetivo</p>
+                    <p className="font-medium text-brand-dark">
+                      {PLAN_LABEL[planoEfetivo]}
+                      {emTeste && planoEfetivo !== u.plan && " · cortesia"}
+                    </p>
+                    {emTeste && planoEfetivo !== u.plan && (
+                      <p className="text-xs text-foreground-muted">
+                        Até {new Date(u.trialEndsAt!).toLocaleDateString("pt-BR")} · base {PLAN_LABEL[u.plan ?? "essencial"]}
+                      </p>
+                    )}
+                  </div>
+                  <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-foreground-muted">Plano contratado / base</p>
                   <form onSubmit={onSubmit("plan", changePlanAction, (fd) => `Plano alterado para ${PLAN_LABEL[String(fd.get("plan")) as PlanTier]}.`)} className="flex gap-2">
                     <input type="hidden" name="psy_id" value={u.psyId} />
                     <select name="plan" defaultValue={u.plan ?? "essencial"} className="h-9 flex-1 rounded-lg border border-border bg-background px-2 text-sm">
@@ -165,22 +186,29 @@ export function UserManageModal({ u, canDelete }: { u: ManageUser; canDelete: bo
                       Em teste do {u.trialTier ? PLAN_LABEL[u.trialTier] : "Voz"} até{" "}
                       {new Date(u.trialEndsAt!).toLocaleDateString("pt-BR")}.
                     </p>
+                  ) : testeRegistrado ? (
+                    <p className="mb-2 text-sm text-foreground-muted">
+                      Há um teste registrado até {new Date(u.trialEndsAt!).toLocaleDateString("pt-BR")},
+                      mas ele não amplia o plano contratado.
+                    </p>
                   ) : (
                     <p className="mb-2 text-sm text-foreground-muted">Sem teste ativo.</p>
                   )}
                   <div className="flex flex-wrap gap-2">
-                    <form onSubmit={onSubmit("trial", grantTrialAction, `${emTeste ? "Teste renovado" : "Voz concedido"}.`)} className="flex items-center gap-2">
-                      <input type="hidden" name="psy_id" value={u.psyId} />
-                      <select name="dias" defaultValue="30" className="h-9 rounded-lg border border-border bg-background px-2 text-sm">
-                        <option value="7">7 dias</option>
-                        <option value="15">15 dias</option>
-                        <option value="30">30 dias</option>
-                        <option value="60">60 dias</option>
-                        <option value="90">90 dias</option>
-                      </select>
-                      <button type="submit" disabled={!!pendingKey} className={btn}>{spin("trial", <><Gift className="h-4 w-4" /> {emTeste ? "Renovar" : "Conceder"} Voz</>)}</button>
-                    </form>
-                    {emTeste && (
+                    {podeReceberVoz && (
+                      <form onSubmit={onSubmit("trial", grantTrialAction, `${emTeste ? "Teste renovado" : "Voz concedido"}.`)} className="flex items-center gap-2">
+                        <input type="hidden" name="psy_id" value={u.psyId} />
+                        <select name="dias" defaultValue="30" className="h-9 rounded-lg border border-border bg-background px-2 text-sm">
+                          <option value="7">7 dias</option>
+                          <option value="15">15 dias</option>
+                          <option value="30">30 dias</option>
+                          <option value="60">60 dias</option>
+                          <option value="90">90 dias</option>
+                        </select>
+                        <button type="submit" disabled={!!pendingKey} className={btn}>{spin("trial", <><Gift className="h-4 w-4" /> {emTeste ? "Renovar" : "Conceder"} Voz</>)}</button>
+                      </form>
+                    )}
+                    {testeRegistrado && (
                       <form onSubmit={onSubmit("trial_end", revokeTrialAction, "Teste encerrado.")}>
                         <input type="hidden" name="psy_id" value={u.psyId} />
                         <button type="submit" disabled={!!pendingKey} className={btn}>{spin("trial_end", "Encerrar teste")}</button>

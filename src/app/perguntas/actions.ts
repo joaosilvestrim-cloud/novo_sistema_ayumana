@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { slugify } from "@/lib/slug";
 import { planHas, effectivePlan } from "@/lib/plan-features";
 
@@ -74,7 +75,10 @@ export async function answerQuestionAction(
     return { error: "Seu CRP precisa estar verificado para responder." };
   }
 
-  const { error } = await supabase.from("forum_answers").insert({
+  // A autorização foi conferida acima com o usuário real. A gravação usa o
+  // client administrativo para não depender de uma policy antiga ainda ativa
+  // durante o intervalo entre o deploy do app e a aplicação da migration.
+  const { error } = await createAdminClient().from("forum_answers").insert({
     question_id: questionId,
     psychologist_id: psy.id,
     body,

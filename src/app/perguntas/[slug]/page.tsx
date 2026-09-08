@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { getQuestionBySlug } from "@/lib/forum";
 import { getMyPsychologist } from "@/lib/auth";
 import { COUNTRIES } from "@/lib/types";
+import { effectivePlan, planHas } from "@/lib/plan-features";
 import { AnswerForm } from "./answer-form";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://ayumana.com.br";
@@ -63,7 +64,7 @@ export default async function QuestionPage({
   const psy = await getMyPsychologist();
   const canAnswer =
     !!psy &&
-    ["ideal", "presenca"].includes(psy.plan_tier) &&
+    planHas(effectivePlan(psy), "forum") &&
     psy.verification_status === "aprovado";
 
   const country = COUNTRIES.find((c) => c.code === question.country_code);

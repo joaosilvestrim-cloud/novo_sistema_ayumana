@@ -7,6 +7,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail, emailShell } from "@/lib/email";
 import { grantCampaignVoz } from "@/lib/campaign-voz";
 import { syncKommo } from "@/lib/kommo/sync";
+import { planAtLeast } from "@/lib/plan-features";
+import type { PlanTier } from "@/lib/types";
 
 export type CreateUserState = { error: string | null; ok?: boolean; email?: string };
 
@@ -239,6 +241,19 @@ export async function grantTrialAction(formData: FormData): Promise<{ ok: boolea
   const dias = Number(formData.get("dias") ?? TRIAL_DIAS) || TRIAL_DIAS;
   if (!psyId) return { ok: false, error: "Psicólogo não identificado." };
   const admin = createAdminClient();
+  const { data: psy, error: readError } = await admin
+    .from("psychologists")
+    .select("plan_tier")
+    .eq("id", psyId)
+    .maybeSingle();
+  if (readError) return { ok: false, error: readError.message };
+  if (!psy) return { ok: false, error: "Psicólogo não encontrado." };
+  if (planAtLeast(psy.plan_tier as PlanTier, TRIAL_TIER)) {
+    return {
+      ok: false,
+      error: "O plano contratado já oferece Voz ou mais; a cortesia não acrescentaria nenhum acesso.",
+    };
+  }
   const { error } = await admin
     .from("psychologists")
     .update({ trial_tier: TRIAL_TIER, trial_ends_at: trialFim(dias), ...TRIAL_RESET })
@@ -293,7 +308,8 @@ export async function bulkUsersAction(formData: FormData) {
     await admin
       .from("psychologists")
       .update({ trial_tier: TRIAL_TIER, trial_ends_at: trialFim(), ...TRIAL_RESET })
-      .in("id", psyIds);
+      .in("id", psyIds)
+      .in("plan_tier", ["essencial", "destaque"]);
   } else if (op === "trial_end" && psyIds.length) {
     await admin
       .from("psychologists")

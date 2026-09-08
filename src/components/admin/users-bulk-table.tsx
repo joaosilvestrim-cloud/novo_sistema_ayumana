@@ -10,6 +10,7 @@ import { UserManageModal } from "@/components/admin/user-manage-modal";
 import { PLAN_LABEL } from "@/lib/plan-labels";
 import { VERIFICATION_LABELS, type PlanTier } from "@/lib/types";
 import { bulkUsersAction } from "@/app/admin/usuarios/actions";
+import { effectivePlan, trialAtivo } from "@/lib/plan-features";
 
 const TIERS: PlanTier[] = ["essencial", "destaque", "ideal", "presenca"];
 
@@ -37,7 +38,8 @@ export function UsersBulkTable({ rows, meId }: { rows: AdminUser[]; meId: string
   const toggle = (id: string) =>
     setSelected((prev) => {
       const n = new Set(prev);
-      n.has(id) ? n.delete(id) : n.add(id);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
       return n;
     });
 
@@ -87,6 +89,25 @@ export function UsersBulkTable({ rows, meId }: { rows: AdminUser[]; meId: string
         );
       }
       psyIds = publicaveis.map((r) => r.psyId).filter(Boolean);
+    }
+
+    if (op === "trial") {
+      const elegiveis = selectedRows.filter(
+        (r) => r.psyId && (r.plan === "essencial" || r.plan === "destaque")
+      );
+      const semBeneficio = selectedRows.filter(
+        (r) => r.psyId && r.plan !== "essencial" && r.plan !== "destaque"
+      );
+      if (elegiveis.length === 0) {
+        setAviso("Nenhum selecionado pode receber a cortesia: quem já tem Voz ou Presença não ganha acesso adicional.");
+        return;
+      }
+      if (semBeneficio.length > 0) {
+        setAviso(
+          `A cortesia será aplicada a ${elegiveis.length} pessoa(s). ${semBeneficio.length} já tem Voz ou Presença e será ignorada.`
+        );
+      }
+      psyIds = elegiveis.map((r) => r.psyId).filter(Boolean);
     }
 
     if (psyIdsRef.current) psyIdsRef.current.value = psyIds.join(",");
@@ -160,7 +181,7 @@ export function UsersBulkTable({ rows, meId }: { rows: AdminUser[]; meId: string
               </th>
               <th className="px-4 py-3 font-medium">Usuário</th>
               <th className="px-4 py-3 font-medium">Papel</th>
-              <th className="px-4 py-3 font-medium">Plano</th>
+              <th className="px-4 py-3 font-medium">Acesso efetivo</th>
               <th className="px-4 py-3 font-medium">Verificação</th>
               <th className="px-4 py-3 font-medium">Publicado</th>
               <th className="px-4 py-3 font-medium">Ações</th>
@@ -172,8 +193,13 @@ export function UsersBulkTable({ rows, meId }: { rows: AdminUser[]; meId: string
               const sel = selected.has(u.profileId);
               // Plano efetivo: no teste, vale o plano do teste (Voz), não o
               // plan_tier cru (que continua Raiz durante a cortesia).
-              const emTeste = !!u.trialEndsAt && new Date(u.trialEndsAt) > new Date();
-              const planoEfetivo = emTeste ? (u.trialTier ?? u.plan) : u.plan;
+              const planSource = {
+                plan_tier: u.plan ?? "essencial",
+                trial_tier: u.trialTier,
+                trial_ends_at: u.trialEndsAt,
+              };
+              const planoEfetivo = effectivePlan(planSource);
+              const emTeste = trialAtivo(planSource) && planoEfetivo !== planSource.plan_tier;
               return (
                 <tr key={u.profileId} className={`border-b border-border last:border-0 ${sel ? "bg-brand/5" : ""}`}>
                   <td className="px-4 py-3">
@@ -195,8 +221,8 @@ export function UsersBulkTable({ rows, meId }: { rows: AdminUser[]; meId: string
                     {u.role === "admin" ? <Badge tone="brand">Admin</Badge> : u.role === "conteudo" ? <Badge tone="warning">Conteúdo</Badge> : <Badge tone="neutral">Psicólogo</Badge>}
                   </td>
                   <td className="px-4 py-3">
-                    <span className="font-medium text-heading">{planoEfetivo ? PLAN_LABEL[planoEfetivo] : "—"}</span>
-                    {emTeste && (
+                    <span className="font-medium text-heading">{PLAN_LABEL[planoEfetivo]}</span>
+                    {emTeste && planoEfetivo !== u.plan && (
                       <span className="ml-1.5 rounded-full bg-brand/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-dark">
                         teste
                       </span>

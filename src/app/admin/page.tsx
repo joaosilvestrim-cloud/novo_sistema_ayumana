@@ -72,7 +72,7 @@ export default async function AdminDashboard() {
   const P = () => admin.from("psychologists").select("*", { count: "exact", head: true });
   const Ppub = () => P().eq("is_published", true);
   const [emTesteVoz, extPub, completoPub, fotoPub, videoPub, valorPub, pagantes] = await Promise.all([
-    cnt(P().eq("trial_tier", "ideal").gt("trial_ends_at", nowIso)),
+    cnt(P().eq("trial_tier", "ideal").gt("trial_ends_at", nowIso).in("plan_tier", ["essencial", "destaque"])),
     cnt(Ppub().eq("attends_abroad", true)),
     cnt(Ppub().eq("profile_completed", true)),
     cnt(Ppub().not("avatar_url", "is", null)),

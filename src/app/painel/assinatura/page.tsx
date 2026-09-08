@@ -2,7 +2,7 @@ import { CalendarClock, Info } from "lucide-react";
 import { getMyPsychologist } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { isAsaasConfigured } from "@/lib/payments/asaas";
-import { trialAtivo, trialDiasRestantes } from "@/lib/plan-features";
+import { effectivePlan, trialAtivo, trialDiasRestantes } from "@/lib/plan-features";
 import { PLAN_LABEL } from "@/lib/plan-labels";
 import { Badge } from "@/components/ui/badge";
 import { PlanCheckout } from "@/components/painel/plan-checkout";
@@ -45,9 +45,10 @@ export default async function AssinaturaPage({
   // Assinatura criada e ainda sem pagamento confirmado.
   const aguardando = !!psy?.pending_plan_tier;
   // Teste gratuito em andamento?
-  const emTeste = psy ? trialAtivo(psy) : false;
+  const accessTier = psy ? effectivePlan(psy) : current;
+  const emTeste = psy ? trialAtivo(psy) && accessTier !== current : false;
   const diasTeste = psy ? trialDiasRestantes(psy) : 0;
-  const planoTeste = psy?.trial_tier ? PLAN_LABEL[psy.trial_tier] : null;
+  const planoTeste = emTeste ? PLAN_LABEL[accessTier] : null;
 
   const erro = typeof sp.erro === "string" ? sp.erro : null;
   const notice =
@@ -123,7 +124,7 @@ export default async function AssinaturaPage({
       <div className="rounded-2xl border border-border bg-background p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-sm text-foreground-muted">Plano atual</p>
+            <p className="text-sm text-foreground-muted">Plano contratado</p>
             <div className="mt-0.5 flex items-center gap-2">
               <span className="text-xl font-semibold text-brand-dark">
                 {plans.find((p) => p.id === current)?.name ?? "Raiz"}
