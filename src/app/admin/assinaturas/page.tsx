@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import {
-  CreditCard, TrendingUp, AlertCircle, Gift, CheckCircle2, Clock,
-  Sparkles, Wallet, Users, Target, ArrowDownRight,
+  CreditCard, TrendingUp, AlertCircle, Gift, CheckCircle2,
+  Sparkles, Wallet, Target,
 } from "lucide-react";
 import { isAsaasConfigured, asaasEnv } from "@/lib/payments/asaas";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -13,6 +13,10 @@ import { Badge } from "@/components/ui/badge";
 import { PLAN_LABEL } from "@/lib/plan-labels";
 import { chargeCents, formatCents } from "@/lib/pricing";
 import { type PlanTier, type SubscriptionStatus } from "@/lib/types";
+import {
+  SubscriptionHealthDrilldown,
+  type SubscriptionHealthGroup,
+} from "@/components/admin/subscription-health-drilldown";
 
 export const metadata = { title: "Assinaturas" };
 
@@ -39,40 +43,22 @@ type Psy = {
 
 /** Cartão de indicador. */
 function Stat({
-  icon, label, value, sub, tone = "neutral", href,
+  icon, label, value, sub, tone = "neutral",
 }: {
   icon: ReactNode; label: string; value: string; sub?: string;
   tone?: "brand" | "green" | "yellow" | "neutral";
-  href?: string;
 }) {
   const chip =
     tone === "green" ? "bg-green-100 text-green-800"
     : tone === "yellow" ? "bg-yellow-100 text-yellow-800"
     : tone === "brand" ? "bg-teal-100 text-teal-800"
     : "bg-surface-muted text-foreground-muted";
-  const content = (
-    <>
+  return (
+    <div className="rounded-2xl border border-border bg-background p-5">
       <div className={`inline-flex h-9 w-9 items-center justify-center rounded-xl ${chip}`}>{icon}</div>
       <p className="mt-3 text-2xl font-semibold text-heading">{value}</p>
       <p className="text-sm text-foreground-muted">{label}</p>
       {sub && <p className="mt-1 text-xs text-foreground-muted">{sub}</p>}
-      {href && (
-        <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-brand-dark">
-          Ver pessoas <ArrowDownRight className="h-3.5 w-3.5 transition-transform group-hover:translate-y-0.5" />
-        </span>
-      )}
-    </>
-  );
-  if (href) {
-    return (
-      <Link href={href} className="group rounded-2xl border border-border bg-background p-5 transition hover:border-brand/50 hover:shadow-sm">
-        {content}
-      </Link>
-    );
-  }
-  return (
-    <div className="rounded-2xl border border-border bg-background p-5">
-      {content}
     </div>
   );
 }
@@ -199,11 +185,6 @@ export default async function AdminAssinaturasPage() {
   const arrCents = mrrCents * 12;
   const arpuCents = pagantes.length ? Math.round(mrrCents / pagantes.length) : 0;
 
-  // Estados.
-  const atrasadas = psys.filter((p) => p.subscription_status === "atrasada" && !p.pending_plan_tier);
-  const canceladas = psys.filter((p) => p.subscription_status === "cancelada");
-  const aguardando = psys.filter((p) => p.pending_plan_tier);
-
   // Testes e campanha.
   const trials = psys.filter(trialAtivo);
   const trials7 = trials.filter((p) => emDias(p.trial_ends_at!) <= 7);
@@ -261,6 +242,45 @@ export default async function AdminAssinaturasPage() {
     else if (p.plan_tier !== "essencial") gCortesia.push(p);
   }
   const periodoLabel = (x: string | null) => (x === "yearly" ? "anual" : "mensal");
+  const pessoa = (p: Psy, detail: string) => ({
+    id: p.id,
+    profileId: p.profile_id,
+    name: p.display_name || "Sem nome de exibição",
+    detail,
+    meta: [emailPorProfile.get(p.profile_id), [p.city, p.state].filter(Boolean).join(" / ")]
+      .filter(Boolean)
+      .join(" · "),
+  });
+  const healthGroups: SubscriptionHealthGroup[] = [
+    {
+      key: "active",
+      label: "Pagantes ativas",
+      description: "Pagamento confirmado no Asaas. Clique no nome para abrir o cadastro.",
+      people: gAtivos.map((p) =>
+        pessoa(p, `${PLAN_LABEL[p.plan_tier]} · ${periodoLabel(p.billing_period)}${cupomAtivo(p) ? ` · cupom -${p.coupon_pct}%` : ""}`)
+      ),
+    },
+    {
+      key: "waiting",
+      label: "Aguardando pagamento",
+      description: "A cobrança foi emitida, mas o primeiro pagamento ainda não confirmou.",
+      people: gAguardando.map((p) =>
+        pessoa(p, p.pending_plan_tier ? `Quer ${PLAN_LABEL[p.pending_plan_tier]} · ${periodoLabel(p.pending_billing_period)}` : "Pagamento pendente")
+      ),
+    },
+    {
+      key: "overdue",
+      label: "Cobranças atrasadas",
+      description: "Assinaturas existentes cuja cobrança mais recente venceu sem pagamento.",
+      people: gAtrasadas.map((p) => pessoa(p, `${PLAN_LABEL[p.plan_tier]} · cobrança vencida`)),
+    },
+    {
+      key: "cancelled",
+      label: "Canceladas",
+      description: "Usuários cujo último estado de assinatura é cancelado.",
+      people: gCanceladas.map((p) => pessoa(p, `${PLAN_LABEL[p.plan_tier]} · assinatura encerrada`)),
+    },
+  ];
 
   return (
     <div className="space-y-8">
@@ -283,12 +303,7 @@ export default async function AdminAssinaturasPage() {
       {/* SAÚDE */}
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-foreground-muted">Saúde das assinaturas</h2>
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <Stat href="#pagantes-ativos" icon={<CheckCircle2 className="h-5 w-5" />} tone="green" label="Pagantes ativas" value={String(pagantes.length)} />
-          <Stat href="#aguardando-pagamento" icon={<Clock className="h-5 w-5" />} tone="yellow" label="Aguardando pagamento" value={String(aguardando.length)} />
-          <Stat href="#cobrancas-atrasadas" icon={<AlertCircle className="h-5 w-5" />} tone="yellow" label="Cobranças atrasadas" value={String(atrasadas.length)} />
-          <Stat href="#assinaturas-canceladas" icon={<Users className="h-5 w-5" />} label="Canceladas" value={String(canceladas.length)} />
-        </div>
+        <SubscriptionHealthDrilldown groups={healthGroups} />
       </section>
 
       {/* DISTRIBUIÇÃO + FUNIL */}
