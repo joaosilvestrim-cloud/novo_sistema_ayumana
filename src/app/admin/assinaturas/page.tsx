@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import {
   CreditCard, TrendingUp, AlertCircle, Gift, CheckCircle2, Clock,
-  Sparkles, Wallet, Users, Target,
+  Sparkles, Wallet, Users, Target, ArrowDownRight,
 } from "lucide-react";
 import { isAsaasConfigured, asaasEnv } from "@/lib/payments/asaas";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -39,22 +39,40 @@ type Psy = {
 
 /** Cartão de indicador. */
 function Stat({
-  icon, label, value, sub, tone = "neutral",
+  icon, label, value, sub, tone = "neutral", href,
 }: {
   icon: ReactNode; label: string; value: string; sub?: string;
   tone?: "brand" | "green" | "yellow" | "neutral";
+  href?: string;
 }) {
   const chip =
     tone === "green" ? "bg-green-100 text-green-800"
     : tone === "yellow" ? "bg-yellow-100 text-yellow-800"
     : tone === "brand" ? "bg-teal-100 text-teal-800"
     : "bg-surface-muted text-foreground-muted";
-  return (
-    <div className="rounded-2xl border border-border bg-background p-5">
+  const content = (
+    <>
       <div className={`inline-flex h-9 w-9 items-center justify-center rounded-xl ${chip}`}>{icon}</div>
       <p className="mt-3 text-2xl font-semibold text-heading">{value}</p>
       <p className="text-sm text-foreground-muted">{label}</p>
       {sub && <p className="mt-1 text-xs text-foreground-muted">{sub}</p>}
+      {href && (
+        <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-brand-dark">
+          Ver pessoas <ArrowDownRight className="h-3.5 w-3.5 transition-transform group-hover:translate-y-0.5" />
+        </span>
+      )}
+    </>
+  );
+  if (href) {
+    return (
+      <Link href={href} className="group rounded-2xl border border-border bg-background p-5 transition hover:border-brand/50 hover:shadow-sm">
+        {content}
+      </Link>
+    );
+  }
+  return (
+    <div className="rounded-2xl border border-border bg-background p-5">
+      {content}
     </div>
   );
 }
@@ -93,15 +111,16 @@ function Funil({ label, count, base, color }: { label: string; count: number; ba
 }
 
 function Grupo({
-  titulo, descricao, rows, plano, badge, vazio,
+  id, titulo, descricao, rows, plano, badge, vazio,
 }: {
+  id?: string;
   titulo: string; descricao: string; rows: Psy[];
   plano: (r: Psy) => string;
   badge: (r: Psy) => { tone: "success" | "warning" | "brand" | "neutral"; label: string };
   vazio: string;
 }) {
   return (
-    <section className="rounded-2xl border border-border bg-background">
+    <section id={id} className="scroll-mt-6 rounded-2xl border border-border bg-background">
       <div className="border-b border-border px-6 py-4">
         <h2 className="text-lg">{titulo} ({rows.length})</h2>
         <p className="mt-0.5 text-sm text-foreground-muted">{descricao}</p>
@@ -115,11 +134,9 @@ function Grupo({
             return (
               <li key={r.id} className="flex items-center justify-between gap-4 px-6 py-3">
                 <div className="min-w-0">
-                  {r.slug ? (
-                    <Link href={`/psicologo/${r.slug}`} target="_blank" className="font-medium text-heading hover:text-brand-dark">{r.display_name || "—"}</Link>
-                  ) : (
-                    <span className="font-medium text-heading">{r.display_name || "—"}</span>
-                  )}
+                  <Link href={`/admin/usuarios/${r.profile_id}`} className="font-medium text-heading hover:text-brand-dark hover:underline">
+                    {r.display_name || "—"}
+                  </Link>
                   <p className="text-xs text-foreground-muted">{plano(r)}</p>
                 </div>
                 <Badge tone={b.tone}>{b.label}</Badge>
@@ -183,8 +200,8 @@ export default async function AdminAssinaturasPage() {
   const arpuCents = pagantes.length ? Math.round(mrrCents / pagantes.length) : 0;
 
   // Estados.
-  const atrasadas = psys.filter((p) => p.subscription_status === "atrasada").length;
-  const canceladas = psys.filter((p) => p.subscription_status === "cancelada").length;
+  const atrasadas = psys.filter((p) => p.subscription_status === "atrasada" && !p.pending_plan_tier);
+  const canceladas = psys.filter((p) => p.subscription_status === "cancelada");
   const aguardando = psys.filter((p) => p.pending_plan_tier);
 
   // Testes e campanha.
@@ -234,10 +251,12 @@ export default async function AdminAssinaturasPage() {
   const waLink = (tel: string | null) => (tel ? `https://wa.me/${tel.replace(/\D/g, "")}` : null);
 
   // Grupos detalhados por estado.
-  const gAtivos: Psy[] = [], gAguardando: Psy[] = [], gTeste: Psy[] = [], gCortesia: Psy[] = [];
+  const gAtivos: Psy[] = [], gAguardando: Psy[] = [], gAtrasadas: Psy[] = [], gCanceladas: Psy[] = [], gTeste: Psy[] = [], gCortesia: Psy[] = [];
   for (const p of psys) {
     if (p.subscription_status === "ativa" && p.plan_tier !== "essencial") gAtivos.push(p);
-    else if (p.pending_plan_tier || p.subscription_status === "atrasada") gAguardando.push(p);
+    else if (p.pending_plan_tier) gAguardando.push(p);
+    else if (p.subscription_status === "atrasada") gAtrasadas.push(p);
+    else if (p.subscription_status === "cancelada") gCanceladas.push(p);
     else if (trialAtivo(p)) gTeste.push(p);
     else if (p.plan_tier !== "essencial") gCortesia.push(p);
   }
@@ -265,10 +284,10 @@ export default async function AdminAssinaturasPage() {
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-foreground-muted">Saúde das assinaturas</h2>
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <Stat icon={<CheckCircle2 className="h-5 w-5" />} tone="green" label="Pagantes ativas" value={String(pagantes.length)} />
-          <Stat icon={<Clock className="h-5 w-5" />} tone="yellow" label="Aguardando pagamento" value={String(aguardando.length)} />
-          <Stat icon={<AlertCircle className="h-5 w-5" />} tone="yellow" label="Cobranças atrasadas" value={String(atrasadas)} />
-          <Stat icon={<Users className="h-5 w-5" />} label="Canceladas" value={String(canceladas)} />
+          <Stat href="#pagantes-ativos" icon={<CheckCircle2 className="h-5 w-5" />} tone="green" label="Pagantes ativas" value={String(pagantes.length)} />
+          <Stat href="#aguardando-pagamento" icon={<Clock className="h-5 w-5" />} tone="yellow" label="Aguardando pagamento" value={String(aguardando.length)} />
+          <Stat href="#cobrancas-atrasadas" icon={<AlertCircle className="h-5 w-5" />} tone="yellow" label="Cobranças atrasadas" value={String(atrasadas.length)} />
+          <Stat href="#assinaturas-canceladas" icon={<Users className="h-5 w-5" />} label="Canceladas" value={String(canceladas.length)} />
         </div>
       </section>
 
@@ -500,16 +519,32 @@ export default async function AdminAssinaturasPage() {
       {/* GRUPOS DETALHADOS */}
       <div className="space-y-6">
         <Grupo
+          id="pagantes-ativos"
           titulo="Pagantes ativos" descricao="Pagamento confirmado no Asaas. Geram receita." rows={gAtivos}
           plano={(r) => `${PLAN_LABEL[r.plan_tier]} · ${periodoLabel(r.billing_period)}${cupomAtivo(r) ? ` · cupom -${r.coupon_pct}%` : ""}`}
           badge={() => ({ tone: "success", label: "Ativa" })}
           vazio="Ninguém pagante ainda."
         />
         <Grupo
+          id="aguardando-pagamento"
           titulo="Aguardando pagamento" descricao="Assinaram e a cobrança foi emitida, mas o pagamento não confirmou." rows={gAguardando}
           plano={(r) => r.pending_plan_tier ? `Quer ${PLAN_LABEL[r.pending_plan_tier]} · ${periodoLabel(r.pending_billing_period)}` : `${PLAN_LABEL[r.plan_tier]} · cobrança vencida`}
           badge={() => ({ tone: "warning", label: "Aguardando" })}
           vazio="Ninguém aguardando pagamento."
+        />
+        <Grupo
+          id="cobrancas-atrasadas"
+          titulo="Cobranças atrasadas" descricao="A assinatura já existia, mas a cobrança mais recente venceu sem pagamento." rows={gAtrasadas}
+          plano={(r) => `${PLAN_LABEL[r.plan_tier]} · cobrança vencida`}
+          badge={() => ({ tone: "warning", label: "Atrasada" })}
+          vazio="Nenhuma cobrança atrasada."
+        />
+        <Grupo
+          id="assinaturas-canceladas"
+          titulo="Assinaturas canceladas" descricao="Usuários cujo último estado de assinatura é cancelado." rows={gCanceladas}
+          plano={(r) => `${PLAN_LABEL[r.plan_tier]} · assinatura encerrada`}
+          badge={() => ({ tone: "neutral", label: "Cancelada" })}
+          vazio="Nenhuma assinatura cancelada."
         />
         <Grupo
           titulo="Em teste gratuito" descricao="Usando os recursos do plano de graça. Vencido o teste, voltam ao contratado." rows={gTeste}

@@ -4,6 +4,7 @@ import { getMyPsychologist } from "@/lib/auth";
 import { listOpenQuestions } from "@/lib/forum";
 import { Badge } from "@/components/ui/badge";
 import { COUNTRIES } from "@/lib/types";
+import { effectivePlan, planHas } from "@/lib/plan-features";
 
 export const metadata = { title: "Fórum" };
 
@@ -11,7 +12,7 @@ export default async function PainelForumPage() {
   const psy = await getMyPsychologist();
   const eligible =
     !!psy &&
-    ["ideal", "presenca"].includes(psy.plan_tier) &&
+    planHas(effectivePlan(psy), "forum") &&
     psy.verification_status === "aprovado";
 
   if (!eligible) {

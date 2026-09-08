@@ -4,6 +4,53 @@
 export type BillingPeriod = "monthly" | "yearly";
 export type CouponDuration = "first_payment" | "first_year" | "forever";
 
+/**
+ * Converte um valor digitado em reais para centavos.
+ *
+ * Aceita a digitação simples ("500"), decimal brasileira ("500,00"),
+ * decimal com ponto ("500.00") e valores com milhar ("1.500,50" ou
+ * "1,500.50"). O último separador só é decimal quando há 1 ou 2 algarismos
+ * depois dele; com 3, é tratado como separador de milhar.
+ */
+export function parseBrlToCents(value: string): number | null {
+  const cleaned = value.trim().replace(/[^\d.,-]/g, "");
+  if (!cleaned || !/\d/.test(cleaned)) return null;
+
+  const negative = cleaned.startsWith("-");
+  const unsigned = cleaned.replace(/-/g, "");
+  const lastComma = unsigned.lastIndexOf(",");
+  const lastDot = unsigned.lastIndexOf(".");
+  const lastSeparator = Math.max(lastComma, lastDot);
+
+  let integerDigits: string;
+  let fractionDigits = "";
+  if (lastSeparator >= 0) {
+    const trailing = unsigned.slice(lastSeparator + 1).replace(/\D/g, "");
+    const isDecimal = trailing.length === 1 || trailing.length === 2;
+    if (isDecimal) {
+      integerDigits = unsigned.slice(0, lastSeparator).replace(/\D/g, "");
+      fractionDigits = trailing.padEnd(2, "0");
+    } else {
+      integerDigits = unsigned.replace(/\D/g, "");
+    }
+  } else {
+    integerDigits = unsigned.replace(/\D/g, "");
+  }
+
+  const reais = Number(integerDigits || "0");
+  const centavos = Number(fractionDigits || "0");
+  if (!Number.isSafeInteger(reais) || !Number.isSafeInteger(centavos)) return null;
+  const total = reais * 100 + centavos;
+  return negative ? -total : total;
+}
+
+/** Valor para campo editável, sem obrigar o sufixo ",00". */
+export function formatBrlInput(cents: number | null | undefined): string {
+  if (!cents) return "";
+  if (cents % 100 === 0) return String(cents / 100);
+  return (cents / 100).toFixed(2).replace(".", ",");
+}
+
 /** Desconto do plano anual sobre o total de 12 meses. */
 export const ANNUAL_DISCOUNT_PCT = 25;
 

@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Loader2, CheckCircle2, ShieldCheck } from "lucide-react";
-import { Field, Input, Textarea, Select, Label } from "@/components/ui/field";
+import { Field, Input, Select, Label } from "@/components/ui/field";
 import { ScheduleEditor } from "@/components/schedule-editor";
 import { StyleEditor } from "@/components/style-editor";
 import { CrpInput } from "@/components/crp-input";
@@ -13,6 +13,7 @@ import { GalleryUpload } from "@/components/gallery-upload";
 import { RichEditor } from "@/components/ui/rich-editor";
 import { CrpDocumentUpload } from "./crp-document-upload";
 import { TIMEZONES } from "@/lib/schedule";
+import { formatBrlInput } from "@/lib/pricing";
 import type { Schedule } from "@/lib/schedule";
 import {
   AUDIENCE_LABELS,
@@ -340,10 +341,10 @@ export function OnboardingForm({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Valor sessão online (R$)" htmlFor="session_price" plano="Alcance" hint="Opcional. Você já pode preencher. Aparece no seu perfil a partir do plano Alcance.">
-            <Input id="session_price" name="session_price" inputMode="decimal" defaultValue={psy?.session_price_cents ? (psy.session_price_cents / 100).toFixed(2) : ""} />
+            <Input id="session_price" name="session_price" inputMode="decimal" placeholder="Ex.: 500" defaultValue={formatBrlInput(psy?.session_price_cents)} />
           </Field>
           <Field label="Valor sessão presencial (R$)" htmlFor="session_price_in_person" plano="Alcance" hint="Opcional. Só se você atende presencial. Aparece a partir do plano Alcance.">
-            <Input id="session_price_in_person" name="session_price_in_person" inputMode="decimal" defaultValue={psy?.session_price_in_person_cents ? (psy.session_price_in_person_cents / 100).toFixed(2) : ""} />
+            <Input id="session_price_in_person" name="session_price_in_person" inputMode="decimal" placeholder="Ex.: 500" defaultValue={formatBrlInput(psy?.session_price_in_person_cents)} />
           </Field>
         </div>
 

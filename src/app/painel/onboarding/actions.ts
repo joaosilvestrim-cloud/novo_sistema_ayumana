@@ -8,6 +8,7 @@ import { slugify } from "@/lib/slug";
 import { verificarCrpNoCfp } from "@/lib/crp/verify";
 import { grantCampaignVoz } from "@/lib/campaign-voz";
 import { syncKommo } from "@/lib/kommo/sync";
+import { parseBrlToCents } from "@/lib/pricing";
 import type { Audience } from "@/lib/types";
 
 const BUCKET = process.env.SUPABASE_CRP_BUCKET || "crp-documentos";
@@ -39,13 +40,6 @@ function sanitizeHtml(html: string): string {
     return `<${t}>`;
   });
   return out;
-}
-
-function toCents(value: string): number | null {
-  const cleaned = value.replace(/[^\d,.-]/g, "").replace(".", "").replace(",", ".");
-  const n = Number(cleaned);
-  if (!value.trim() || Number.isNaN(n)) return null;
-  return Math.round(n * 100);
 }
 
 /**
@@ -151,8 +145,8 @@ export async function saveOnboardingAction(
   const state = String(formData.get("state") ?? "").trim() || null;
   const phone = String(formData.get("phone_whatsapp") ?? "").replace(/\D/g, "") || null;
   const instagram = String(formData.get("instagram") ?? "").trim().replace(/^@+/, "") || null;
-  const sessionPrice = toCents(String(formData.get("session_price") ?? ""));
-  const sessionPriceInPerson = toCents(String(formData.get("session_price_in_person") ?? ""));
+  const sessionPrice = parseBrlToCents(String(formData.get("session_price") ?? ""));
+  const sessionPriceInPerson = parseBrlToCents(String(formData.get("session_price_in_person") ?? ""));
   // Vídeo de apresentação (benefício do Voz, mas todos preenchem). Só aceita
   // link http(s); qualquer outra coisa vira nulo, por segurança.
   const videoRaw = String(formData.get("video_url") ?? "").trim();
