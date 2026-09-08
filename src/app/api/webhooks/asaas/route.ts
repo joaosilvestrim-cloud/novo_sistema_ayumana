@@ -199,6 +199,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, error: updErr.message });
   }
 
+  // Cobrança apagada/estornada: a fila do Presença precisa refletir isso, senão
+  // fica travada em "Cobrança gerada / Aguardando". Volta a linha para
+  // "contatado" e limpa o link, para a equipe gerar de novo se for o caso.
+  if (CANCEL.has(event)) {
+    const subId: string | null = payment.subscription ?? body.subscription?.id ?? null;
+    const reset = { status: "contatado", checkout_url: null, asaas_subscription_id: null };
+    if (subId) {
+      await supabase.from("presenca_waitlist").update(reset).eq("asaas_subscription_id", subId);
+    } else {
+      await supabase.from("presenca_waitlist").update(reset).eq("psychologist_id", psy.id).eq("status", "cobranca_gerada");
+    }
+  }
+
   // Avisa o psicólogo que o plano entrou no ar. Falha de e-mail não derruba
   // o webhook: o pagamento já foi aplicado no banco acima.
   if (ACTIVATE.has(event) && psy.pending_plan_tier) {

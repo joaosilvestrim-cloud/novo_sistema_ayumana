@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { CreditCard, Loader2, Copy, Check, AlertCircle, MessageCircle } from "lucide-react";
 import { generatePresencaChargeAction } from "@/app/admin/presenca/actions";
 
-export function PresencaCharge({ id, checkoutUrl, phone, name }: { id: string; checkoutUrl: string | null; phone: string | null; name: string | null }) {
+export function PresencaCharge({ id, checkoutUrl, phone, name, removed }: { id: string; checkoutUrl: string | null; phone: string | null; name: string | null; removed?: boolean }) {
   const router = useRouter();
   const [url, setUrl] = useState<string | null>(checkoutUrl);
   const [loading, setLoading] = useState(false);
@@ -63,7 +63,7 @@ export function PresencaCharge({ id, checkoutUrl, phone, name }: { id: string; c
   return (
     <div className="flex flex-col items-end gap-1">
       <button onClick={gerar} disabled={loading} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-brand/50 px-3 text-xs font-medium text-brand-dark hover:bg-brand/10 disabled:opacity-60">
-        {loading ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Gerando…</> : <><CreditCard className="h-3.5 w-3.5" /> Gerar cobrança e link</>}
+        {loading ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Gerando…</> : <><CreditCard className="h-3.5 w-3.5" /> {removed ? "Gerar nova cobrança" : "Gerar cobrança e link"}</>}
       </button>
       {err && (
         <span className="inline-flex max-w-60 items-start gap-1 text-right text-xs text-danger">

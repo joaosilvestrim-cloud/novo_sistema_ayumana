@@ -113,21 +113,46 @@ export async function createSubscription(params: {
   return { subscriptionId: sub.id, checkoutUrl };
 }
 
-/** Situação do pagamento de uma assinatura (a cobrança mais recente). */
-export async function getSubscriptionPayment(subscriptionId: string): Promise<{
-  status: string | null;
-  value: number | null;
-  dueDate: string | null;
-  paymentDate: string | null;
-  invoiceUrl: string | null;
-} | null> {
+/**
+ * Situação do pagamento de uma assinatura (a cobrança mais recente).
+ * Distingue três casos, porque "não achei pagamento" não é o mesmo que
+ * "não deu para consultar":
+ *  - null              => a consulta falhou (rede/API). A tela mantém o que sabia.
+ *  - { removed:true }  => a assinatura foi apagada ou está sem cobrança (a
+ *                         cobrança foi excluída no Asaas).
+ *  - { removed:false, status, ... } => cobrança existe, com a situação.
+ */
+export type SubscriptionPayment =
+  | { removed: true }
+  | {
+      removed: false;
+      status: string | null;
+      value: number | null;
+      dueDate: string | null;
+      paymentDate: string | null;
+      invoiceUrl: string | null;
+    };
+
+export async function getSubscriptionPayment(subscriptionId: string): Promise<SubscriptionPayment | null> {
+  if (!API_KEY) return null;
+  const headers = { access_token: API_KEY, "Content-Type": "application/json", "User-Agent": "Ayumana" };
   try {
-    const payments = await asaas<{
-      data: { status?: string; value?: number; dueDate?: string; paymentDate?: string; clientPaymentDate?: string; invoiceUrl?: string }[];
-    }>(`/subscriptions/${subscriptionId}/payments`);
-    const p = payments.data?.[0];
-    if (!p) return null;
+    // 1) A assinatura ainda existe?
+    const subRes = await fetch(`${BASE}/subscriptions/${subscriptionId}`, { headers, cache: "no-store" });
+    if (subRes.status === 404) return { removed: true };
+    const sub = (await subRes.json().catch(() => ({}))) as { deleted?: boolean };
+    if (sub?.deleted === true) return { removed: true };
+
+    // 2) Cobrança mais recente da assinatura.
+    const payRes = await fetch(`${BASE}/subscriptions/${subscriptionId}/payments`, { headers, cache: "no-store" });
+    if (!payRes.ok) return null;
+    const pay = (await payRes.json().catch(() => ({}))) as {
+      data?: { status?: string; value?: number; dueDate?: string; paymentDate?: string; clientPaymentDate?: string; invoiceUrl?: string }[];
+    };
+    const p = pay.data?.[0];
+    if (!p) return { removed: true }; // sem cobrança ativa: foi excluída
     return {
+      removed: false,
       status: p.status ?? null,
       value: p.value ?? null,
       dueDate: p.dueDate ?? null,

@@ -72,14 +72,17 @@ export default async function AdminPresencaPage() {
   }
 
   // Situação do pagamento ao vivo no Asaas (só para quem já tem assinatura criada).
-  const pagamentoPorSub = new Map<string, { status: string | null; paymentDate: string | null; dueDate: string | null }>();
+  type PgInfo = { removed: boolean; status: string | null; paymentDate: string | null; dueDate: string | null };
+  const pagamentoPorSub = new Map<string, PgInfo>();
   if (isAsaasConfigured()) {
     const subs = [...new Set(rows.map((r) => r.asaas_subscription_id).filter(Boolean) as string[])];
     const pagos = await Promise.all(
       subs.map(async (sub) => ({ sub, pg: await getSubscriptionPayment(sub) }))
     );
     for (const { sub, pg } of pagos) {
-      if (pg) pagamentoPorSub.set(sub, { status: pg.status, paymentDate: pg.paymentDate, dueDate: pg.dueDate });
+      if (!pg) continue; // consulta falhou: mantém o que se sabia
+      if (pg.removed) pagamentoPorSub.set(sub, { removed: true, status: null, paymentDate: null, dueDate: null });
+      else pagamentoPorSub.set(sub, { removed: false, status: pg.status, paymentDate: pg.paymentDate, dueDate: pg.dueDate });
     }
   }
 
@@ -134,7 +137,10 @@ export default async function AdminPresencaPage() {
             const perfil = r.psychologist_id ? perfilPorPsy.get(r.psychologist_id) : null;
             const w = wa(r.phone);
             const pg = r.asaas_subscription_id ? pagamentoPorSub.get(r.asaas_subscription_id) : null;
-            const sp = statusPagamento(pg?.status ?? (r.asaas_subscription_id ? "PENDING" : null));
+            const removida = pg?.removed === true;
+            const sp = removida
+              ? { label: "Cobrança removida", tone: "danger" as const }
+              : statusPagamento(pg?.status ?? (r.asaas_subscription_id ? "PENDING" : null));
             const spClass =
               sp.tone === "success" ? "bg-green-500/15 text-green-700"
               : sp.tone === "danger" ? "bg-danger/15 text-danger"
@@ -174,8 +180,11 @@ export default async function AdminPresencaPage() {
                         {sp.tone === "success" && pg?.paymentDate && (
                           <span className="text-xs text-foreground-muted">pago em {fmt(pg.paymentDate)}</span>
                         )}
-                        {sp.tone !== "success" && pg?.dueDate && (
+                        {!removida && sp.tone !== "success" && pg?.dueDate && (
                           <span className="text-xs text-foreground-muted">vence em {new Date(pg.dueDate + "T00:00:00").toLocaleDateString("pt-BR")}</span>
+                        )}
+                        {removida && (
+                          <span className="text-xs text-foreground-muted">A cobrança foi excluída no Asaas. Gere de novo se ela ainda quer entrar.</span>
                         )}
                         <span className="text-xs text-foreground-muted">
                           · Cobrança gerada por <span className="font-medium text-foreground">{geradaPor ?? "Equipe"}</span>
@@ -193,7 +202,7 @@ export default async function AdminPresencaPage() {
                       <button className="h-9 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary-hover">Salvar</button>
                     </form>
                     <span className="text-[11px] text-foreground-muted">Etapa manual. “Pago” é automático pelo Asaas.</span>
-                    <PresencaCharge id={r.id} checkoutUrl={r.checkout_url} phone={r.phone} name={r.name} />
+                    <PresencaCharge id={r.id} checkoutUrl={removida ? null : r.checkout_url} phone={r.phone} name={r.name} removed={removida} />
                     {perfil && (
                       <Link href={`/admin/usuarios/${perfil}`} className="text-xs font-medium text-brand-dark hover:underline">Ver no admin →</Link>
                     )}
