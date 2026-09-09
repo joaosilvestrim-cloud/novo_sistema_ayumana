@@ -121,6 +121,10 @@ export type AdminUser = {
   subscription: SubscriptionStatus | null;
   trialTier: PlanTier | null;
   trialEndsAt: string | null;
+  billingPeriod: string | null;
+  periodEnd: string | null;
+  asaasSubscriptionId: string | null;
+  campaignVozGrantedAt: string | null;
   createdAt: string | null;
 };
 
@@ -161,7 +165,7 @@ export async function getUsersOverview(): Promise<AdminUser[]> {
     supabase.from("profiles").select("id, full_name, email, role, created_at").order("created_at", { ascending: false }),
     supabase
       .from("psychologists")
-      .select("id, profile_id, slug, city, plan_tier, verification_status, is_published, subscription_status, profile_completed, trial_tier, trial_ends_at"),
+      .select("id, profile_id, slug, city, plan_tier, verification_status, is_published, subscription_status, profile_completed, trial_tier, trial_ends_at, billing_period, subscription_period_end, asaas_subscription_id, campaign_voz_granted_at"),
   ]);
 
   const psyByProfile = new Map((psys ?? []).map((p) => [p.profile_id, p]));
@@ -183,6 +187,10 @@ export async function getUsersOverview(): Promise<AdminUser[]> {
       subscription: (psy?.subscription_status as SubscriptionStatus) ?? null,
       trialTier: (psy?.trial_tier as PlanTier) ?? null,
       trialEndsAt: psy?.trial_ends_at ?? null,
+      billingPeriod: (psy?.billing_period as string) ?? null,
+      periodEnd: psy?.subscription_period_end ?? null,
+      asaasSubscriptionId: (psy?.asaas_subscription_id as string) ?? null,
+      campaignVozGrantedAt: psy?.campaign_voz_granted_at ?? null,
       createdAt: pr.created_at,
     };
   });

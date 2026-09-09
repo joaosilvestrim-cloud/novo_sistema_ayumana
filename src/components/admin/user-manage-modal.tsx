@@ -8,7 +8,7 @@ import {
   Eye, EyeOff, BadgeCheck, AlertCircle, Gift, Unlock, Loader2, Check,
 } from "lucide-react";
 import { PLAN_LABEL } from "@/lib/plan-labels";
-import { VERIFICATION_LABELS, type PlanTier, type VerificationStatus, type UserRole } from "@/lib/types";
+import { VERIFICATION_LABELS, type PlanTier, type VerificationStatus, type UserRole, type SubscriptionStatus } from "@/lib/types";
 import { ConfirmButton } from "@/components/admin/confirm-button";
 import { effectivePlan, planAtLeast, trialAtivo } from "@/lib/plan-features";
 import {
@@ -33,9 +33,27 @@ export type ManageUser = {
   verification: VerificationStatus | null;
   published: boolean;
   profileCompleted: boolean;
+  subscription?: SubscriptionStatus | null;
+  billingPeriod?: string | null;
+  periodEnd?: string | null;
+  asaasSubscriptionId?: string | null;
+  campaignVozGrantedAt?: string | null;
 };
 
 const btn = "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium hover:bg-surface-muted";
+
+function subLabel(s: SubscriptionStatus | null | undefined): string {
+  if (s === "ativa") return "assinatura ativa";
+  if (s === "atrasada") return "pagamento em atraso";
+  if (s === "cancelada") return "assinatura cancelada";
+  return "sem assinatura ativa";
+}
+function subTone(s: SubscriptionStatus | null | undefined): string {
+  if (s === "ativa") return "font-medium text-green-700";
+  if (s === "atrasada") return "font-medium text-yellow-700";
+  if (s === "cancelada") return "font-medium text-danger";
+  return "text-foreground-muted";
+}
 
 export function UserManageModal({ u, canDelete }: { u: ManageUser; canDelete: boolean }) {
   const [open, setOpen] = useState(false);
@@ -163,6 +181,40 @@ export function UserManageModal({ u, canDelete }: { u: ManageUser; canDelete: bo
                         Até {new Date(u.trialEndsAt!).toLocaleDateString("pt-BR")} · base {PLAN_LABEL[u.plan ?? "essencial"]}
                       </p>
                     )}
+
+                    {/* Rastreabilidade: de onde vem cada camada do acesso */}
+                    <div className="mt-2 space-y-1.5 border-t border-brand/20 pt-2 text-xs">
+                      {/* Camada 1: plano pago (contratado) */}
+                      {u.plan && u.plan !== "essencial" ? (
+                        <div>
+                          <p className="text-foreground">
+                            💳 <span className="font-medium">Pagou {PLAN_LABEL[u.plan]}</span>
+                            {u.billingPeriod && <> ({u.billingPeriod === "yearly" ? "anual" : "mensal"})</>}
+                            {" · "}
+                            <span className={subTone(u.subscription)}>{subLabel(u.subscription)}</span>
+                          </p>
+                          {u.periodEnd && (
+                            <p className="text-foreground-muted">Renova/vence em {new Date(u.periodEnd).toLocaleDateString("pt-BR")}</p>
+                          )}
+                          {u.asaasSubscriptionId && (
+                            <p className="text-foreground-muted">Assinatura Asaas: <span className="font-mono">{u.asaasSubscriptionId}</span></p>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-foreground-muted">💳 Sem plano pago (base Raiz gratuito).</p>
+                      )}
+
+                      {/* Camada 2: cortesia, quando amplia o plano pago */}
+                      {emTeste && planoEfetivo !== u.plan && (
+                        <p className="text-foreground">
+                          🎁 <span className="font-medium">Cortesia de {u.trialTier ? PLAN_LABEL[u.trialTier] : "Voz"}</span>{" "}
+                          {u.campaignVozGrantedAt
+                            ? <>pela campanha de reativação (desde {new Date(u.campaignVozGrantedAt).toLocaleDateString("pt-BR")})</>
+                            : <>concedida manualmente pela equipe</>}
+                          . Ao terminar, volta para {PLAN_LABEL[u.plan ?? "essencial"]}.
+                        </p>
+                      )}
+                    </div>
                   </div>
                   <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-foreground-muted">Plano contratado / base</p>
                   <form onSubmit={onSubmit("plan", changePlanAction, (fd) => `Plano alterado para ${PLAN_LABEL[String(fd.get("plan")) as PlanTier]}.`)} className="flex gap-2">
