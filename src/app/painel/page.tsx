@@ -14,6 +14,7 @@ import { ShareProfile } from "@/components/share-profile";
 import { VERIFICATION_LABELS, type Plan } from "@/lib/types";
 import { effectivePlan, trialAtivo } from "@/lib/plan-features";
 import { PLAN_LABEL } from "@/lib/plan-labels";
+import { OnboardingVideoCard } from "@/components/painel/onboarding-video";
 
 export default async function PainelHome() {
   const profile = await getProfile();
@@ -55,6 +56,9 @@ export default async function PainelHome() {
           Acompanhe seu perfil e sua verificação de CRP.
         </p>
       </div>
+
+      {/* Vídeo de boas-vindas (dispensável) */}
+      <OnboardingVideoCard />
 
       {/* Status de verificação */}
       <div className="rounded-2xl border border-border bg-background p-6">

@@ -2,6 +2,7 @@ import { getMyPsychologist } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { effectivePlan } from "@/lib/plan-features";
 import { HelpCenter } from "@/components/painel/help-center";
+import { OnboardingVideo } from "@/components/painel/onboarding-video";
 import type { PlanTier } from "@/lib/types";
 
 export const metadata = { title: "Ajuda e planos" };
@@ -33,6 +34,14 @@ export default async function AjudaPage() {
           Entenda o que cada plano traz e como assinar. Clique em um plano para ver os detalhes.
         </p>
       </div>
+      <section className="rounded-2xl border border-border bg-background p-5">
+        <h2 className="text-lg">Vídeo de boas-vindas</h2>
+        <p className="mb-3 mt-0.5 text-sm text-foreground-muted">
+          Um guia rápido de como a Ayumana funciona, tela por tela.
+        </p>
+        <OnboardingVideo />
+      </section>
+
       <HelpCenter currentPlan={plano} supportWhatsapp={whatsapp} precos={precos} />
     </div>
   );
