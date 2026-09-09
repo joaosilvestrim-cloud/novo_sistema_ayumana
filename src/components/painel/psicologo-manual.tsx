@@ -127,7 +127,7 @@ export function PsicologoManual() {
   const buscando = q.trim().length > 0;
 
   return (
-    <section className="rounded-2xl border border-border bg-background p-5">
+    <section id="manual" className="scroll-mt-24 rounded-2xl border border-border bg-background p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg">Manual do psicólogo</h2>

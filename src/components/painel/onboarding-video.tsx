@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PlayCircle, X } from "lucide-react";
+import Link from "next/link";
+import { PlayCircle, X, BookOpen } from "lucide-react";
 
 export const ONBOARDING_VIDEO_URL =
   "https://nhxnhlnmjekcqldmxkar.supabase.co/storage/v1/object/public/onboarding/guia-psicologo.mp4";
@@ -56,9 +57,17 @@ export function OnboardingVideoCard() {
       >
         Seu navegador não consegue exibir o vídeo.
       </video>
-      <p className="mt-2 text-xs text-foreground-muted">
-        Pode fechar quando quiser. O vídeo fica sempre guardado em “Ajuda e planos”.
-      </p>
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <Link
+          href="/painel/ajuda#manual"
+          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand-dark px-3.5 text-sm font-medium text-white hover:opacity-90"
+        >
+          <BookOpen className="h-4 w-4" /> Ver manual completo
+        </Link>
+        <span className="text-xs text-foreground-muted">
+          Pode fechar quando quiser. O vídeo e o manual ficam guardados em “Ajuda e planos”.
+        </span>
+      </div>
     </div>
   );
 }
