@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { effectivePlan } from "@/lib/plan-features";
 import { HelpCenter } from "@/components/painel/help-center";
 import { OnboardingVideo } from "@/components/painel/onboarding-video";
+import { PsicologoManual } from "@/components/painel/psicologo-manual";
 import type { PlanTier } from "@/lib/types";
 
 export const metadata = { title: "Ajuda e planos" };
@@ -41,6 +42,8 @@ export default async function AjudaPage() {
         </p>
         <OnboardingVideo />
       </section>
+
+      <PsicologoManual />
 
       <HelpCenter currentPlan={plano} supportWhatsapp={whatsapp} precos={precos} />
     </div>
