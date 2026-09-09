@@ -23,6 +23,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 type Psy = {
   id: string;
   plan_tier: PlanTier;
+  asaas_subscription_id: string | null;
   pending_plan_tier: PlanTier | null;
   pending_billing_period: string | null;
   pending_coupon_code: string | null;
@@ -39,7 +40,7 @@ async function acharPsicologo(
   supabase: ReturnType<typeof createAdminClient>,
   ref: { subscriptionId?: string; externalReference?: string; customerId?: string }
 ): Promise<Psy | null> {
-  const cols = "id, plan_tier, pending_plan_tier, pending_billing_period, pending_coupon_code, pending_coupon_pct, pending_coupon_duration";
+  const cols = "id, plan_tier, asaas_subscription_id, pending_plan_tier, pending_billing_period, pending_coupon_code, pending_coupon_pct, pending_coupon_duration";
 
   if (ref.subscriptionId) {
     const { data } = await supabase
@@ -132,6 +133,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, ignored: "psicólogo não encontrado" });
   }
 
+  const eventoSubId: string | null = payment.subscription ?? body.subscription?.id ?? null;
+
   const update: Record<string, unknown> = {};
   let resumo = "";
 
@@ -139,6 +142,9 @@ export async function POST(request: NextRequest) {
     update.subscription_status = "ativa" satisfies SubscriptionStatus;
     const fim = fimDoPeriodo(payment.dueDate);
     if (fim) update.subscription_period_end = fim;
+
+    // Se por algum motivo o vínculo da assinatura se perdeu, religa agora.
+    if (!psy.asaas_subscription_id && eventoSubId) update.asaas_subscription_id = eventoSubId;
 
     // É aqui que o plano contratado passa a valer de verdade.
     if (psy.pending_plan_tier) {
@@ -163,6 +169,20 @@ export async function POST(request: NextRequest) {
       update.pending_coupon_duration = null;
 
       resumo = `Pagamento confirmado. Plano liberado: ${psy.pending_plan_tier} (${period === "yearly" ? "anual" : "mensal"}).`;
+    } else if (psy.plan_tier === "essencial") {
+      // Rede de segurança: pagou, mas o "pending" se perdeu (ex.: uma cobrança
+      // antiga foi excluída e limpou o pending antes do pagamento confirmar).
+      // Deduz o plano pelo valor pago, comparando com a tabela de preços.
+      const valorCents = Math.round((payment.value ?? 0) * 100);
+      const { data: plans } = await supabase.from("plans").select("id, price_cents").gt("price_cents", 0);
+      const achado = (plans as { id: string; price_cents: number }[] | null)?.find((p) => p.price_cents === valorCents);
+      if (achado) {
+        update.plan_tier = achado.id as PlanTier;
+        update.billing_period = "monthly";
+        resumo = `Pagamento confirmado. Plano deduzido pelo valor R$ ${(valorCents / 100).toFixed(2)}: ${achado.id}.`;
+      } else {
+        resumo = `Pagamento confirmado, mas não deu para deduzir o plano pelo valor (R$ ${(valorCents / 100).toFixed(2)}). Conferir manualmente.`;
+      }
     } else {
       resumo = "Pagamento confirmado. Assinatura renovada.";
     }
@@ -170,6 +190,18 @@ export async function POST(request: NextRequest) {
     update.subscription_status = "atrasada" satisfies SubscriptionStatus;
     resumo = "Cobrança venceu sem pagamento.";
   } else if (CANCEL.has(event)) {
+    // Só rebaixa se a cobrança cancelada for a assinatura VIGENTE. Uma cobrança
+    // antiga (substituída num novo checkout) sendo excluída não pode derrubar o
+    // plano atual: era exatamente isso que furava o upgrade de quem refazia o
+    // checkout.
+    const ehAtual = !psy.asaas_subscription_id || !eventoSubId || eventoSubId === psy.asaas_subscription_id;
+    if (!ehAtual) {
+      await supabase.from("presenca_waitlist")
+        .update({ status: "contatado", checkout_url: null, asaas_subscription_id: null })
+        .eq("asaas_subscription_id", eventoSubId);
+      await fechar(psy.id, true, `Cobrança antiga (${eventoSubId}) excluída; assinatura vigente (${psy.asaas_subscription_id}) mantida.`);
+      return NextResponse.json({ ok: true, kept: true });
+    }
     update.subscription_status = "cancelada" satisfies SubscriptionStatus;
     update.plan_tier = "essencial";
     update.pending_plan_tier = null;
@@ -203,7 +235,7 @@ export async function POST(request: NextRequest) {
   // fica travada em "Cobrança gerada / Aguardando". Volta a linha para
   // "contatado" e limpa o link, para a equipe gerar de novo se for o caso.
   if (CANCEL.has(event)) {
-    const subId: string | null = payment.subscription ?? body.subscription?.id ?? null;
+    const subId = eventoSubId;
     const reset = { status: "contatado", checkout_url: null, asaas_subscription_id: null };
     if (subId) {
       await supabase.from("presenca_waitlist").update(reset).eq("asaas_subscription_id", subId);
