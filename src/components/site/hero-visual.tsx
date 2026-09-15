@@ -1,107 +1,129 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 import Link from "next/link";
-import { ShieldCheck } from "lucide-react";
+import { ArrowRight, Globe2, MapPin, ShieldCheck } from "lucide-react";
 import type { HeroPerson } from "@/lib/psychologists";
-
-// Posições/animações fixas dos 3 cartões + fallback fictício se não houver reais.
-const SLOTS = [
-  { initials: "MA", name: "Mariana A.", role: "TCC · atende no exterior", place: "🇵🇹 Portugal", tone: "bg-teal-100 text-teal-800", cls: "ayu-float", style: { top: "4%", right: "6%" }, delay: "0s" },
-  { initials: "RS", name: "Rafael S.", role: "Psicanálise", place: "🇺🇸 EUA", tone: "bg-green-100 text-green-800", cls: "ayu-float-slow", style: { top: "40%", right: "40%" }, delay: "1.2s" },
-  { initials: "CN", name: "Camila N.", role: "Infância · bilíngues", place: "🇮🇪 Irlanda", tone: "bg-yellow-400/20 text-yellow-600", cls: "ayu-float", style: { bottom: "6%", right: "10%" }, delay: "0.6s" },
-];
-
-const COUNTRY_PILLS = [
-  { flag: "🇩🇪", label: "Alemanha", style: { top: "24%", right: "34%" }, cls: "ayu-float-slow", delay: "0.3s" },
-  { flag: "🇯🇵", label: "Japão", style: { bottom: "28%", right: "48%" }, cls: "ayu-float", delay: "1.6s" },
-];
+import styles from "./hero-visual.module.css";
 
 function firstNames(name: string | null): string {
-  if (!name) return "Psicólogo(a)";
-  const parts = name.trim().split(/\s+/).filter((w) => !/^(dr|dra|prof|profa)\.?$/i.test(w));
+  const parts = (name || "Psicólogo(a)").trim().split(/\s+/).filter((w) => !/^(dr|dra|prof|profa)\.?$/i.test(w));
   return parts[1] ? `${parts[0]} ${parts[1][0]}.` : parts[0] || "Psicólogo(a)";
 }
 
 export function HeroVisual({ people = [] }: { people?: HeroPerson[] }) {
-  const [tick, setTick] = useState(0);
-  const [visible, setVisible] = useState(true);
-  const canRotate = people.length > 3;
+  const [active, setActive] = useState(0);
 
-  // Rotaciona os 3 cartões pela lista inteira (todos os IDEAL passam pela animação).
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [reduced, setReduced] = useState(true);
+  const [inView, setInView] = useState(false);
+  const [pageVisible, setPageVisible] = useState(true);
+  const root = useRef<HTMLDivElement>(null);
+  const moving = !hovered && !focused && !reduced && inView && pageVisible;
+  const count = people.length;
+  const current = count ? active % count : 0;
+
   useEffect(() => {
-    if (!canRotate) return;
-    const id = setInterval(() => {
-      setVisible(false);
-      setTimeout(() => {
-        setTick((t) => t + 1);
-        setVisible(true);
-      }, 450);
-    }, 5000);
-    return () => clearInterval(id);
-  }, [canRotate]);
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setReduced(media.matches);
+    const visibility = () => setPageVisible(!document.hidden);
+    sync(); visibility();
+    media.addEventListener("change", sync);
+    document.addEventListener("visibilitychange", visibility);
+    const observer = new IntersectionObserver(([entry]) => setInView(entry.isIntersecting));
+    if (root.current) observer.observe(root.current);
+    return () => {
+      media.removeEventListener("change", sync);
+      document.removeEventListener("visibilitychange", visibility);
+      observer.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!moving || count < 2) return;
+    const timer = window.setInterval(() => setActive((value) => (value + 1) % count), 6500);
+    return () => window.clearInterval(timer);
+  }, [moving, count]);
+
+  function tilt(event: PointerEvent<HTMLDivElement>) {
+    if (reduced || event.pointerType !== "mouse") return;
+    const bounds = event.currentTarget.getBoundingClientRect();
+    event.currentTarget.style.setProperty("--tilt-x", `${-((event.clientY - bounds.top) / bounds.height - 0.5) * 12}deg`);
+    event.currentTarget.style.setProperty("--tilt-y", `${((event.clientX - bounds.left) / bounds.width - 0.5) * 16}deg`);
+  }
 
   return (
-    <div className="relative hidden h-[440px] lg:block" aria-hidden>
-      <div className="absolute right-[14%] top-1/2 h-72 w-72 -translate-y-1/2 rounded-[46%_54%_60%_40%/48%_42%_58%_52%] border-2 border-brand/30" />
-      <div className="absolute right-[10%] top-1/2 h-80 w-80 -translate-y-1/2 rounded-[54%_46%_40%_60%/58%_52%_48%_42%] border border-accent/30" />
-
-      {COUNTRY_PILLS.map((c) => (
-        <div
-          key={c.label}
-          className={`absolute ${c.cls} rounded-full border border-border bg-background/90 px-3 py-1.5 text-xs font-medium text-heading shadow-sm backdrop-blur`}
-          style={{ ...c.style, animationDelay: c.delay }}
-        >
-          <span className="mr-1">{c.flag}</span>
-          {c.label}
-        </div>
-      ))}
-
-      {SLOTS.map((fake, i) => {
-        const real = people.length ? people[(tick * 3 + i) % people.length] : undefined;
-        const name = real ? firstNames(real.name) : fake.name;
-        const role = real ? real.role : fake.role;
-        const place = real ? real.place : fake.place;
-        const cardCls = `absolute ${fake.cls} w-56 rounded-2xl border border-border bg-background/95 p-3.5 shadow-lg shadow-teal-900/5 backdrop-blur transition-opacity duration-500`;
-        const inner = (
-          <>
-            <div className="flex items-center gap-3">
-              {real?.avatar_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={real.avatar_url} alt={name ?? "Psicólogo"} className="h-11 w-11 shrink-0 rounded-full object-cover" />
-              ) : (
-                <div className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-semibold ${fake.tone}`}>
-                  {fake.initials}
-                </div>
-              )}
-              <div className="min-w-0">
-                <div className="flex items-center gap-1">
-                  <p className="truncate text-sm font-semibold text-heading">{name}</p>
-                  <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-green-600" />
-                </div>
-                <p className="truncate text-xs text-foreground-muted">{role}</p>
+    <div ref={root} className={styles.portal} data-moving={moving} role="region" aria-label="Conheça os profissionais da Ayumana"
+      onPointerMove={tilt}
+      onPointerLeave={(event) => {
+        event.currentTarget.style.setProperty("--tilt-x", "0deg");
+        event.currentTarget.style.setProperty("--tilt-y", "0deg");
+      }}
+      onFocusCapture={() => setFocused(true)}
+      onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}
+    >
+      <div className={styles.viewport}>
+        <div className={styles.scene}>
+          <div className={styles.world} aria-hidden="true">
+            <div className={styles.halo} />
+            <div className={styles.orbit}><i /></div>
+            <div className={`${styles.orbit} ${styles.orbitTwo}`}><i /></div>
+            <div className={`${styles.orbit} ${styles.orbitThree}`} />
+            <div className={styles.globe}>
+              <svg viewBox="0 0 320 320" className={styles.grid} fill="none">
+                <circle cx="160" cy="160" r="157" />
+                {[45, 90, 135].map((rx) => <ellipse key={rx} cx="160" cy="160" rx={rx} ry="157" />)}
+                {[65, 110, 160, 210, 255].map((cy) => <ellipse key={cy} cx="160" cy={cy} rx={Math.sqrt(157 ** 2 - (cy - 160) ** 2)} ry="19" />)}
+                <path className={styles.connection} d="M83 230 Q90 40 226 102 M83 230 Q248 264 260 153 M83 230 Q8 130 119 92" />
+                <g className={styles.nodes}><circle cx="83" cy="230" r="5" /><circle cx="226" cy="102" r="4" /><circle cx="260" cy="153" r="4" /><circle cx="119" cy="92" r="4" /></g>
+              </svg>
+              <div className={styles.brandCore}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/brand/ayumana-symbol.png" alt="" width="68" height="68" />
+                <span>ayumana</span><small>O cuidado aproxima.</small>
               </div>
+              <div className={styles.reflection} />
             </div>
-            <div className="mt-3 flex items-center justify-between border-t border-border pt-2.5">
-              <span className="truncate text-xs text-foreground-muted">{place}</span>
-              <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-green-700">
-                <span className="ayu-pulse-dot h-1.5 w-1.5 rounded-full bg-green-500" />
-                online
-              </span>
-            </div>
-          </>
-        );
-        const style = { ...fake.style, animationDelay: fake.delay, opacity: visible ? 1 : 0 };
-        return real?.slug ? (
-          <Link key={i} href={`/psicologo/${real.slug}`} className={cardCls} style={style}>
-            {inner}
-          </Link>
-        ) : (
-          <div key={i} className={cardCls} style={style}>
-            {inner}
+            <span className={`${styles.country} ${styles.portugal}`}>PT <b>Portugal</b></span>
+            <span className={`${styles.country} ${styles.brasil}`}>BR <b>Brasil</b></span>
+            <span className={`${styles.country} ${styles.japan}`}>JP <b>Japão</b></span>
+            <div className={styles.floor} />
           </div>
-        );
-      })}
+          {people.map((person, index) => {
+            const offset = (index - current + count) % count;
+            const slot = offset === 0 ? "front" : offset === 1 ? "back" : offset === count - 1 ? "side" : "hidden";
+            const name = firstNames(person.name);
+            const content = <>
+              <div className={styles.cardLabel}><span /> CUIDADO EM PORTUGUÊS <ShieldCheck size={13} /></div>
+              <div className={styles.person}>
+                <div className={styles.avatar}>
+                  {person.avatar_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={person.avatar_url} alt="" width="56" height="56" />
+                  ) : <span>{name.slice(0, 1)}</span>}
+                </div>
+                <div className={styles.identity}><strong>{name}</strong><span>{person.role}</span></div>
+              </div>
+              <div className={styles.location}><MapPin size={12} /><span>{person.place}</span></div>
+              {person.slug && <div className={styles.cardCta}>Conhecer profissional <ArrowRight size={15} /></div>}
+            </>;
+            const props = {
+              className: styles.card, "data-slot": slot,
+              "aria-hidden": slot === "hidden" ? true : undefined,
+              tabIndex: slot === "hidden" ? -1 : 0,
+              onPointerEnter: () => setHovered(true), onPointerLeave: () => setHovered(false),
+            };
+            return person.slug ? (
+              <Link key={person.slug} href={`/psicologo/${person.slug}`} prefetch={false} aria-label={`Conhecer ${person.name || name}`} {...props}>{content}</Link>
+            ) : <div key={index} {...props}>{content}</div>;
+          })}
+          {!count && <Link href="/psicologos" className={`${styles.card} ${styles.empty}`} data-slot="front"><Globe2 size={24} /><strong>O cuidado vai até você.</strong><span>Encontre seu psicólogo <ArrowRight size={16} /></span></Link>}
+        </div>
+      </div>
+      <div className={styles.controls}>
+        <span className={styles.caption}>Perto de você. Em qualquer lugar.</span>
+      </div>
     </div>
   );
 }
