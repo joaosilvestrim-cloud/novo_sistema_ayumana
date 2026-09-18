@@ -241,6 +241,47 @@ export default async function AdminAssinaturasPage() {
     else if (cortesiaAtiva(p)) gTeste.push(p);
     else if (p.plan_tier !== "essencial") gCortesia.push(p);
   }
+  // Para os cancelados: descobrir o que a pessoa contratou (último plano pago) e
+  // o que tentou, a partir do histórico de cobranças do Asaas. Assim o card diz
+  // o que ela tinha, não só o plano atual (que sempre volta ao Raiz).
+  const centsParaTier: Record<number, PlanTier> = {};
+  for (const [id, c] of Object.entries(precoPlano)) centsParaTier[c] = id as PlanTier;
+  const valorTier = (v: number | undefined | null): PlanTier | null => (v ? centsParaTier[Math.round(v * 100)] ?? null : null);
+  const pagoPorPsy = new Map<string, PlanTier>();
+  const tentadoPorPsy = new Map<string, PlanTier>();
+  const cancelIds = gCanceladas.map((p) => p.id);
+  if (cancelIds.length) {
+    const { data: evs } = await supabase
+      .from("payment_events")
+      .select("psychologist_id, event, raw, created_at")
+      .in("psychologist_id", cancelIds)
+      .order("created_at", { ascending: false });
+    const PAGOU = new Set(["PAYMENT_CONFIRMED", "PAYMENT_RECEIVED"]);
+    for (const e of (evs ?? []) as { psychologist_id: string; event: string; raw: { payment?: { value?: number } } | null }[]) {
+      const tier = valorTier(e.raw?.payment?.value);
+      if (!tier || !e.psychologist_id) continue;
+      if (!tentadoPorPsy.has(e.psychologist_id)) tentadoPorPsy.set(e.psychologist_id, tier);
+      if (PAGOU.has(e.event) && !pagoPorPsy.has(e.psychologist_id)) pagoPorPsy.set(e.psychologist_id, tier);
+    }
+  }
+  const fmtDia = (x: string | null) => (x ? new Date(x).toLocaleDateString("pt-BR") : "");
+  // Linhas descritivas de um cancelado: o que contratou, a situação e o acesso hoje.
+  const canceladaLinhas = (p: Psy): { label: string; value: string; tone?: "good" | "warn" | "muted" }[] => {
+    const pago = pagoPorPsy.get(p.id) ?? null;
+    const tentado = tentadoPorPsy.get(p.id) ?? null;
+    const emCortesia = cortesiaAtiva(p);
+    const contratou = pago
+      ? { label: "Contratou", value: `${PLAN_LABEL[pago]} · chegou a pagar`, tone: "muted" as const }
+      : tentado
+        ? { label: "Contratou", value: `${PLAN_LABEL[tentado]} · não chegou a pagar`, tone: "warn" as const }
+        : { label: "Contratou", value: "sem plano pago registrado", tone: "muted" as const };
+    const situacao = { label: "Situação", value: "assinatura cancelada / encerrada no Asaas", tone: "muted" as const };
+    const hoje = emCortesia
+      ? { label: "Acesso hoje", value: `${PLAN_LABEL[effectivePlan(p)]} de cortesia até ${fmtDia(p.trial_ends_at)}`, tone: "good" as const }
+      : { label: "Acesso hoje", value: "Raiz (plano gratuito)", tone: "muted" as const };
+    return [contratou, situacao, hoje];
+  };
+
   const periodoLabel = (x: string | null) => (x === "yearly" ? "anual" : "mensal");
   const pessoa = (p: Psy, detail: string) => ({
     id: p.id,
@@ -277,8 +318,8 @@ export default async function AdminAssinaturasPage() {
     {
       key: "cancelled",
       label: "Canceladas",
-      description: "Usuários cujo último estado de assinatura é cancelado.",
-      people: gCanceladas.map((p) => pessoa(p, `${PLAN_LABEL[p.plan_tier]} · assinatura encerrada`)),
+      description: "Assinatura encerrada. Veja o que a pessoa contratou e qual o acesso dela hoje (pode ter Voz de cortesia).",
+      people: gCanceladas.map((p) => ({ ...pessoa(p, ""), extra: canceladaLinhas(p) })),
     },
   ];
 
@@ -556,8 +597,14 @@ export default async function AdminAssinaturasPage() {
         />
         <Grupo
           id="assinaturas-canceladas"
-          titulo="Assinaturas canceladas" descricao="Usuários cujo último estado de assinatura é cancelado." rows={gCanceladas}
-          plano={(r) => `${PLAN_LABEL[r.plan_tier]} · assinatura encerrada`}
+          titulo="Assinaturas canceladas" descricao="Assinatura encerrada. Mostra o que a pessoa contratou e o acesso dela hoje." rows={gCanceladas}
+          plano={(r) => {
+            const pago = pagoPorPsy.get(r.id) ?? null;
+            const tentado = tentadoPorPsy.get(r.id) ?? null;
+            const contratou = pago ? `contratou ${PLAN_LABEL[pago]}` : tentado ? `tentou ${PLAN_LABEL[tentado]} (não pagou)` : "sem plano pago";
+            const hoje = cortesiaAtiva(r) ? `hoje ${PLAN_LABEL[effectivePlan(r)]} de cortesia` : "hoje Raiz";
+            return `${contratou} · ${hoje}`;
+          }}
           badge={() => ({ tone: "neutral", label: "Cancelada" })}
           vazio="Nenhuma assinatura cancelada."
         />

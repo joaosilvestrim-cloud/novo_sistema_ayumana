@@ -17,6 +17,8 @@ export type SubscriptionHealthPerson = {
   name: string;
   detail: string;
   meta?: string;
+  /** Linhas descritivas (ex.: Contratou / Situação / Acesso hoje). */
+  extra?: { label: string; value: string; tone?: "good" | "warn" | "muted" }[];
 };
 
 export type SubscriptionHealthGroup = {
@@ -125,7 +127,21 @@ export function SubscriptionHealthDrilldown({
                   >
                     {person.name}
                   </Link>
-                  <p className="mt-0.5 text-xs text-foreground-muted">{person.detail}</p>
+                  {person.detail && <p className="mt-0.5 text-xs text-foreground-muted">{person.detail}</p>}
+                  {person.extra && person.extra.length > 0 && (
+                    <div className="mt-1 space-y-0.5">
+                      {person.extra.map((e, i) => (
+                        <p key={i} className="text-xs">
+                          <span className="font-medium text-foreground">{e.label}:</span>{" "}
+                          <span className={
+                            e.tone === "good" ? "text-green-700"
+                            : e.tone === "warn" ? "text-yellow-700"
+                            : "text-foreground-muted"
+                          }>{e.value}</span>
+                        </p>
+                      ))}
+                    </div>
+                  )}
                   {person.meta && <p className="mt-0.5 text-xs text-foreground-muted">{person.meta}</p>}
                 </li>
               ))}
