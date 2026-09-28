@@ -21,8 +21,9 @@ export function CatalogFiltersForm({
   approaches: Approach[];
   current: CatalogFilters;
 }) {
-  const geral = specialties.filter((s) => s.category !== "exterior");
+  const geral = specialties.filter((s) => s.category !== "exterior" && s.category !== "neuro");
   const exterior = specialties.filter((s) => s.category === "exterior");
+  const neuro = specialties.filter((s) => s.category === "neuro");
 
   return (
     <form
@@ -58,6 +59,13 @@ export function CatalogFiltersForm({
               <option key={s.id} value={s.slug}>{s.name}</option>
             ))}
           </optgroup>
+          {neuro.length > 0 && (
+            <optgroup label="Neuropsicologia">
+              {neuro.map((s) => (
+                <option key={s.id} value={s.slug}>{s.name}</option>
+              ))}
+            </optgroup>
+          )}
         </Select>
       </div>
 

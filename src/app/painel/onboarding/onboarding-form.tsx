@@ -141,8 +141,9 @@ export function OnboardingForm({
   const [state, action] = useActionState(saveOnboardingAction, initial);
   const [abroad, setAbroad] = useState(psy?.attends_abroad ?? false);
 
-  const geral = specialties.filter((s) => s.category !== "exterior");
+  const geral = specialties.filter((s) => s.category !== "exterior" && s.category !== "neuro");
   const exterior = specialties.filter((s) => s.category === "exterior");
+  const neuro = specialties.filter((s) => s.category === "neuro");
 
   return (
     <form action={action} className="space-y-6">
@@ -293,6 +294,16 @@ export function OnboardingForm({
             ))}
           </div>
         </div>
+        {neuro.length > 0 && (
+          <div>
+            <Label>Neuropsicologia e avaliação</Label>
+            <div className="flex flex-wrap gap-2">
+              {neuro.map((s) => (
+                <CheckPill key={s.id} name="specialties" value={String(s.id)} label={s.name} defaultChecked={selectedSpecialties.includes(s.id)} />
+              ))}
+            </div>
+          </div>
+        )}
       </Section>
 
       <Section title="Atendimento">
