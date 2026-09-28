@@ -36,6 +36,9 @@ export default async function AssinaturaPage({
   const { data } = await supabase.from("plans").select("*").order("sort_order");
   const plans = (data as Plan[]) ?? [];
   const current = psy?.plan_tier ?? "essencial";
+  // Preço do Presença vem do banco (fonte única), para não divergir do card.
+  const presencaCents = plans.find((p) => p.id === "presenca")?.price_cents ?? 29700;
+  const presencaLabel = `R$ ${Math.round(presencaCents / 100)}/mês`;
   const status = psy?.subscription_status ?? "nenhuma";
   const s = SUBSCRIPTION_LABELS[status];
   const renewal = fmtDate(psy?.subscription_period_end ?? null);
@@ -168,7 +171,7 @@ export default async function AssinaturaPage({
       <div className="grid gap-4 md:grid-cols-2">
         <div className="rounded-2xl border border-border bg-background p-6">
           <h2 className="text-lg">Presença</h2>
-          <p className="mt-1 text-2xl font-semibold text-brand-dark">R$ 297/mês</p>
+          <p className="mt-1 text-2xl font-semibold text-brand-dark">{presencaLabel}</p>
           <p className="mt-4 rounded-lg bg-surface-muted px-3 py-2 text-sm text-foreground-muted">
             O Presença tem onboarding humano e vaga limitada. A entrada é por
             contato com a equipe.
