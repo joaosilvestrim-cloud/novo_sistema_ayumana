@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LayoutDashboard, UserRound, CreditCard, MessagesSquare, LogOut, Palette, LifeBuoy } from "lucide-react";
+import { LayoutDashboard, UserRound, CreditCard, MessagesSquare, LogOut, Palette, LifeBuoy, TrendingUp } from "lucide-react";
 import { requireUser, getProfile, getMyPsychologist } from "@/lib/auth";
 import { effectivePlan } from "@/lib/plan-features";
 import { Logo } from "@/components/ui/logo";
@@ -9,6 +9,7 @@ import { SupportButton } from "@/components/painel/support-button";
 const NAV = [
   { href: "/painel", label: "Início", icon: LayoutDashboard },
   { href: "/painel/onboarding", label: "Meu perfil", icon: UserRound },
+  { href: "/painel/desempenho", label: "Meu desempenho", icon: TrendingUp },
   { href: "/painel/forum", label: "Fórum", icon: MessagesSquare },
   { href: "/painel/assinatura", label: "Assinatura", icon: CreditCard },
   { href: "/painel/ajuda", label: "Ajuda e planos", icon: LifeBuoy },
