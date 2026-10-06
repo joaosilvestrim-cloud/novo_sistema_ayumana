@@ -8,13 +8,14 @@ import {
 } from "lucide-react";
 import { getMyPsychologist, getProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ShareProfile } from "@/components/share-profile";
 import { VERIFICATION_LABELS, type Plan } from "@/lib/types";
 import { effectivePlan, trialAtivo, trialDiasRestantes } from "@/lib/plan-features";
 import { PLAN_LABEL } from "@/lib/plan-labels";
-import { Gift } from "lucide-react";
+import { Gift, Eye, MessageCircle } from "lucide-react";
 import { OnboardingVideoCard } from "@/components/painel/onboarding-video";
 
 export default async function PainelHome() {
@@ -50,6 +51,16 @@ export default async function PainelHome() {
     { done: !!psy?.is_published, label: "Perfil publicado na busca" },
   ];
   const completed = steps.filter((s) => s.done).length;
+
+  // Movimento da plataforma (agregado, últimos 30 dias). Prova social para o
+  // psicólogo ver que a Ayumana tem tração, sem expor o número individual dele.
+  const admin = createAdminClient();
+  const since30 = new Date(Date.now() - 30 * 86_400_000).toISOString();
+  const [{ count: visitasPerfis }, { count: contatosWa }] = await Promise.all([
+    admin.from("analytics_events").select("*", { count: "exact", head: true }).eq("type", "pageview").like("path", "/psicologo/%").gte("created_at", since30),
+    admin.from("analytics_events").select("*", { count: "exact", head: true }).eq("type", "click").like("path", "/psicologo/%").ilike("label", "%wa.me%").gte("created_at", since30),
+  ]);
+  const temMovimento = (visitasPerfis ?? 0) >= 50; // só mostra quando há volume
 
   return (
     <div className="space-y-6">
@@ -155,6 +166,31 @@ export default async function PainelHome() {
       {/* Compartilhar perfil (quando publicado) */}
       {psy?.is_published && psy.slug && (
         <ShareProfile slug={psy.slug} name={psy.display_name} variant="card" />
+      )}
+
+      {/* A Ayumana em movimento (agregado, prova social) */}
+      {temMovimento && (
+        <div className="rounded-2xl border border-border bg-background p-6">
+          <p className="font-medium text-heading">A Ayumana em movimento</p>
+          <p className="mt-0.5 text-sm text-foreground-muted">Nos últimos 30 dias, em toda a plataforma.</p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div className="flex items-center gap-3 rounded-xl border border-border bg-surface-muted/40 p-4">
+              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-100 text-teal-800"><Eye className="h-5 w-5" /></span>
+              <div>
+                <p className="text-2xl font-semibold text-heading">{(visitasPerfis ?? 0).toLocaleString("pt-BR")}</p>
+                <p className="text-sm text-foreground-muted">visitas a perfis de psicólogos</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 rounded-xl border border-border bg-surface-muted/40 p-4">
+              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-100 text-green-800"><MessageCircle className="h-5 w-5" /></span>
+              <div>
+                <p className="text-2xl font-semibold text-heading">{(contatosWa ?? 0).toLocaleString("pt-BR")}</p>
+                <p className="text-sm text-foreground-muted">contatos iniciados pelo WhatsApp</p>
+              </div>
+            </div>
+          </div>
+          <p className="mt-3 text-xs text-foreground-muted">Capriche no perfil e divulgue seu link para aproveitar esse movimento.</p>
+        </div>
       )}
 
       {/* Plano atual */}
