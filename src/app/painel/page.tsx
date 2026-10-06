@@ -12,8 +12,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ShareProfile } from "@/components/share-profile";
 import { VERIFICATION_LABELS, type Plan } from "@/lib/types";
-import { effectivePlan, trialAtivo } from "@/lib/plan-features";
+import { effectivePlan, trialAtivo, trialDiasRestantes } from "@/lib/plan-features";
 import { PLAN_LABEL } from "@/lib/plan-labels";
+import { Gift } from "lucide-react";
 import { OnboardingVideoCard } from "@/components/painel/onboarding-video";
 
 export default async function PainelHome() {
@@ -22,6 +23,8 @@ export default async function PainelHome() {
   const baseTier = psy?.plan_tier ?? "essencial";
   const accessTier = psy ? effectivePlan(psy) : baseTier;
   const emCortesia = !!psy && trialAtivo(psy) && accessTier !== baseTier;
+  const diasCortesia = emCortesia ? trialDiasRestantes(psy!) : 0;
+  const cortesiaUrgente = emCortesia && diasCortesia <= 15;
 
   const supabase = await createClient();
   const { data: plan } = psy
@@ -56,6 +59,32 @@ export default async function PainelHome() {
           Acompanhe seu perfil e sua verificação de CRP.
         </p>
       </div>
+
+      {/* Aviso de fim da cortesia: converter em assinante antes de perder o destaque */}
+      {emCortesia && (
+        <div className={`rounded-2xl border p-5 ${cortesiaUrgente ? "border-yellow-300 bg-yellow-400/10" : "border-brand/30 bg-brand/5"}`}>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <span className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${cortesiaUrgente ? "bg-yellow-400/20 text-yellow-700" : "bg-brand/10 text-brand-dark"}`}>
+                <Gift className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="font-medium text-heading">
+                  {diasCortesia <= 0
+                    ? `Seu ${PLAN_LABEL[accessTier]} de cortesia terminou`
+                    : `Seu ${PLAN_LABEL[accessTier]} de cortesia termina em ${diasCortesia} ${diasCortesia === 1 ? "dia" : "dias"}`}
+                </p>
+                <p className="mt-0.5 text-sm text-foreground-muted">
+                  Assine o {PLAN_LABEL[accessTier]} para manter a prioridade na busca, o vídeo de apresentação e o fórum. Sem assinar, seu perfil volta para o {PLAN_LABEL[baseTier]}.
+                </p>
+              </div>
+            </div>
+            <Button href="/painel/assinatura" size="sm">
+              Assinar o {PLAN_LABEL[accessTier]} <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Vídeo de boas-vindas (dispensável) */}
       <OnboardingVideoCard />
