@@ -30,6 +30,14 @@ const PLAN_PRIORITY: Record<PlanTier, number> = {
   essencial: 0,
 };
 
+// Paga de verdade no nível em que aparece? Quando o plano efetivo vem do plano
+// contratado (e não de um teste de cortesia), a pessoa está pagando por aquela
+// faixa. Isso desempata a favor de quem paga, para a cortesia (90 dias de Voz)
+// não diluir a vez de quem assina.
+function pagaReal(p: PsychologistCard): boolean {
+  return p.plan_tier !== "essencial" && effectivePlan(p) === p.plan_tier;
+}
+
 const SELECT = `
   *,
   specialties:psychologist_specialties(specialty:specialties(id,name,slug,category)),
@@ -247,6 +255,10 @@ export async function listPsychologists(filters: CatalogFilters): Promise<{
     const pa = PLAN_PRIORITY[effectivePlan(a)] ?? 0;
     const pb = PLAN_PRIORITY[effectivePlan(b)] ?? 0;
     if (pb !== pa) return pb - pa;
+    // Dentro da mesma faixa, quem paga vem antes de quem está só na cortesia.
+    const payA = pagaReal(a) ? 1 : 0;
+    const payB = pagaReal(b) ? 1 : 0;
+    if (payB !== payA) return payB - payA;
     return scoreDentroDaFaixa(b, dia) - scoreDentroDaFaixa(a, dia);
   });
 
